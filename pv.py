@@ -62,6 +62,10 @@ class pvp(om.ExplicitComponent):
             desc="Solar PV azimuth angle in degs, 180=south facing")
 
         self.add_input(
+            'DC_AC_ratio',
+            desc="DC/AC PV ratio")
+
+        self.add_input(
             'solar_MW',
             val=1,
             desc="Solar PV plant installed capacity",
@@ -93,7 +97,6 @@ class pvp(om.ExplicitComponent):
         
         surface_tilt = inputs['surface_tilt']
         surface_azimuth = inputs['surface_azimuth']
-
         solar_MW = inputs['solar_MW'][0]
         
         if self.tracking == 'single_axis':
@@ -119,7 +122,11 @@ class pvp(om.ExplicitComponent):
         # Run solar with the WRF weather
         mc.run_model(self.weather)
 
-        solar_t = (mc.ac / inverter.Paco)
+        DC_AC_ratio = inputs['DC_AC_ratio']
+        DC_AC_ratio_ref = inverter.Pdco / inverter.Paco
+        Paco = inverter.Paco * DC_AC_ratio_ref / DC_AC_ratio
+        solar_t = (mc.ac / Paco)
+   
         solar_t[solar_t>1] = 1
         solar_t[solar_t<0] = 0
 
