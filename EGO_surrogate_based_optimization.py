@@ -203,7 +203,7 @@ if __name__ == "__main__":
     n_procs = 3 # number of parallel process
     
     # paralel EGO parameters
-    n_doe = 100
+    n_doe = 42
     n_seed = 0
     max_iter = 20
     tol = 1e-6
