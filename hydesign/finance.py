@@ -105,8 +105,7 @@ class finance(om.ExplicitComponent):
         
         df['hpp_t'] = inputs['hpp_t_with_deg']
         df['price_t'] = inputs['price_t_ext']
-        df['penalty_t'] = 0
-        #df['penalty_t'] = inputs['penalty_t']
+        df['penalty_t'] = inputs['penalty_t']
         df['revenue'] = df['hpp_t'] * df['price_t'] - df['penalty_t']
         
         df['i_year'] = np.hstack([np.array([ii]*N_time) for ii in range(int(np.ceil(life_h/N_time)))])[:life_h]
