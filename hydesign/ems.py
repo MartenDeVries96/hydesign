@@ -75,7 +75,7 @@ class ems(om.ExplicitComponent):
             'n_full_power_hours_expected_per_day_at_peak_price',
             desc="Pnealty occurs if nunmber of full power hours expected per day at peak price are not reached.")
 
-        # -------------------------------------------------------
+        # ----------------------------------------------------------------------------------------------------------
         self.add_output(
             'wind_t_ext',
             desc="WPP power time series",
@@ -135,9 +135,9 @@ class ems(om.ExplicitComponent):
     
         battery_depth_of_discharge = inputs['battery_depth_of_discharge']
         battery_charge_efficiency = inputs['battery_charge_efficiency']
-        peak_hr_quantile = inputs['peak_hr_quantile']
-        cost_of_battery_P_fluct_in_peak_price_ratio = inputs['cost_of_battery_P_fluct_in_peak_price_ratio']
-        n_full_power_hours_expected_per_day_at_peak_price = inputs['n_full_power_hours_expected_per_day_at_peak_price']
+        peak_hr_quantile = inputs['peak_hr_quantile'][0]
+        cost_of_battery_P_fluct_in_peak_price_ratio = inputs['cost_of_battery_P_fluct_in_peak_price_ratio'][0]
+        n_full_power_hours_expected_per_day_at_peak_price = inputs['n_full_power_hours_expected_per_day_at_peak_price'][0]
         
         # Build a sintetic time to avoid problems with time sereis 
         # indexing in ems
@@ -163,9 +163,9 @@ class ems(om.ExplicitComponent):
             hpp_grid_connection = G_MW[0],
             battery_depth_of_discharge = battery_depth_of_discharge[0],
             charge_efficiency = battery_charge_efficiency[0],
-            peak_hr_quantile = 0.9,
-            cost_of_battery_P_fluct_in_peak_price_ratio = 0,
-            n_full_power_hours_expected_per_day_at_peak_price = 0,
+            peak_hr_quantile = peak_hr_quantile,
+            cost_of_battery_P_fluct_in_peak_price_ratio = cost_of_battery_P_fluct_in_peak_price_ratio,
+            n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price,
         )
 
         # Extend (by repeating them and stacking) all variable to full lifetime 
@@ -263,7 +263,14 @@ class ems_long_term_operation(om.ExplicitComponent):
             'b_E_SOC_t',
             desc="Battery energy SOC time series",
             shape=[self.life_h + 1])
-
+        self.add_input(
+            'peak_hr_quantile',
+            desc="Quantile of price tim sereis to define peak price hours (above this quantile).\n"+
+                 "Only used for peak production penalty and for cost of battery degradation.")
+        self.add_input(
+            'n_full_power_hours_expected_per_day_at_peak_price',
+            desc="Pnealty occurs if nunmber of full power hours expected per day at peak price are not reached.")
+        
         # -------------------------------------------------------
 
         self.add_output(
@@ -286,9 +293,15 @@ class ems_long_term_operation(om.ExplicitComponent):
             desc="Battery energy SOC time series",
             shape=[self.life_h + 1])
         self.add_output(
-           'penalty_t_with_deg',
-           desc="penalty for not reaching expected energy productin at peak hours",
-           shape=[self.life_h])   
+            'penalty_t_with_deg',
+            desc="penalty for not reaching expected energy productin at peak hours",
+            shape=[self.life_h])   
+        self.add_output(
+            'total_curtailment',
+            desc="total curtailment in the lifetime",
+            units='GW*h',
+           )
+        
 
     # def setup_partials(self):
     #    self.declare_partials('*', '*',  method='fd')
@@ -309,6 +322,9 @@ class ems_long_term_operation(om.ExplicitComponent):
         hpp_curt_t = inputs['hpp_curt_t']
         b_t = inputs['b_t']
         b_E_SOC_t = inputs['b_E_SOC_t']
+        
+        peak_hr_quantile = inputs['peak_hr_quantile'][0]
+        n_full_power_hours_expected_per_day_at_peak_price = inputs['n_full_power_hours_expected_per_day_at_peak_price'][0]
 
         life_h = self.life_h
         
@@ -348,8 +364,8 @@ class ems_long_term_operation(om.ExplicitComponent):
                 battery_charge_efficiency = battery_charge_efficiency[0],
                 b_E_SOC_0 = b_E_SOC_0,
                 price_ts = price_t_ext[times_op],
-                peak_hr_quantile = 0.9,
-                n_full_power_hours_expected_per_day_at_peak_price = 0,
+                peak_hr_quantile = peak_hr_quantile,
+                n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price,
             )
 
             Hpp_deg[times_op] = Hpp_deg_aux
@@ -365,6 +381,7 @@ class ems_long_term_operation(om.ExplicitComponent):
         outputs['b_t_with_deg'] = b_t_sat
         outputs['b_E_SOC_t_with_deg'] = b_E_SOC_t_sat
         outputs['penalty_t_with_deg'] = penalty_t_with_deg_all
+        outputs['total_curtailment'] = P_curt_deg.sum()
 
 
 
@@ -403,6 +420,10 @@ def ems_cplex(
     e_peak_period_expected = e_peak_day_expected*N_days
     price_peak = np.quantile(price_ts.values, peak_hr_quantile)
     peak_hours_index = np.where(price_ts>=price_peak)[0]
+    
+    price_ts_to_max = price_peak - price_ts
+    price_ts_to_max.loc[price_ts_to_max<0] = 0
+    price_ts_to_max.iloc[:-1] = 0.5*price_ts_to_max.iloc[:-1].values + 0.5*price_ts_to_max.iloc[1:].values
         
     mdl = Model(name='EMS')
     mdl.context.cplex_parameters.threads = 31
@@ -458,9 +479,13 @@ def ems_cplex(
             for t in time) - penalty \
         # Add cost for rapid charge-discharge for limiting the battery life use
         - mdl.sum(
-            fabs(P_charge_discharge[t + pd.Timedelta('1hour')] - \
-                 P_charge_discharge[t])*cost_of_battery_P_fluct_in_peak_price_ratio*price_peak
-            for t in time[:-1])  
+           fabs(P_charge_discharge[t + pd.Timedelta('1hour')] - \
+                P_charge_discharge[t])*cost_of_battery_P_fluct_in_peak_price_ratio*price_ts_to_max[t]
+           for t in time[:-1])  
+        #- mdl.sum(
+        #    fabs(P_charge_discharge[t + pd.Timedelta('1hour')] - \
+        #         P_charge_discharge[t])*cost_of_battery_P_fluct_in_peak_price_ratio*price_peak
+        #    for t in time[:-1])  
     ) 
         
     #Constraints
@@ -511,6 +536,7 @@ def ems_cplex(
         log_output=False)
         #log_output=True)
 
+    
     #print(mdl.export_to_string())
     #sol.display() 
     
