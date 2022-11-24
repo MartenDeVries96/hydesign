@@ -273,7 +273,7 @@ if __name__ == "__main__":
                  'solar_MW [MW]', 
                  'surface_tilt [deg]', 
                  'surface_azimuth [deg]', 
-                 #'DC_AC_ratio', 
+                 'DC_AC_ratio', 
                  'b_P [MW]', 
                  'b_E_h [h]',
                  'cost_of_battery_P_fluct_in_peak_price_ratio'
@@ -290,8 +290,8 @@ if __name__ == "__main__":
     xtypes = [
         #clearance, sp, p_rated, Nwt, wind_MW_per_km2, 
         INT, INT, INT, INT, FLOAT, 
-        #solar_MW, surface_tilt, surface_azimuth, 
-        INT,FLOAT,FLOAT,
+        #solar_MW, surface_tilt, surface_azimuth, DC_AC_ratio
+        INT,FLOAT,FLOAT,FLOAT,
         #b_P, b_E_h , cost_of_battery_P_fluct_in_peak_price_ratio
         INT,INT,FLOAT]
 
@@ -313,7 +313,7 @@ if __name__ == "__main__":
         #surface_azimuth
         [150, 210],
         #DC_AC_ratio
-        #[1, 1.5],
+        [1, 1.5],
         #b_P in MW
         [0, 300],
         #b_E_h in h
