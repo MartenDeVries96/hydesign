@@ -299,7 +299,6 @@ class hpp_model:
             promotes_inputs=[
                 'surface_tilt',
                 'surface_azimuth',
-                'DC_AC_ratio',
                 'solar_MW',
                 ])
         model.add_subsystem(
@@ -506,7 +505,7 @@ class hpp_model:
         # Wind plant design
         clearance, sp, p_rated, Nwt, wind_MW_per_km2,
         # PV plant design
-        solar_MW,  surface_tilt, surface_azimuth, DC_AC_ratio,
+        solar_MW,  surface_tilt, surface_azimuth, 
         # Energy storage & EMS price constrains
         b_P, b_E_h, cost_of_battery_P_fluct_in_peak_price_ratio
         ):
@@ -529,7 +528,6 @@ class hpp_model:
 
         prob.set_val('surface_tilt', surface_tilt)
         prob.set_val('surface_azimuth', surface_azimuth)
-        prob.set_val('DC_AC_ratio', DC_AC_ratio)
         prob.set_val('solar_MW', solar_MW)
         
         prob.set_val('b_P', b_P)
