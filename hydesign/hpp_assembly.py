@@ -221,6 +221,7 @@ class hpp_model:
         min_LoH = sim_pars['min_LoH']
         pv_deg_per_year = sim_pars['pv_deg_per_year']
         wpp_efficiency = sim_pars['wpp_efficiency']
+        land_use_per_solar_MW = sim_pars['land_use_per_solar_MW']
         
         # Extract weather timeseries
         if input_ts_fn == None:
@@ -496,7 +497,9 @@ class hpp_model:
         prob.set_val('solar_WACC', sim_pars['solar_WACC'])
         prob.set_val('battery_WACC', sim_pars['battery_WACC'])
         prob.set_val('tax_rate', sim_pars['tax_rate'])
+        prob.set_val('land_use_per_solar_MW', sim_pars['land_use_per_solar_MW'])
         
+
         self.sim_pars = sim_pars
         self.prob = prob
         self.num_batteries = num_batteries
@@ -526,6 +529,8 @@ class hpp_model:
         prob.set_val('p_rated', p_rated)
         prob.set_val('Nwt', Nwt)
         prob.set_val('Awpp', Awpp)
+        Apvp = solar_MW * self.sim_pars['land_use_per_solar_MW']
+        prob.set_val('Apvp', Apvp)
 
         prob.set_val('surface_tilt', surface_tilt)
         prob.set_val('surface_azimuth', surface_azimuth)
