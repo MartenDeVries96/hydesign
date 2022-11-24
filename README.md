@@ -1,3 +1,4 @@
+[![pipeline status](https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/badges/main/pipeline.svg)](https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/-/commits/main)
 # hydesign
 
 
