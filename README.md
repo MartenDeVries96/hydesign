@@ -1,4 +1,6 @@
 [![pipeline status](https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/badges/main/pipeline.svg)](https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/-/commits/main)
+[![coverage report](https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/badges/main/coverage.svg)](https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/commits/main)
+
 # hydesign
 
 
