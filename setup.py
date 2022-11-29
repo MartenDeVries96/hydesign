@@ -38,4 +38,6 @@ setup(name='hydesign',
       author_email='jumu@dtu.dk',
       license='Proprietary',
       packages=find_packages(),
+      package_data={
+          'hydesign': ['tests/test_files/sm.pkl',],},
       zip_safe=True)
