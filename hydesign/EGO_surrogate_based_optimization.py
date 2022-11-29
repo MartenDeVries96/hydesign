@@ -24,7 +24,7 @@ from smt.surrogate_models import KRG, KPLS, KPLSK, GEKPLS
 from smt.applications.mixed_integer import MixedIntegerSurrogateModel
 from smt.sampling_methods import LHS, Random, FullFactorial
 
-from hpp_assembly import hpp_model, mkdir
+from hydesign.hpp_assembly import hpp_model, mkdir
 
 def LCB(sm, point):
     """
@@ -62,7 +62,7 @@ def KB(sm, point):
     res = sm.predict_values(point)
     return res
 
-def get_sm(xdoe, ydoe, mixint):
+def get_sm(xdoe, ydoe, mixint=None):
     '''
     Function that trains the surrogate and uses it to predict on random input points
     '''
@@ -185,8 +185,10 @@ def print_design(x_opt, outs, list_vars, list_out_vars, xtypes):
 if __name__ == "__main__":
 
 
-    from corres.auxiliar_functions import clean, mkdir
+    # from corres.auxiliar_functions import clean, mkdir
     from multiprocessing import Pool
+    
+    xold=None
     
 
     # Required inputs

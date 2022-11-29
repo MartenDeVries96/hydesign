@@ -1,0 +1,12 @@
+image: dtuwindenergy/hydesign:latest
+
+# ===== TEST hydesign debian=====
+test_hydesign:
+  stage: 
+    test
+  script:
+  - source activate py37
+  - pip install -e .
+  - pytest
+  tags:
+  - debian

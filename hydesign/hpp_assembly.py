@@ -15,13 +15,13 @@ import scipy as sp
 from scipy import stats
 import xarray as xr
 
-from weather import extract_weather_for_HPP, ABL
-from wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_area, get_rotor_d
-from pv import pvp, pvp_degradation_linear
-from ems import ems, ems_long_term_operation
-from battery_degradation import battery_degradation
-from costs import wpp_cost, pvp_cost, battery_cost, shared_cost
-from finance import finance
+from hydesign.weather import extract_weather_for_HPP, ABL
+from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_area, get_rotor_d
+from hydesign.pv import pvp, pvp_degradation_linear
+from hydesign.ems import ems, ems_long_term_operation
+from hydesign.battery_degradation import battery_degradation
+from hydesign.costs import wpp_cost, pvp_cost, battery_cost, shared_cost
+from hydesign.finance import finance
 
 
 class inputs_converter(om.ExplicitComponent):

@@ -17,7 +17,7 @@ from scipy import stats
 import xarray as xr
 
 #Wisdem
-from nrel_csm_tcc_2015 import get_WT_cost_wisdem
+from hydesign.nrel_csm_tcc_2015 import get_WT_cost_wisdem
 
 
 class wpp_cost(om.ExplicitComponent):

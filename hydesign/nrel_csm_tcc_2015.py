@@ -11,7 +11,7 @@ import numpy as np
 
 import openmdao.api as om
 import numpy as np
-from turbine_costsse_2015 import Turbine_CostsSE_2015
+from hydesign.turbine_costsse_2015 import Turbine_CostsSE_2015
 
 
 
