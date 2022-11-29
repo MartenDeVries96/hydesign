@@ -10,11 +10,6 @@ import pandas as pd
 import xarray as xr
 import openmdao.api as om
 
-# pywake imports
-import py_wake as pw
-from py_wake.wind_turbines.generic_wind_turbines import GenericWindTurbine
-from py_wake.examples.data.iea37 import IEA37Site
-
 class genericWT_surrogate(om.ExplicitComponent):
     """
     Metamodel of WT
