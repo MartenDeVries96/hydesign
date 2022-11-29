@@ -10,3 +10,16 @@ test_hydesign:
   - pytest
   tags:
   - debian
+
+# ===== TEST hydesign windows=====
+test_hydesign_windows:
+  stage:
+    test
+  script:
+  - conda init powershell
+  - "if (test-path $PROFILE.CurrentUserAllHosts) { & $PROFILE.CurrentUserAllHosts}"
+  - conda activate hydesign
+  - pip install -e . --no-deps
+  - pytest --cov-report term-missing:skip-covered --cov=hydesign --cov-config .coveragerc
+  tags:
+  - ANMH_old

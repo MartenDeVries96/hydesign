@@ -1,0 +1,5 @@
+[run]
+omit = 
+	hydesign/tests/*
+[report]
+fail_under = 1
