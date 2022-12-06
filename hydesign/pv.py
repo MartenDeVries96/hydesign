@@ -17,7 +17,7 @@ from pvlib.modelchain import ModelChain
 from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
 
 class pvp(om.ExplicitComponent):
-    """pv plant model"""
+    """PV power plant model : It computes the solar power output during the lifetime of the plant using solar plant AC capacity, DC/AC ratio, location coordinates and PV module angles"""
 
     def __init__(self,
                  weather_fn,
@@ -26,6 +26,19 @@ class pvp(om.ExplicitComponent):
                  longitude,
                  altitude,
                  tracking = 'single_axis'):
+
+        """Initialization of the PV power plant model
+
+        Parameters
+        ----------
+        weather_fn : Weather timeseries
+        N_time : Length of the representative data
+        latitude : Latitude at chosen location
+        longitude : Longitude at chosen location
+        altitude : Altitude at chosen location
+        tracking : Tracking type of the PV modules, ex:'single_axis'
+
+        """   
         super().__init__()
         self.weather_fn = weather_fn
         self.N_time = N_time
@@ -90,6 +103,20 @@ class pvp(om.ExplicitComponent):
     #    self.declare_partials('*', '*',  method='fd')
 
     def compute(self, inputs, outputs):
+
+        """ Computing the output power time series of the PV plant
+
+        Parameters
+        ----------
+        surface_tilt : surface tilt of the PV panels
+        surface_azimuth : azimuth of the PV panels
+        DC_AC_ratio : DC-AC ratio of the PV converter
+        solar_MW : AC nominal capacity of the PV power plant
+
+        Returns
+        -------
+        solar_t : PV power time series 
+        """
         
         # Sandia
         sandia_modules = pvsystem.retrieve_sam('SandiaMod')
@@ -154,12 +181,18 @@ class pvp(om.ExplicitComponent):
 
 
 class pvp_degradation_linear(om.ExplicitComponent):
-    """docstring for pvp_degradation"""
+    """PV degradation model providing the PV degradation time series throughout the lifetime of the plant, considering a fixed linear degradation of the PV panels"""
     def __init__(
         self, 
         life_h = 25*365*24, 
         ):
+        """Initialization of the PV degradation model
 
+        Parameters
+        ----------
+        life_h : lifetime of the plant
+
+        """ 
         super().__init__()
         self.life_h = life_h
         
@@ -175,7 +208,17 @@ class pvp_degradation_linear(om.ExplicitComponent):
             shape=[self.life_h])   
 
     def compute(self, inputs, outputs):
+        """ Computing the PV degradation
 
+        Parameters
+        ----------
+        pv_deg_per_year : fixed yearly degradation of PV panels
+
+        Returns
+        -------
+        SoH_pv : degradation of the PV plant throughout the lifetime
+        """
+        
         pv_deg_per_year = inputs['pv_deg_per_year']
         
         t_over_year = np.arange(self.life_h)/(365*24)

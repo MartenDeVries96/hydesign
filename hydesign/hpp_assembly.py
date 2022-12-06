@@ -183,7 +183,26 @@ class hpp_model:
         genWT_fn = lut_filepath+'genWT_v3.nc',
         genWake_fn = lut_filepath+'genWake_v3.nc',
         ):
-        
+        """Initialization of the hybrid power plant evaluator
+
+        Parameters
+        ----------
+        latitude : Latitude at chosen location
+        longitude : Longitude at chosen location
+        altitude : Altitude at chosen location, if not provided, elevation is calculated using elevation map datasets
+        sims_pars_fn : Case study input values of the HPP 
+        work_dir : Working directory path
+        num_batteries : Number of battery replacements
+        ems_type : Energy management system optimization type: cplex solver or rule based
+        inputs_ts_fn : User provided weather timeseries, if not provided, the weather data is calculated using ERA5 datasets
+        price_fn : Price timeseries
+        era5_zarr : Location of wind speed renalysis
+        ratio_gwa_era5 : Location of mean wind speed correction factor
+        era5_ghi_zarr : Location of GHI renalysis
+        elevation_fn : Location of GHI renalysis
+        genWT_fn : Wind turbine power curve look-up tables
+        genWake_fn : Wind turbine wake look-up tables
+        """
         work_dir = mkdir(work_dir)
         
         # Extract simulation parameters
@@ -571,7 +590,44 @@ class hpp_model:
         # Energy storage & EMS price constrains
         b_P, b_E_h, cost_of_battery_P_fluct_in_peak_price_ratio
         ):
-        
+        """Calculating the financial metrics of the hybrid power plant project.
+
+        Parameters
+        ----------
+        clearance : Distance from the ground to the tip of the blade [m]
+        sp : Specific power of the turbine [MW/m2] 
+        p_rated : Rated powe of the turbine [MW] 
+        Nwt : Number of wind turbines
+        wind_MW_per_km2 : Wind power installation density [MW/km2]
+        solar_MW : Solar AC capacity [MW]
+        surface_tilt : Surface tilt of the PV panels [deg]
+        surface_azimuth : Surface azimuth of the PV panels [deg]
+        DC_AC_ratio : DC  AC ratio
+        b_P : Battery power [MW]
+        b_E_h : Battery storage duration [h]
+        cost_of_battery_P_fluct_in_peak_price_ratio : Cost of battery power fluctuations in peak price ratio [Eur]
+
+        Returns
+        -------
+        prob['NPV_over_CAPEX'] : Net present value over the capital expenditures
+        prob['NPV'] : Net present value
+        prob['IRR'] : Internal rate of return
+        prob['LCOE'] : Levelized cost of energy
+        prob['CAPEX'] : Total capital expenditure costs of the HPP
+        prob['OPEX'] : Operational and maintenance costs of the HPP
+        prob['penalty_lifetime'] : Lifetime penalty
+        prob['mean_AEP']/(self.sim_pars['G_MW']*365*24) : Grid utilization factor
+        self.sim_pars['G_MW'] : Grid connection [MW]
+        wind_MW : Wind power plant installed capacity [MW]
+        solar_MW : Solar power plant installed capacity [MW]
+        b_E : Battery power [MW]
+        b_P : Battery energy [MW]
+        prob['total_curtailment']/1e3 : Total curtailed power [GMW]
+        d : wind turbine diameter [m]
+        hh : hub height of the wind turbine [m]
+        self.num_batteries : Number of allowed replacements of the battery
+        """
+
         prob = self.prob
         
         d = get_rotor_d(p_rated*1e6/sp)
@@ -640,3 +696,5 @@ def mkdir(dir_):
             pass
     return dir_
 
+
+# %%

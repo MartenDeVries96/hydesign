@@ -14,6 +14,19 @@ import numpy as np
 ###### Rotor
 #-------------------------------------------------------------------------------
 class BladeCost2015(om.ExplicitComponent):
+    """ Calculating the blade component cost
+
+    Parameters
+    ----------
+    blade_mass : Component mass [kg]
+    blade_mass_cost_coeff : Blade mass-cost coefficient [USD/kg]
+    blade_cost_external : Blade cost computed by RotorSE [USD]
+
+    Returns
+    -------
+    blade_cost : Blade component cost [USD]
+    """
+    
 
     def setup(self):
 
@@ -38,6 +51,18 @@ class BladeCost2015(om.ExplicitComponent):
 
 # -----------------------------------------------------------------------------------------------
 class HubCost2015(om.ExplicitComponent):
+    """ Calculating the hub component cost
+
+    Parameters
+    ----------
+    hub_mass : Component mass [kg]
+    hub_mass_cost_coeff : Hub mass-cost coefficient [USD/kg]
+
+    Returns
+    -------
+    blade_cost : Hub component cost [USD]
+    """
+    
 
     def setup(self):
 
@@ -60,6 +85,18 @@ class HubCost2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class PitchSystemCost2015(om.ExplicitComponent):
+    """ Calculating the pitch system cost
+
+    Parameters
+    ----------
+    pitch_system_mass : Pitch system mass [kg]
+    pitch_system_mass_cost_coeff : pitch system mass-cost coefficient [USD/kg]
+
+    Returns
+    -------
+    pitch_system_cost : pitch system cost [USD]
+    """
+    
 
     def setup(self):
 
@@ -81,7 +118,18 @@ class PitchSystemCost2015(om.ExplicitComponent):
         
 #-------------------------------------------------------------------------------
 class SpinnerCost2015(om.ExplicitComponent):
+    """ Calculating the spinner cost
 
+    Parameters
+    ----------
+    pitch_system_mass : Spinner mass [kg]
+    pitch_system_mass_cost_coeff : Spinner mass-cost coefficient [USD/kg]
+
+    Returns
+    -------
+    pitch_system_cost : Spinner cost [USD]
+    """
+    
     def setup(self):
 
         # variables
@@ -102,6 +150,27 @@ class SpinnerCost2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class HubSystemCostAdder2015(om.ExplicitComponent):
+    """ Calculating the hub system cost
+
+    Parameters
+    ----------
+    hub_cost : Hub component cost [USD]
+    hub_mass : Hub component mass [kg]
+    pitch_system_cost : Pitch system cost [USD]
+    pitch_system_mass : Pitch system mass [kg]
+    spinner_cost : Spinner component cost [USD]
+    spinner_mass : Spinner component mass [kg]
+    hub_assemblyCostMultiplier : Rotor assembly cost multiplier 
+    hub_overheadCostMultiplier : Rotor overhead cost multiplier 
+    hub_profitMultiplier : Rotor profit multiplier 
+    hub_transportMultiplier : Rotor transport multiplier 
+
+    Returns
+    -------
+    hub_system_mass : Mass of the hub system, including hub, spinner, and pitch system for the blades [kg]
+    hub_system_cost : Overall wind sub-assembly capial costs including transportation costs [USD]
+    """
+    
 
     def setup(self):
 
@@ -145,6 +214,19 @@ class HubSystemCostAdder2015(om.ExplicitComponent):
 class RotorCostAdder2015(om.ExplicitComponent):
     """
     RotorCostAdder adds up individual rotor system and component costs to get overall rotor cost.
+
+    Parameters
+    ----------
+    blade_cost : Individual blade cost [USD]
+    blade_mass : Individual blade mass [kg]
+    hub_system_cost : Cost for hub system [USD]
+    hub_system_mass : Mass for hub system [kg]
+    blade_number : Number of rotor blades
+
+    Returns
+    -------
+    rotor_cost : Overall wind sub-assembly capital costs [USD]
+    rotor_mass_tcc : Rotor mass, including blades, pitch system, hub, and spinner [kg]
     """
 
     def setup(self):
@@ -177,7 +259,17 @@ class RotorCostAdder2015(om.ExplicitComponent):
 ###### Nacelle
 # -------------------------------------------------
 class LowSpeedShaftCost2015(om.ExplicitComponent):
+    """ Low speed shaft cost.
 
+    Parameters
+    ----------
+    lss_mass : Low speed shaft mass [kg]
+    lss_mass_cost_coeff : Low speed shaft mass cost coefficient [USD/kg]
+
+    Returns
+    -------
+    lss_cost : Low speed shaft cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -197,7 +289,18 @@ class LowSpeedShaftCost2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class BearingsCost2015(om.ExplicitComponent):
+    """ Bearings cost.
 
+    Parameters
+    ----------
+    main_bearing_masslss_mass : component mass [kg]
+    main_bearing_number : number of main bearings
+    bearings_mass_cost_coeff : main bearings mass-cost coeff [USD/kg]
+
+    Returns
+    -------
+    lss_cost : main bearing cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -219,7 +322,17 @@ class BearingsCost2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class GearboxCost2015(om.ExplicitComponent):
+    """ Gearbox cost.
 
+    Parameters
+    ----------
+    gearbox_mass : gearbox mass [kg]
+    gearbox_mass_cost_coeff : gearbox mass cost coefficient [USD/kg]
+
+    Returns
+    -------
+    gearbox_cost : gearbox cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -238,7 +351,17 @@ class GearboxCost2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class HighSpeedSideCost2015(om.ExplicitComponent):
+    """ High speed shaft cost.
 
+    Parameters
+    ----------
+    hss_mass : high speed shaft mass [kg]
+    hss_mass_cost_coeff : high speed side mass-cost coefficient [USD/kg]
+
+    Returns
+    -------
+    hss_cost : High speed shaft cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -257,7 +380,17 @@ class HighSpeedSideCost2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class GeneratorCost2015(om.ExplicitComponent):
+    """ Generator cost.
 
+    Parameters
+    ----------
+    generator_mass : generator mass [kg]
+    generator_mass_cost_coeff : generator mass cost coefficient [USD/kg]
+
+    Returns
+    -------
+    generator_cost : generator cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -276,7 +409,17 @@ class GeneratorCost2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class BedplateCost2015(om.ExplicitComponent):
+    """ Bed plate cost.
 
+    Parameters
+    ----------
+    bedplate_mass : bedplate mass [kg]
+    bedplate_mass_cost_coeff : bedplate mass cost coefficient [USD/kg]
+
+    Returns
+    -------
+    generator_cost : bedplate cost [USD]
+    """
     def setup(self):
         
         # variables
@@ -295,7 +438,17 @@ class BedplateCost2015(om.ExplicitComponent):
 
 #---------------------------------------------------------------------------------
 class YawSystemCost2015(om.ExplicitComponent):
+    """ Yaw system cost.
 
+    Parameters
+    ----------
+    yaw_mass : yaw system mass [kg]
+    yaw_mass_cost_coeff : yaw system mass cost coefficient [USD/kg]
+
+    Returns
+    -------
+    yaw_system_cost : yaw system cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -314,7 +467,17 @@ class YawSystemCost2015(om.ExplicitComponent):
 
 #---------------------------------------------------------------------------------
 class VariableSpeedElecCost2015(om.ExplicitComponent):
+    """ Variable speed electronics cost.
 
+    Parameters
+    ----------
+    vs_electronics_mass : variable speed electronics mass [kg]
+    vs_electronics_mass_cost_coeff : variable speed electronics mass cost coefficient [USD/kg]
+
+    Returns
+    -------
+    vs_cost : variable speed electronics cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -333,7 +496,17 @@ class VariableSpeedElecCost2015(om.ExplicitComponent):
 
 #---------------------------------------------------------------------------------
 class HydraulicCoolingCost2015(om.ExplicitComponent):
+    """ Hydraulic and cooling system cost.
 
+    Parameters
+    ----------
+    hvac_mass : hydraulic and cooling system mass [kg]
+    hvac_mass_cost_coeff : hydraulic and cooling system mass cost coefficient [USD/kg]
+
+    Returns
+    -------
+    vs_cost : hydraulic and cooling system cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -353,7 +526,17 @@ class HydraulicCoolingCost2015(om.ExplicitComponent):
 
 #---------------------------------------------------------------------------------
 class NacelleCoverCost2015(om.ExplicitComponent):
+    """ Nacelle cover cost.
 
+    Parameters
+    ----------
+    cover_mass : nacelle cover mass [kg]
+    cover_mass_cost_coeff : nacelle cover mass cost coefficient [USD/kg]
+
+    Returns
+    -------
+    cover_cost : nacelle cover cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -372,7 +555,17 @@ class NacelleCoverCost2015(om.ExplicitComponent):
 
 #---------------------------------------------------------------------------------
 class ElecConnecCost2015(om.ExplicitComponent):
+    """ Electrical connections cost.
 
+    Parameters
+    ----------
+    machine_rating : machine rating [kw]
+    elec_connec_machine_rating_cost_coeff : electrical connections cost coefficient per kW [USD/kW]
+
+    Returns
+    -------
+    elec_cost : electrical connections cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -392,7 +585,17 @@ class ElecConnecCost2015(om.ExplicitComponent):
 
 #---------------------------------------------------------------------------------
 class ControlsCost2015(om.ExplicitComponent):
+    """ Controls cost.
 
+    Parameters
+    ----------
+    machine_rating : machine rating [kw]
+    controls_machine_rating_cost_coeff : controls cost coefficient per kW [USD/kW]
+
+    Returns
+    -------
+    controls_cost : controls cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -411,7 +614,19 @@ class ControlsCost2015(om.ExplicitComponent):
 
 #---------------------------------------------------------------------------------
 class OtherMainframeCost2015(om.ExplicitComponent):
+    """ Other main frame costs.
 
+    Parameters
+    ----------
+    platforms_mass : platform mass [kg]
+    platforms_mass_cost_coeff : nacelle platforms mass cost coeff [USD/kg]
+    crane : flag for presence of onboard crane
+    crane_cost : crane cost if present [USD]
+
+    Returns
+    -------
+    other_cost : other main frame costs [USD]
+    """
     def setup(self):
 
         # variables
@@ -453,7 +668,17 @@ class OtherMainframeCost2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class TransformerCost2015(om.ExplicitComponent):
+    """ Transformer cost.
 
+    Parameters
+    ----------
+    transformer_mass : transformer mass [kg]
+    transformer_mass_cost_coeff : transformer mass cost coeff [USD/kg]
+
+    Returns
+    -------
+    transformer_cost : transformer cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -472,7 +697,46 @@ class TransformerCost2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class NacelleSystemCostAdder2015(om.ExplicitComponent):
+    """ Overall nacelle system cost.
 
+    Parameters
+    ----------
+    lss_cost : transformer cost [USD]
+    lss_mass : transformer mass  [kg]
+    main_bearing_cost : main bearing cost [USD]
+    main_bearing_mass : main bearing mass [kg]
+    gearbox_cost : gearbox cost [USD]
+    gearbox_mass : gearbox mass [kg]
+    hss_cost : high speed shaft cost [USD]
+    hss_mass : high speed shaft mass [kg]
+    generator_cost : generator cost [USD]
+    generator_mass : generator mass [kg]
+    bedplate_cost : bedplate cost [USD]
+    bedplate_mass : bedplate mass [kg]
+    yaw_system_cost : yaw system cost [USD]
+    yaw_mass : yas system mass [kg]
+    vs_cost : variable speed electronics cost [USD]
+    vs_mass : variable speed electronics mass [kg]
+    hvac_cost : hydraulic and cooling system cost [USD]
+    hvac_mass : hydraulic and cooling system mass [kg]
+    cover_cost : nacelle cover cost [USD]
+    cover_mass : nacelle cover mass [kg]
+    elec_cost : electrical connections cost [USD]
+    controls_cost : electrical connections mass [USD]
+    other_cost : other costs [USD]
+    transformer_cost : transformer cost [USD]
+    transformer_mass : transformer mass [kg]
+    main_bearing_number : main bearing number 
+    nacelle_assemblyCostMultiplier : nacelle assembly cost multiplier
+    nacelle_overheadCostMultiplier : nacelle overhead cost multiplier
+    nacelle_profitMultiplier : nacelle profit multiplier
+    nacelle_transportMultiplier : nacelle transport multiplier
+
+    Returns
+    -------
+    nacelle_cost : total nacelle cost [USD]
+    nacelle_mass : total nacelle mass [kg]
+    """
     def setup(self):
 
         # variables
@@ -557,7 +821,18 @@ class NacelleSystemCostAdder2015(om.ExplicitComponent):
 ###### Tower
 #-------------------------------------------------------------------------------
 class TowerCost2015(om.ExplicitComponent):
+    """ Tower cost.
 
+    Parameters
+    ----------
+    tower_mass : tower mass [kg]
+    tower_mass_cost_coeff : tower mass cost coefficient [USD/kg]
+    tower_cost_external : tower cost cimputed by towerSE [USD]
+
+    Returns
+    -------
+    tower_parts_cost : tower cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -582,7 +857,19 @@ class TowerCost2015(om.ExplicitComponent):
         
 #-------------------------------------------------------------------------------
 class TowerCostAdder2015(om.ExplicitComponent):
+    """ Tower cost adder.
 
+    Parameters
+    ----------
+    tower_parts_cost : tower parts cost [USD]
+    tower_assemblyCostMultiplier : tower assembly cost multiplier
+    tower_profitMultiplier : tower overhead cost multiplier
+    tower_transportMultiplier : tower transport cost multiplier
+
+    Returns
+    -------
+    tower_cost : tower cost [USD]
+    """
     def setup(self):
 
         # variables
@@ -611,7 +898,28 @@ class TowerCostAdder2015(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class TurbineCostAdder2015(om.ExplicitComponent):
+    """ Turbine cost adder.
 
+    Parameters
+    ----------
+    rotor_cost : Rotor cost [USD]
+    rotor_mass_tcc : Rotor mass [kg]
+    nacelle_cost : Nacelle cost [USD]
+    nacelle_mass : Nacelle mass [kg]
+    tower_cost : Tower cost [USD]
+    tower_mass : Tower mass [kg]
+    machine_rating : Machine rating [kw]
+    turbine_assemblyCostMultiplier : tower transport cost multiplier
+    turbine_overheadCostMultiplier : tower transport cost multiplier
+    turbine_profitMultiplier : tower transport cost multiplier
+    turbine_transportMultiplier : tower transport cost multiplier
+
+    Returns
+    -------
+    turbine_mass : Turbine total mass [kg]
+    turbine_cost : Wind turbine costs [USD]
+    turbine_cost_kW : Wind turbine costs per kW [USD/kw]
+    """
     def setup(self):
 
         # Variables
@@ -749,7 +1057,7 @@ class Outputs2Screen(om.ExplicitComponent):
 
 #-------------------------------------------------------------------------------
 class Turbine_CostsSE_2015(om.Group):
-
+    """ Assembly of the cost components"""
     def __init__(self, verbosity=False):
         
         super(Turbine_CostsSE_2015, self).__init__()

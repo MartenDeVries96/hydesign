@@ -21,7 +21,10 @@ from hydesign.nrel_csm_tcc_2015 import get_WT_cost_wisdem
 
 
 class wpp_cost(om.ExplicitComponent):
-    """WPP cost model"""
+    """Wind power plant cost model is used to assess the overall wind plant cost. It is based on the The NREL Cost and Scaling model *.
+    It estimates the total capital expenditure costs and operational and maintenance costs, as a function of the installed capacity, the cost of the
+    turbine, intallation costs and O&M costs.
+    * Dykes, K., et al. 2014. Sensitivity analysis of wind plant performance to key turbine design parameters: a systems engineering approach. Tech. rep. National Renewable Energy Laboratory"""
 
     def __init__(self,
                  wind_turbine_cost,
@@ -33,6 +36,21 @@ class wpp_cost(om.ExplicitComponent):
                  p_rated_ref,
                  N_time,
                  ):
+
+        """Initialization of the wind power plant cost model
+
+        Parameters
+        ----------
+        wind_turbine_cost : Wind turbine cost [Euro/MW]
+        wind_civil_works_cost : Wind civil works cost [Euro/MW]
+        wind_fixed_onm_cost : Wind fixed onm (operation and maintenance) cost [Euro/MW/year]
+        wind_variable_onm_cost : Wind variable onm cost [EUR/MWh_e]
+        d_ref : Reference diameter of the cost model [m]
+        hh_ref : Reference hub height of the cost model [m]
+        p_rated_ref : Reference turbine power of the cost model [MW]
+        N_time : Length of the representative data
+
+        """  
         super().__init__()
         self.wind_turbine_cost = wind_turbine_cost
         self.wind_civil_works_cost = wind_civil_works_cost
@@ -74,6 +92,23 @@ class wpp_cost(om.ExplicitComponent):
         self.declare_partials('*', '*', method='fd')
 
     def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+        """ Computing the CAPEX and OPEX of the wind power plant.
+
+        Parameters
+        ----------
+        Nwt : Number of wind turbines
+        Awpp : Land use area of WPP [km**2]
+        hh : Turbine's hub height [m]
+        d : Turbine's diameter [m]
+        p_rated : Turbine's rated power [MW]
+        wind_t : WPP power time series [MW]
+
+        Returns
+        -------
+        CAPEX_w : CAPEX of the wind power plant [Eur]
+        OPEX_w : OPEX of the wind power plant [Eur/year]
+        """
+        
         Nwt = discrete_inputs['Nwt']
         Awpp = inputs['Awpp']
         hh = inputs['hh']
@@ -144,13 +179,25 @@ class wpp_cost(om.ExplicitComponent):
 
 
 class pvp_cost(om.ExplicitComponent):
-    """PV cost model"""
+    """PV plant cost model is used to calculate the overall PV plant cost. The cost model estimates the total solar capital expenditure costs
+    and  operational and maintenance costs as a function of the installed solar capacity and the PV cost per MW installation costs (extracted from the danish energy agency data catalogue).
+    """
 
     def __init__(self,
                  solar_PV_cost,
                  solar_hardware_installation_cost,
                  solar_fixed_onm_cost,
                  ):
+
+        """Initialization of the PV power plant cost model
+
+        Parameters
+        ----------
+        solar_PV_cost : PV panels cost [Euro/MW]
+        solar_hardware_installation_cost : Solar panels civil works cost [Euro/MW]
+        solar_fixed_onm_cost : Solar fixed onm (operation and maintenance) cost [Euro/MW/year]
+
+        """  
         super().__init__()
         self.solar_PV_cost = solar_PV_cost
         self.solar_hardware_installation_cost = solar_hardware_installation_cost
@@ -171,6 +218,18 @@ class pvp_cost(om.ExplicitComponent):
         self.declare_partials('*', '*', method='fd')
 
     def compute(self, inputs, outputs):
+        """ Computing the CAPEX and OPEX of the solar power plant.
+
+        Parameters
+        ----------
+        solar_MW : AC nominal capacity of the PV plant [MW]
+
+        Returns
+        -------
+        CAPEX_s : CAPEX of the PV power plant [Eur]
+        OPEX_s : OPEX of the PV power plant [Eur/year]
+        """
+        
         solar_MW = inputs['solar_MW']
 
         solar_PV_cost = self.solar_PV_cost
@@ -194,7 +253,7 @@ class pvp_cost(om.ExplicitComponent):
 
 
 class battery_cost(om.ExplicitComponent):
-    """Battery cost model"""
+    """Battery cost model calculates the storage unit costs. It uses technology costs extracted from the danish energy agency data catalogue."""
 
     def __init__(self,
                  battery_energy_cost,
@@ -206,6 +265,22 @@ class battery_cost(om.ExplicitComponent):
                  n_steps_in_LoH = 30,
                  N_life = 25,
                  life_h = 25*365*24):
+        """Initialization of the battery cost model
+
+        Parameters
+        ----------
+        battery_energy_cost : Battery energy cost [Euro/MWh]
+        battery_power_cost : Battery power cost [Euro/MW]
+        battery_BOP_installation_commissioning_cost : Battery installation and commissioning cost [Euro/MW]
+        battery_control_system_cost : Battery system controt cost [Euro/MW]
+        battery_energy_onm_cost : Battery operation and maintenance cost [Euro/MW]
+        num_batteries : Number of battery replacement in the lifetime of the plant
+        n_steps_in_LoH : Number of discretization steps in battery level of health
+        N_life : Lifetime of the plant in years
+        life_h : Total number of hours in the lifetime of the plant
+
+
+        """ 
         super().__init__()
         self.battery_energy_cost = battery_energy_cost
         self.battery_power_cost = battery_power_cost
@@ -245,6 +320,21 @@ class battery_cost(om.ExplicitComponent):
         self.declare_partials('*', '*', method='fd')
 
     def compute(self, inputs, outputs):
+        """ Computing the CAPEX and OPEX of battery.
+
+        Parameters
+        ----------
+        b_P : Battery power capacity [MW]
+        b_E : Battery energy storage capacity [MWh]
+        ii_time : Indices on the lifetime time series (Hydesign operates in each range at constant battery health)
+        SoH : Battery state of health at discretization levels 
+        battery_price_reduction_per_year : Factor of battery price reduction per year
+
+        Returns
+        -------
+        CAPEX_b : CAPEX of the storage unit [Eur]
+        OPEX_b : OPEX of the storage unit [Eur/year]
+        """
         
         N_life = self.N_life
         life_h = self.life_h
@@ -282,6 +372,14 @@ class shared_cost(om.ExplicitComponent):
                  hpp_grid_connection_cost,
                  land_cost
                  ):
+        """Initialization of the shared costs model
+
+        Parameters
+        ----------
+        hpp_BOS_soft_cost : Balancing of system cost [Euro/MW]
+        hpp_grid_connection_cost : Grid connection cost [Euro/MW]
+        land_cost : Land rent cost [Euro/km**2]
+        """ 
         super().__init__()
         self.hpp_BOS_soft_cost = hpp_BOS_soft_cost
         self.hpp_grid_connection_cost = hpp_grid_connection_cost
@@ -306,6 +404,19 @@ class shared_cost(om.ExplicitComponent):
         self.declare_partials('*', '*', method='fd')
 
     def compute(self, inputs, outputs):
+        """ Computing the CAPEX and OPEX of the shared land and infrastructure.
+
+        Parameters
+        ----------
+        G_MW : Grid capacity [MW]
+        Awpp : Land use area of the wind power plant [km**2]
+        Apvp : Land use area of the solar power plant [km**2]
+
+        Returns
+        -------
+        CAPEX_sh : CAPEX electrical infrastructure/ land rent [Eur]
+        OPEX_sh : OPEX electrical infrastructure/ land rent [Eur/year]
+        """
         G_MW = inputs['G_MW']
         Awpp = inputs['Awpp']
         Apvp = inputs['Apvp']
