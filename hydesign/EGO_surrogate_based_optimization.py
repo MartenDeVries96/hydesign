@@ -180,16 +180,44 @@ def print_design(x_opt, outs, list_vars, list_out_vars, xtypes):
     print()
 
 
+class ParallelRunner():
+
+    def __init__(self, n_procs=None):
+        """
+        Parameters
+        ----------
+        n_procs : int or None, optional
+            Number of processes passed to multiprocessing.Pool
+        """
+        self.pool = multiprocessing.Pool(n_procs)
+
+    def run(self, fun, x):
+        """Run in parallel
+
+        Parameters
+        ----------
+        fun : function
+            function for sequential run. Interface must be:
+        x : array
+            array of inputs to evaluate f
+
+        Returns
+        -------
+        results : array
+            all results
+        """
+
+        
+        results = np.array( 
+            self.pool.map(fun, [x[[i],:] for i in range(x.shape[0])] )
+            ).reshape(-1,1)    
+        return results
+
 
 
 if __name__ == "__main__":
 
-
-    # from corres.auxiliar_functions import clean, mkdir
-    from multiprocessing import Pool
-    
-    xold=None
-    
+    from multiprocessing import Pool    
 
     # Required inputs
     # -----------------
@@ -203,7 +231,13 @@ if __name__ == "__main__":
     opt_var = 'NPV_over_CAPEX'
     work_dir = './results_C/'
     n_procs = 3 # number of parallel process
+    input_ts_fn = './results_C/input_ts.csv',#None, # If None then it computes the weather
     
+    if input_ts_fn == None: # If None then it computes the weather
+        price_fn = 'elec_price_t_new.csv' # If input_ts_fn is given it should include Price column.
+    else:
+        price_fn = None
+        
     # paralel EGO parameters
     n_doe = 42
     n_seed = 0
@@ -226,16 +260,8 @@ if __name__ == "__main__":
             ems_type = ems_type,
             work_dir = work_dir,
             sim_pars_fn = 'hpp_pars.yml',
-            #input_ts_fn = './results/input_ts.csv',#None, # If None then it computes the weather
-            # -------------------------------
-            input_ts_fn = None, # If None then it computes the weather
-            price_fn = 'elec_price_t_new.csv', # If input_ts_fn is given it should include Price column.
-            era5_zarr = '/groups/reanalyses/era5/app/era5.zarr', # location of wind speed renalysis
-            ratio_gwa_era5 = '/groups/INP/era5/ratio_gwa2_era5.nc', # location of mean wind speed correction factor
-            era5_ghi_zarr = '/groups/INP/era5/ghi.zarr', # location of GHI renalysis
-            elevation_fn = '/groups/INP/era5/SRTMv3_plus_ViewFinder_coarsen.nc',
-            genWT_fn='/home/jumu/Hydesign_openmdao_dev/hydesign/hydesign/Aug3/genWT_v3.nc',
-            genWake_fn='/home/jumu/Hydesign_openmdao_dev/hydesign/hydesign/Aug3/genWake_v3.nc',
+            input_ts_fn = input_ts_fn,
+            price_fn = price_fn,
     )
     print('\n\n')
     
@@ -383,6 +409,7 @@ if __name__ == "__main__":
     error = 1e10
     conv_iter = 0
     yopt = ydoe[[np.argmin(ydoe)],:]
+    xold = None
     while itr < max_iter:
         # Iteration
         start_iter = time.time()

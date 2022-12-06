@@ -693,7 +693,7 @@ def get_WT_cost_wisdem(
 
     # simple test of module
     trb = nrel_csm_2015()
-    prob = om.Problem(trb)
+    prob = om.Problem(trb, reports=None)
     prob.setup()
 
     # simple test of module

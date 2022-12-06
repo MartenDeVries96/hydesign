@@ -2,8 +2,7 @@
 # HPP Global
 # --------------------------------------------------------------------------------------------
 G_MW: 300 # Grid capacity
-year_start: '1990' # Single representative year
-year_end: '1990' # Single representative year
+year: '1990' # Single representative year
 N_life: 25
 
 # --------------------------------------------------------------------------------------------
@@ -30,9 +29,6 @@ pv_deg_per_year: 0.5e-2
 land_use_per_solar_MW: 0.01226 # Danish energy agency
 
 #selected tracker
-#surface_tilt:  'optimal' # Computed from optimal tilt: 7.203 + lat*0.6804
-surface_tilt:  'optimal_india_global_pv_atlas'
-surface_azimuth: 180.0   # South facing
 tracking: 'No' # 'single_axis'  #
 
 # --------------------------------------------------------------------------------------------
@@ -77,3 +73,12 @@ solar_WACC: 0.048   # After tax WACC for solar PV
 battery_WACC: 0.080 # After tax WACC for stationary storge li-ion batteries
 tax_rate: 0.22      # Corporate tax rate
 
+
+# --------------------------------------------------------------------------------------------
+# Weather databases
+# Not required if the user provides input_ts_fn.csv to hpp_model
+# --------------------------------------------------------------------------------------------
+era5_zarr: '/groups/reanalyses/era5/app/era5.zarr' # location of wind speed renalysis
+ratio_gwa_era5: '/groups/INP/era5/ratio_gwa2_era5.nc' # location of mean wind speed correction factor
+era5_ghi_zarr: '/groups/INP/era5/ghi.zarr' # location of GHI renalysis
+elevation_fn: '/groups/INP/era5/SRTMv3_plus_ViewFinder_coarsen.nc' # Altitude map for extracting altitude

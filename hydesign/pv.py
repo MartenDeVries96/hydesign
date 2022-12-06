@@ -13,9 +13,7 @@ import openmdao.api as om
 # pvlib imports
 from pvlib import pvsystem, tools, irradiance, atmosphere
 from pvlib.location import Location
-from pvlib.pvsystem import PVSystem
 from pvlib.modelchain import ModelChain
-from pvlib.tracking import SingleAxisTracker
 from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
 
 class pvp(om.ExplicitComponent):
@@ -71,11 +69,22 @@ class pvp(om.ExplicitComponent):
             desc="Solar PV plant installed capacity",
             units='MW')
         
+        self.add_input(
+            'land_use_per_solar_MW',
+            val=1,
+            desc="Solar land use per solar MW",
+            units='km**2/MW')
+        
         self.add_output(
             'solar_t',
             desc="PV power time series",
             units='MW',
             shape=[self.N_time])
+        
+        self.add_output(
+            'Apvp',
+            desc="Land use area of WPP",
+            units='km**2')
         
     # def setup_partials(self):
     #    self.declare_partials('*', '*',  method='fd')
@@ -98,19 +107,29 @@ class pvp(om.ExplicitComponent):
         surface_tilt = inputs['surface_tilt']
         surface_azimuth = inputs['surface_azimuth']
         solar_MW = inputs['solar_MW'][0]
+        land_use_per_solar_MW = inputs['land_use_per_solar_MW'][0]
         
         if self.tracking == 'single_axis':
-            system = SingleAxisTracker(
-                module_parameters=module,
-                inverter_parameters=inverter,
-                temperature_model_parameters=temp_model,
+          
+            mount = pvsystem.SingleAxisTrackerMount(
                 axis_tilt=surface_tilt[0],
-                axis_azimuth=surface_azimuth[0],
-                max_angle=90,
-                backtrack=True,
-                gcr=0.2857142857142857)
+                axis_azimuth=surface_azimuth[0], 
+                max_angle = 90.0, 
+                backtrack = True, 
+                gcr = 0.2857142857142857, 
+                cross_axis_tilt = 0.0,
+                #module_height = 1
+                )
+            array = pvsystem.Array(
+                mount=mount, 
+                module_parameters=module,
+                temperature_model_parameters=temp_model)
+            system = pvsystem.PVSystem(
+                arrays=[array],
+                inverter_parameters=inverter,
+                )
         else:
-            system = PVSystem(
+            system = pvsystem.PVSystem(
                 module_parameters=module,
                 inverter_parameters=inverter,
                 temperature_model_parameters=temp_model,
@@ -125,12 +144,13 @@ class pvp(om.ExplicitComponent):
         DC_AC_ratio = inputs['DC_AC_ratio']
         DC_AC_ratio_ref = inverter.Pdco / inverter.Paco
         Paco = inverter.Paco * DC_AC_ratio_ref / DC_AC_ratio
-        solar_t = (mc.ac / Paco)
+        solar_t = (mc.results.ac / Paco)
    
         solar_t[solar_t>1] = 1
         solar_t[solar_t<0] = 0
 
         outputs['solar_t'] = solar_MW * solar_t.fillna(0.0)
+        outputs['Apvp'] = solar_MW * land_use_per_solar_MW
 
 
 class pvp_degradation_linear(om.ExplicitComponent):

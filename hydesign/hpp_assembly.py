@@ -22,7 +22,7 @@ from hydesign.ems import ems, ems_long_term_operation
 from hydesign.battery_degradation import battery_degradation
 from hydesign.costs import wpp_cost, pvp_cost, battery_cost, shared_cost
 from hydesign.finance import finance
-
+from hydesign.look_up_tables import lut_filepath
 
 class inputs_converter(om.ExplicitComponent):
     """Hybrid power plant inputs converter"""
@@ -177,20 +177,25 @@ class hpp_model:
         sim_pars_fn=None,
         work_dir = './',
         num_batteries = 1,
-        ems_type='cplex',
+        ems_type='pyomo',
         input_ts_fn = None, # If None then it computes the weather
         price_fn = None, # If input_ts_fn is given it should include Price column.
-        era5_zarr = '/groups/reanalyses/era5/app/era5.zarr', # location of wind speed renalysis
-        ratio_gwa_era5 = '/groups/INP/era5/ratio_gwa2_era5.nc', # location of mean wind speed correction factor
-        era5_ghi_zarr = '/groups/INP/era5/ghi.zarr', # location of GHI renalysis
-        elevation_fn = '/groups/INP/era5/SRTMv3_plus_ViewFinder_coarsen.nc', # Altitude map for extracting altitude
-        genWT_fn='Hydesign_openmdao_dev/v1_release/look_up_tables/genWT.nc',
-        genWake_fn='Hydesign_openmdao_dev/v1_release/look_up_tables/genWT.nc',
+        genWT_fn = lut_filepath+'genWT_v3.nc',
+        genWake_fn = lut_filepath+'genWake_v3.nc',
         ):
         
         work_dir = mkdir(work_dir)
         
+        # Extract simulation parameters
+        try:
+            with open(sim_pars_fn) as file:
+                sim_pars = yaml.load(file, Loader=yaml.FullLoader)
+        except:
+            raise(f'sim_pars_fn="{sim_pars_fn}" can not be read')
+        
         if altitude == None:
+            
+            elevation_fn = sim_pars['elevation_fn'] # Altitude map for extracting altitude
             elevation_ds = xr.open_dataset(elevation_fn)
             altitude = elevation_ds['elev'].interp(
                                 latitude=latitude,
@@ -202,16 +207,9 @@ class hpp_model:
         print('latitude =',latitude)
         print('altitude =',altitude)
         
-        # Extract simulation parameters
-        try:
-            with open(sim_pars_fn) as file:
-                sim_pars = yaml.load(file, Loader=yaml.FullLoader)
-        except:
-            raise(f'sim_pars_fn="{sim_pars_fn}" can not be read')
-        
         # Parameters of the simulation
-        year_start = sim_pars['year_start']
-        year_end = sim_pars['year_end']
+        year_start = sim_pars['year']
+        year_end = sim_pars['year']
         N_life = sim_pars['N_life']
         life_h = N_life*365*24
         n_steps_in_LoH = sim_pars['n_steps_in_LoH']
@@ -225,6 +223,12 @@ class hpp_model:
         
         # Extract weather timeseries
         if input_ts_fn == None:
+            
+            # Weather database
+            era5_zarr = sim_pars['era5_zarr'] # location of wind speed renalysis
+            ratio_gwa_era5 = sim_pars['ratio_gwa_era5'] # location of mean wind speed correction factor
+            era5_ghi_zarr = sim_pars['era5_ghi_zarr'] # location of GHI renalysis
+            
             weather = extract_weather_for_HPP(
                 longitude = longitude, 
                 latitude = latitude,
@@ -236,7 +240,7 @@ class hpp_model:
                 year_end = year_end)
             price = pd.read_csv(price_fn, index_col=0, parse_dates=True)
             try:
-                weather['Price'] = price.loc[weather.index,:]
+                weather['Price'] = price.loc[weather.index].bfill()
             except:
                 raise('Price timeseries does not match the weather')
             
@@ -255,29 +259,59 @@ class hpp_model:
         model = om.Group()
 
         model.add_subsystem(
+            'inputs_converter',
+            inputs_converter(),
+            promotes_inputs=[
+                'clearance',
+                'sp',
+                'p_rated',
+                'Nwt',
+                'wind_MW_per_km2',
+                'wind_MW_per_km2',
+                'surface_tilt',
+                'surface_azimuth',
+                'solar_MW',
+                'b_P',
+                'b_E_h',
+                'cost_of_battery_P_fluct_in_peak_price_ratio',
+            ],
+        )
+        
+        model.add_subsystem(
             'abl', 
             ABL(
                 weather_fn=input_ts_fn, 
                 N_time=N_time),
-            promotes_inputs=['hh']
+            #promotes_inputs=['hh']
             )
         model.add_subsystem(
             'genericWT', 
             genericWT_surrogate(
                 genWT_fn=genWT_fn,
                 N_ws = N_ws),
-            promotes_inputs=['*'])
+            promotes_inputs=[
+               'p_rated',
+            ])
+            #promotes_inputs=[
+            #    'hh',
+            #    'd',
+            #    'p_rated',
+            #])
         
         model.add_subsystem(
             'genericWake', 
             genericWake_surrogate(
                 genWake_fn=genWake_fn,
                 N_ws = N_ws),
-            promotes_inputs=['Nwt',
-                             'Awpp',
-                             'd',
-                             'p_rated',
-                            ])
+            promotes_inputs=[
+                'Nwt',
+                'p_rated',
+            ])
+            # promotes_inputs=['Nwt',
+            #                  'Awpp',
+            #                  'd',
+            #                  'p_rated',
+            #                 ])
         
         model.add_subsystem(
             'wpp', 
@@ -302,6 +336,7 @@ class hpp_model:
                 'surface_azimuth',
                 'DC_AC_ratio',
                 'solar_MW',
+                'land_use_per_solar_MW',
                 ])
         model.add_subsystem(
             'ems', 
@@ -312,7 +347,7 @@ class hpp_model:
             promotes_inputs=[
                 'price_t',
                 'b_P',
-                'b_E',
+                #'b_E',
                 'G_MW',
                 'battery_depth_of_discharge',
                 'battery_charge_efficiency',
@@ -329,8 +364,7 @@ class hpp_model:
                 life_h = life_h),
             promotes_inputs=[
                 'min_LoH'
-                ]
-                )
+                ])
         
         model.add_subsystem(
             'pvp_degradation_linear', 
@@ -338,8 +372,7 @@ class hpp_model:
                 life_h = life_h),
             promotes_inputs=[
                 'pv_deg_per_year'
-                ]
-                )
+                ])
         
         model.add_subsystem(
             'ems_long_term_operation', 
@@ -350,7 +383,7 @@ class hpp_model:
                 life_h = life_h),
             promotes_inputs=[
                 'b_P',
-                'b_E',
+                #'b_E',
                 'G_MW',
                 'battery_depth_of_discharge',
                 'battery_charge_efficiency',
@@ -359,8 +392,7 @@ class hpp_model:
                 ],
             promotes_outputs=[
                 'total_curtailment'
-            ]
-                )
+            ])
         
         model.add_subsystem(
             'wpp_cost',
@@ -375,9 +407,9 @@ class hpp_model:
                 N_time = N_time, 
             ),
             promotes_inputs=[
-                'Awpp',
-                'hh',
-                'd',
+                #'Awpp',
+                #'hh',
+                #'d',
                 'p_rated'])
         model.add_subsystem(
             'pvp_cost',
@@ -386,7 +418,7 @@ class hpp_model:
                 solar_hardware_installation_cost=sim_pars['solar_hardware_installation_cost'],
                 solar_fixed_onm_cost=sim_pars['solar_fixed_onm_cost'],
             ),
-            promotes_inputs=['*'])
+            promotes_inputs=['solar_MW'])
 
         model.add_subsystem(
             'battery_cost',
@@ -403,7 +435,7 @@ class hpp_model:
             ),
             promotes_inputs=[
                 'b_P',
-                'b_E',
+                #'b_E',
                 'battery_price_reduction_per_year'])
 
         model.add_subsystem(
@@ -413,7 +445,10 @@ class hpp_model:
                 hpp_grid_connection_cost=sim_pars['hpp_grid_connection_cost'],
                 land_cost=sim_pars['land_cost'],
             ),
-            promotes_inputs=['*'])
+            promotes_inputs=[
+                'G_MW',
+                #'Awpp',
+            ])
 
         model.add_subsystem(
             'finance', 
@@ -435,8 +470,26 @@ class hpp_model:
                               'OPEX'
                               ],
         )
-   
-
+        
+        
+        model.connect('inputs_converter.hh', 'abl.hh')
+        
+        model.connect('inputs_converter.hh', 'genericWT.hh')
+        model.connect('inputs_converter.d', 'genericWT.d')
+        
+        model.connect('inputs_converter.Awpp', 'genericWake.Awpp')
+        model.connect('inputs_converter.d', 'genericWake.d')
+        
+        model.connect('inputs_converter.Awpp', 'wpp_cost.Awpp')
+        model.connect('inputs_converter.hh', 'wpp_cost.hh')
+        model.connect('inputs_converter.d', 'wpp_cost.d')
+        
+        model.connect('inputs_converter.Awpp', 'shared_cost.Awpp')
+        
+        model.connect('inputs_converter.b_E', 'ems.b_E')
+        model.connect('inputs_converter.b_E', 'ems_long_term_operation.b_E')
+        model.connect('inputs_converter.b_E', 'battery_cost.b_E')              
+                      
         model.connect('genericWT.ws', 'genericWake.ws')
         model.connect('genericWT.pc', 'genericWake.pc')
         model.connect('genericWT.ct', 'genericWake.ct')
@@ -464,6 +517,8 @@ class hpp_model:
         model.connect('battery_degradation.ii_time','battery_cost.ii_time')
         model.connect('battery_degradation.SoH','battery_cost.SoH')
         
+        model.connect('pvp.Apvp', 'shared_cost.Apvp')
+        
         model.connect('wpp_cost.CAPEX_w', 'finance.CAPEX_w')
         model.connect('wpp_cost.OPEX_w', 'finance.OPEX_w')
 
@@ -479,7 +534,10 @@ class hpp_model:
         model.connect('ems_long_term_operation.hpp_t_with_deg', 'finance.hpp_t_with_deg')
         model.connect('ems_long_term_operation.penalty_t_with_deg', 'finance.penalty_t')
         
-        prob = om.Problem(model)
+        prob = om.Problem(
+            model,
+            reports=None
+        )
 
         prob.setup()        
         
@@ -529,8 +587,8 @@ class hpp_model:
         prob.set_val('p_rated', p_rated)
         prob.set_val('Nwt', Nwt)
         prob.set_val('Awpp', Awpp)
-        Apvp = solar_MW * self.sim_pars['land_use_per_solar_MW']
-        prob.set_val('Apvp', Apvp)
+        #Apvp = solar_MW * self.sim_pars['land_use_per_solar_MW']
+        #prob.set_val('Apvp', Apvp)
 
         prob.set_val('surface_tilt', surface_tilt)
         prob.set_val('surface_azimuth', surface_azimuth)

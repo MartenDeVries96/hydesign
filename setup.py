@@ -39,5 +39,9 @@ setup(name='hydesign',
       license='Proprietary',
       packages=find_packages(),
       package_data={
-          'hydesign': ['tests/test_files/sm.pkl',],},
+          'hydesign': [
+            'tests/test_files/sm.pkl',
+            'look_up_tables/*.nc'
+            ],},
+      include_package_data=True,
       zip_safe=True)
