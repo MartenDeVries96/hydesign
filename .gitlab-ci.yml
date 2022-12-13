@@ -24,3 +24,20 @@ test_hydesign_windows:
   - pytest --cov-report term-missing:skip-covered --cov=hydesign --cov-config .coveragerc
   tags:
   - ANMH_old
+
+# ===== DEPLOY hydesign docs=====
+pages:
+  stage:  
+    deploy
+  script:  
+  - pip install -e .
+  - cd docs; make html
+  - cd ../; mv docs/build/html public/
+  artifacts:
+    paths:
+    - public
+  only: 
+  - /^test_docdeploy.*/ 
+  - master
+  tags: 
+  - debian
