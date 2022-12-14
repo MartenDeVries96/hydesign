@@ -1,19 +1,25 @@
-WPP cost model
+Costs API
 ===================================
 
-.. inheritance-diagram:: hydesign.costs.wpp_cost
-    :parts: 1
 
-- `wpp_cost`_ 
-    
-    
-wpp_cost
-------------------
+.. automodule:: hydesign.costs
 
 
-.. autoclass:: hydesign.costs.wpp_cost
-    :members:
-    
-   
-    .. automethod:: __init__
-	
+.. autoclass:: wpp_cost
+	:members:
+	:special-members:
+
+
+.. autoclass:: pvp_cost
+	:members:
+	:special-members:
+
+
+.. autoclass:: battery_cost
+	:members:
+	:special-members:
+
+
+.. autoclass:: shared_cost
+	:members:
+	:special-members:

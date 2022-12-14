@@ -43,5 +43,34 @@ setup(name='hydesign',
             'tests/test_files/sm.pkl',
             'look_up_tables/*.nc'
             ],},
+      install_requires=[
+          'finitediff',
+          'numpy',
+          'pandas',
+          'scikit-learn',
+          'scipy',
+          'xarray',
+          'openmdao',
+          'smt',
+          'cplex',
+          'docplex',
+          'numpy-financial',
+          'pvlib',
+          'statsmodels',
+          'rainflow',
+          'pyyaml',],
+      extras_require={
+        'test': [
+            'pytest',],
+        'optional': [
+            'matplotlib',
+            'seaborn',
+            'jupyterlab',],
+        'docs': [
+            'pypandoc',
+            'sphinx',
+            'nbsphinx',
+            'nbconvert',
+            'sphinx_rtd_theme',],},
       include_package_data=True,
       zip_safe=True)

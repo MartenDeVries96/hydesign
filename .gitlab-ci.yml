@@ -5,9 +5,8 @@ test_hydesign:
   stage: 
     test
   script:
-  - source activate py37
-  - pip install -e .
-  - pytest
+  - pip install -e .[test]
+  - python -m pytest
   tags:
   - debian
 
@@ -30,7 +29,7 @@ pages:
   stage:  
     deploy
   script:  
-  - pip install -e .
+  - pip install -e .[docs] --upgrade
   - cd docs; make html
   - cd ../; mv docs/build/html public/
   artifacts:

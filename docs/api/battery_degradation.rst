@@ -1,19 +1,23 @@
-Battery degradation
+Battery degradation API
 ===================================
 
-.. inheritance-diagram:: hydesign.battery_degradation.battery_degradation
-    :parts: 1
 
-- `battery_degradation`_ 
-    
-    
-battery_degradation
-------------------
+.. automodule:: hydesign.battery_degradation
 
 
-.. autoclass:: hydesign.battery_degradation.battery_degradation
-    :members:
-    
-   
-    .. automethod:: __init__
-	
+.. autoclass:: battery_degradation
+	:members:
+	:special-members:
+
+
+.. autofunction:: battery_replacement
+
+
+.. autofunction:: degradation
+
+
+.. autofunction:: Linear_Degfun
+
+
+.. autofunction:: RFcount
+

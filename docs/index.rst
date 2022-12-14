@@ -38,7 +38,13 @@ Explanations of hydesign's core objects can be found in the following tutorials:
        
 	notebooks/Quickstart
 
+    .. toctree::
+        :maxdepth: 1
 	:caption: API Reference
             
         api/battery_degradation
         api/costs
+        api/EGO_surrogate_based_optimization
+        api/ems
+        api/finance
+    
