@@ -37,6 +37,6 @@ pages:
     - public
   only: 
   - /^test_docdeploy.*/ 
-  - master
+  - main
   tags: 
   - debian

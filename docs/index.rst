@@ -11,7 +11,7 @@ Source code repository and issue tracker:
 License:
     MIT_
 
-.. _MIT: https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/blob/master/LICENSE
+.. _MIT: https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/blob/main/LICENSE
 
 Getting Started
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
