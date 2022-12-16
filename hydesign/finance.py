@@ -152,7 +152,8 @@ class finance(om.ExplicitComponent):
         df['penalty_t'] = inputs['penalty_t']
         df['revenue'] = df['hpp_t'] * df['price_t'] - df['penalty_t']
         
-        df['i_year'] = np.hstack([np.array([ii]*N_time) for ii in range(int(np.ceil(life_h/N_time)))])[:life_h]
+        df['i_year'] = np.hstack([np.array([ii]*N_time) 
+                                  for ii in range(int(np.ceil(life_h/N_time)))])[:life_h]
 
         revenues = df.groupby('i_year').revenue.mean()*365*24
         CAPEX = inputs['CAPEX_w'] + inputs['CAPEX_s'] + \

@@ -102,16 +102,30 @@ def opt_sm(sm, mixint, x0, fmin=1e10):
     Function that optimizes the surrogate based on lower confidence bound predictions
     '''
 
+    # ndims = mixint.get_unfolded_dimension()
+    # res = optimize.minimize(
+    #     #fun = lambda x:  LCB(sm, x.reshape([1,ndims])),
+    #     fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin),
+    #     ## No jacobian for LCB. Only for actual sm evaluation
+    #     #fun = lambda x:  KB(sm, x.reshape([1,ndims])),
+    #     #jac = lambda x: np.stack([sm.predict_derivatives(
+    #     #    x.reshape([1,ndims]), kx=i) 
+    #     #    for i in range(ndims)] ).reshape([1,ndims]),
+    #     x0 = x0.reshape([1,ndims]),
+    #     method="SLSQP",
+    #     bounds=mixint.get_unfolded_xlimits(),
+    #     options={
+    #         "maxiter": 200,
+    #         'eps':1e-3,
+    #         'disp':False
+    #     },
+    # )
+    # return res.x.reshape([1,-1])
+    
     ndims = mixint.get_unfolded_dimension()
     res = optimize.minimize(
-        #fun = lambda x:  LCB(sm, x.reshape([1,ndims])),
-        fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin),
-        ## No jacobian for LCB. Only for actual sm evaluation
-        #fun = lambda x:  KB(sm, x.reshape([1,ndims])),
-        #jac = lambda x: np.stack([sm.predict_derivatives(
-        #    x.reshape([1,ndims]), kx=i) 
-        #    for i in range(ndims)] ).reshape([1,ndims]),
-        x0 = x0.reshape([1,ndims]),
+        fun = lambda x:  EI(sm, x, fmin=fmin),
+        x0 = x0,
         method="SLSQP",
         bounds=mixint.get_unfolded_xlimits(),
         options={
@@ -120,7 +134,7 @@ def opt_sm(sm, mixint, x0, fmin=1e10):
             'disp':False
         },
     )
-    return res.x.reshape([1,-1])
+    return res.x.reshape([1,-1])    
 
 def get_candiate_points(
     x, y, quantile=0.25, n_clusters=32 ): 
@@ -221,20 +235,32 @@ if __name__ == "__main__":
 
     # Required inputs
     # -----------------
-    longitude = 68.54220353096616
-    latitude = 23.54209921071357
-    altitude = 29.883557407411217 
-    # altitude = None #if not known
+    # name = 'Indian_site_good_solar'
+    # longitude = 68.54220353096616
+    # latitude = 23.54209921071357
+    # altitude = 29.883557407411217
+
+    # name = 'Indian_site_good_wind'
+    # longitude = 77.50022582725498
+    # latitude = 8.334293917013909
+    # altitude = 679.8034540123396
+
+    name = 'Indian_site_bad_solar_bad_wind'
+    longitude = 77.91687802708239
+    latitude = 17.292316213302755
+    altitude = 627.4246425926144
     
-    num_batteries = 2
-    ems_type = 'cplex'
+    num_batteries = 1 
+    ems_type = 'pyomo'
     opt_var = 'NPV_over_CAPEX'
-    work_dir = './results_C/'
-    n_procs = 3 # number of parallel process
-    input_ts_fn = './results_C/input_ts.csv',#None, # If None then it computes the weather
-    
+    work_dir = f'../examples/Indian_site/{name}/'
+    n_procs = 5 # number of parallel process
+    #input_ts_fn = './results_C/input_ts.csv'
+    input_ts_fn = None    
+    sim_pars_fn = '../examples/Indian_site/hpp_pars.yml'
+
     if input_ts_fn == None: # If None then it computes the weather
-        price_fn = 'elec_price_t_new.csv' # If input_ts_fn is given it should include Price column.
+        price_fn = '../examples/Indian_site/elec_price_t_new.csv' # If input_ts_fn is given it should include Price column.
     else:
         price_fn = None
         
@@ -259,7 +285,7 @@ if __name__ == "__main__":
             num_batteries = num_batteries,
             ems_type = ems_type,
             work_dir = work_dir,
-            sim_pars_fn = 'hpp_pars.yml',
+            sim_pars_fn = sim_pars_fn,
             input_ts_fn = input_ts_fn,
             price_fn = price_fn,
     )
@@ -357,8 +383,8 @@ if __name__ == "__main__":
             return np.array(
                 opt_sign*hpp_m.evaluate(*x[0,:])[op_var_index])
         except:
-            print(f'x={x}')
-    
+            print( 'x=['+', '.join(str(x).split())+']' )
+ 
     class ParallelEvaluator(Evaluator):
         """
         Implement Evaluator interface using multiprocessing Pool object (Python 3 only).

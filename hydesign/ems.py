@@ -14,8 +14,6 @@ import yaml
 
 import xarray as xr
 from docplex.mp.model import Model
-import pyomo.environ as pyo
-
 
 class ems(om.ExplicitComponent):
     """Energy management optimization model"""
@@ -136,7 +134,7 @@ class ems(om.ExplicitComponent):
             ems_WSB = ems_rule_based
         
         # Avoid running an expensive optimization based ems if there is no battery
-        if ( b_P == 0 ) or (b_E == 0):
+        if ( b_P <= 1e-2 ) or (b_E == 0):
             ems_WSB = ems_rule_based
     
         battery_depth_of_discharge = inputs['battery_depth_of_discharge']
@@ -404,8 +402,72 @@ def expand_to_lifetime(x, life_h = 25*365*24):
     return np.tile(x,N_repeats)[:life_h]
     
 
-
 def ems_cplex(
+    wind_ts,
+    solar_ts,
+    price_ts,
+    P_batt_MW,
+    E_batt_MWh_t,
+    hpp_grid_connection,
+    battery_depth_of_discharge,
+    charge_efficiency,
+    peak_hr_quantile = 0.9,
+    cost_of_battery_P_fluct_in_peak_price_ratio = 0.5, #[0, 0.8]. For higher values might cause errors
+    n_full_power_hours_expected_per_day_at_peak_price = 3,    
+    batch_size = 2*24,
+):
+    
+    # split in batches, ussually a week
+    batches_all = split_in_batch(list(range(len(wind_ts))), batch_size)
+    # Make sure the last batch is not smaller than the others
+    # instead append it to the previous last one
+    batches = batches_all[:-1]
+    batches[-1] = batches_all[-2]+batches_all[-1]
+    
+    # allocate vars
+    P_HPP_ts = np.array([]) 
+    P_curtailment_ts = np.array([])
+    P_charge_discharge_ts = np.array([]) 
+    E_SOC_ts = np.array([])
+    penalty_ts = np.array([])
+    
+    #print('\n\nEMS solved with pyomo\n')
+    for ib, batch in enumerate(batches):
+        wind_ts_sel = wind_ts.iloc[batch]
+        solar_ts_sel = solar_ts.iloc[batch]
+        price_ts_sel = price_ts.iloc[batch]
+        E_batt_MWh_t_sel = E_batt_MWh_t.iloc[batch]
+        
+        #print(f'batch {ib+1} out of {len(batches)}')
+        P_HPP_ts_batch, P_curtailment_ts_batch, P_charge_discharge_ts_batch,\
+        E_SOC_ts_batch, penalty_batch = ems_cplex_parts(
+            wind_ts = wind_ts_sel,
+            solar_ts = solar_ts_sel,
+            price_ts = price_ts_sel,
+            P_batt_MW = P_batt_MW,
+            E_batt_MWh_t = E_batt_MWh_t_sel,
+            hpp_grid_connection = hpp_grid_connection,
+            battery_depth_of_discharge = battery_depth_of_discharge,
+            charge_efficiency = charge_efficiency,
+            peak_hr_quantile = peak_hr_quantile,
+            cost_of_battery_P_fluct_in_peak_price_ratio = cost_of_battery_P_fluct_in_peak_price_ratio,
+            n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price,
+        )
+        
+        P_HPP_ts = np.append(P_HPP_ts, P_HPP_ts_batch)
+        P_curtailment_ts = np.append(
+            P_curtailment_ts, P_curtailment_ts_batch)
+        P_charge_discharge_ts = np.append(
+            P_charge_discharge_ts,P_charge_discharge_ts_batch)
+        E_SOC_ts = np.append(E_SOC_ts, E_SOC_ts_batch)
+        penalty_ts = np.append(penalty_ts, penalty_batch)
+        
+    E_SOC_ts = np.append(E_SOC_ts, E_SOC_ts[0])
+    
+    return P_HPP_ts, P_curtailment_ts, P_charge_discharge_ts, E_SOC_ts, penalty_ts
+
+
+def ems_cplex_parts(
     wind_ts,
     solar_ts,
     price_ts,
@@ -433,21 +495,22 @@ def ems_cplex(
     price_ts_to_max.iloc[:-1] = 0.5*price_ts_to_max.iloc[:-1].values + 0.5*price_ts_to_max.iloc[1:].values
         
     mdl = Model(name='EMS')
-    mdl.context.cplex_parameters.threads = 31
-    mdl.context.cplex_parameters.emphasis.mip = 1 # CPLEX parameter pg 87 Emphasize feasibility over optimality
+    mdl.context.cplex_parameters.threads = 1
+    # CPLEX parameter pg 87 Emphasize feasibility over optimality
+    # mdl.context.cplex_parameters.emphasis.mip = 1 
     #mdl.context.cplex_parameters.timelimit = 1e-2
     #mdl.context.cplex_parameters.mip.limits.strongit = 3
     #mdl.context.cplex_parameters.mip.strategy.search = 1 #  branch and cut strategy; disable dynamic
     
-    cpx = mdl.get_cplex()
-    cpx.parameters.mip.tolerances.integrality.set(0)
-    cpx.parameters.simplex.tolerances.markowitz.set(0.999)
-    cpx.parameters.simplex.tolerances.optimality.set(1e-6)#1e-9)
-    cpx.parameters.simplex.tolerances.feasibility.set(1e-5)#1e-9)
-    cpx.parameters.mip.pool.intensity.set(2)
-    cpx.parameters.mip.pool.absgap.set(1e75)
-    cpx.parameters.mip.pool.relgap.set(1e75)
-    cpx.parameters.mip.limits.populate.set(50)    
+    #cpx = mdl.get_cplex()
+    # cpx.parameters.mip.tolerances.integrality.set(0)
+    # cpx.parameters.simplex.tolerances.markowitz.set(0.999)
+    # cpx.parameters.simplex.tolerances.optimality.set(1e-6)#1e-9)
+    # cpx.parameters.simplex.tolerances.feasibility.set(1e-5)#1e-9)
+    # cpx.parameters.mip.pool.intensity.set(2)
+    # cpx.parameters.mip.pool.absgap.set(1e75)
+    # cpx.parameters.mip.pool.relgap.set(1e75)
+    # cpx.parameters.mip.limits.populate.set(50)    
     
     time = price_ts.index
     # time set with an additional time slot for the last soc
@@ -459,14 +522,13 @@ def ems_cplex(
         name='HPP power output')
     P_curtailment_t = mdl.continuous_var_dict(
         time, lb=0, 
-        #ub=np.maximum(0,wind_ts.max()+solar_ts.max()-hpp_grid_connection),
         name='Curtailment')
 
     # Power charge/discharge from battery
     # Lower bound as large negative number in order to allow the variable to
     # have either positive or negative values
     P_charge_discharge = mdl.continuous_var_dict(
-        time, lb=-P_batt_MW, ub=P_batt_MW, 
+        time, lb=-P_batt_MW/charge_efficiency, ub=P_batt_MW*charge_efficiency, 
         name='Battery power')
     # Battery energy level, energy stored
     E_SOC_t = mdl.continuous_var_dict(
@@ -509,6 +571,9 @@ def ems_cplex(
     # SOC at the end of the year has to be equal to SOC at the beginning of the year
     mdl.add_constraint( E_SOC_t[SOCtime[-1]] == 0.5 * E_batt_MWh_t[time[0]] )
 
+    # pircewise linear representation of charge vs dischrage effciency 
+    f2 = mdl.piecewise(charge_efficiency,[(0,0)],1/charge_efficiency)
+    
     for t in time:
         # Time index for successive time step
         tt = t + pd.Timedelta('1hour')
@@ -520,12 +585,13 @@ def ems_cplex(
             P_HPP_t[t] == wind_ts[t] +
             solar_ts[t] +
             - P_curtailment_t[t] +
-            P_charge_discharge[t]/charge_efficiency)
+            P_charge_discharge[t])
         
         # charge/dischrage equation
         mdl.add_constraint(
             E_SOC_t[tt] == E_SOC_t[t] - 
-            P_charge_discharge[t] * dt)
+            f2(P_charge_discharge[t]) * dt)
+        
         # Constraining battery energy level to minimum battery level
         mdl.add_constraint(
             E_SOC_t[t] >= (1 - battery_depth_of_discharge) * E_batt_MWh_t[t]
@@ -535,8 +601,9 @@ def ems_cplex(
         mdl.add_constraint(E_SOC_t[t] <= E_batt_MWh_t[t])
 
         # Battery charge/discharge within its power rating
-        mdl.add_constraint(P_charge_discharge[t] <= P_batt_MW)
-        mdl.add_constraint(P_charge_discharge[t] >= -P_batt_MW)
+        mdl.add_constraint(P_charge_discharge[t] <= P_batt_MW*charge_efficiency)
+        mdl.add_constraint(P_charge_discharge[t] >= -P_batt_MW/charge_efficiency)
+        
 
     # Solving the problem
     sol = mdl.solve(
@@ -737,6 +804,8 @@ def ems_Wind_Solar_Battery_Pyomo_parts(
     HPP total OPEX
     Levelised cost of energy
     """
+    
+    import pyomo.environ as pyo
 
     # extract parameters into the variable space
     #globals().update(self.__dict__)
@@ -922,8 +991,8 @@ def ems_Wind_Solar_Battery_Pyomo_parts(
 
     opt = pyo.SolverFactory('glpk')
     #opt.options['tmlim'] = 60
-    #results = opt.solve(model, tee=False)
-    #results.write()
+    results = opt.solve(model, tee=True)
+    results.write()
     #print('model.penalty[0]()',model.penalty[0]() )
     #print('\n\n')
 

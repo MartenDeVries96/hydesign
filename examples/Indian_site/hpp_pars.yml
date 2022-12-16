@@ -37,6 +37,8 @@ tracking: 'No' # 'single_axis'  #
 battery_energy_cost: 90_000  # [Euro/MWh]
 battery_power_cost: 32_000    # Power conversion system cost [Euro/MW]
 # in the excel its in MWh and not labeled as other costs
+#battery_energy_cost: 45_000  # [Euro/MWh]
+#battery_power_cost: 16_000    # Power conversion system cost [Euro/MW]
 #to fix 2 below, they are unchanged
 battery_BOP_installation_commissioning_cost: 36_000 # Electric BalanceOfPlant, instal+commission cost [Euro/MW]
 battery_control_system_cost: 9_000  # Grid management control system cost[Euro/MW]
@@ -45,9 +47,9 @@ battery_energy_onm_cost: 0 # No costs if we model battery replacement
 # EMS and Degradation parameters
 battery_depth_of_discharge: 0.9 # 1 - Minimum energy level in the battery
 battery_charge_efficiency: 0.98  # Charge efficiency for Lithium-ion
-battery_price_reduction_per_year: 0.05 # Compound battery price reduction per year
+battery_price_reduction_per_year: 0.05 # Battery price reduction per year
 peak_hr_quantile: 0.9 # An hour of peak price has prices above this quantile
-n_steps_in_LoH: 20 # No. battery degradation levels for discretization of lifetime operation
+n_steps_in_LoH: 20 # Number of battery degradation levels for discretization of lifetime operation
 min_LoH: 0.7 # Minimum energy storage capacity in percent for the storage to be replaced
 
 # Penalty is defined as: Number of peak hours of full load expected per day.

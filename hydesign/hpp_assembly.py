@@ -24,148 +24,7 @@ from hydesign.costs import wpp_cost, pvp_cost, battery_cost, shared_cost
 from hydesign.finance import finance
 from hydesign.look_up_tables import lut_filepath
 
-class inputs_converter(om.ExplicitComponent):
-    """Hybrid power plant inputs converter"""
 
-    def __init__(self):
-        super().__init__()
-
-    def setup(self):        
-        self.add_input(
-            'clearance',
-            desc="Turbine's clearance: hub height - rotor radius",
-            units='m')
-        self.add_input(
-            'sp',
-            desc="Turbine's specific power",
-            units='W/(m**2)')
-        self.add_input(
-            'p_rated',
-            desc="Turbine's rated power",
-            units='MW')
-        self.add_discrete_input(
-            'Nwt',
-            val=1,
-            desc="Number of wind turbines")
-        self.add_input(
-            'wind_MW_per_km2',
-            desc="Wind plant installation density",
-            units='MW/(Km**2)')
-        self.add_input(
-            'wind_MW_per_km2',
-            desc="Wind plant installation density",
-            units='MW/(Km**2)')
-        
-        self.add_input(
-            'surface_tilt',
-            val=20,
-            desc="Solar PV tilt angle in degs")
-        self.add_input(
-            'surface_azimuth',
-            val=180,
-            desc="Solar PV azimuth angle in degs, 180=south facing")
-        self.add_input(
-            'solar_MW',
-            val=1,
-            desc="Solar PV plant installed capacity",
-            units='MW')
-        
-        self.add_input(
-            'b_P',
-            desc="Battery power capacity",
-            units='MW')
-        self.add_input(
-            'b_E_h',
-            desc="Battery energy storage capacity in hours of full power")
-        self.add_input(
-            'cost_of_battery_P_fluct_in_peak_price_ratio',
-            desc="cost of battery power fluctuations computed as a peak price ratio.")
-        
-        # ----------------------------------------------------------------------------------------------------------
-        self.add_output(
-            'hh',
-            desc="Turbine's hub height",
-            units='m')
-        self.add_output(
-            'd',
-            desc="Turbine's diameter",
-            units='m')
-        self.add_output(
-            'p_rated',
-            desc="Turbine's rated power",
-            units='MW')
-        self.add_discrete_output(
-            'Nwt',
-            val=1,
-            desc="Number of wind turbines")
-        self.add_output(
-            'Awpp',
-            desc="Wind plant area of land use",
-            units='Km**2')
-        
-        self.add_output(
-            'surface_tilt',
-            val=20,
-            desc="Solar PV tilt angle in degs")
-        self.add_output(
-            'surface_azimuth',
-            val=180,
-            desc="Solar PV azimuth angle in degs, 180=south facing")
-        self.add_output(
-            'solar_MW',
-            val=1,
-            desc="Solar PV plant installed capacity",
-            units='MW')
-        
-        self.add_output(
-            'b_P',
-            desc="Battery power capacity",
-            units='MW')
-        self.add_output(
-            'b_E',
-            desc="Battery energy storage capacity")
-        self.add_output(
-            'cost_of_battery_P_fluct_in_peak_price_ratio',
-            desc="cost of battery power fluctuations computed as a peak price ratio.")
-    
-    def compute(self, inputs, outputs):
-        
-        clearance = inputs['clearance']
-        sp = inputs['sp']
-        p_rated = inputs['p_rated']
-        wind_MW_per_km2 = inputs['wind_MW_per_km2']
-        wind_MW_per_km2 = inputs['wind_MW_per_km2']
-        surface_tilt = inputs['surface_tilt']
-        surface_azimuth = inputs['surface_azimuth']
-        solar_MW = inputs['solar_MW']
-        b_P = inputs['b_P']
-        b_E_h = inputs['b_E_h']
-        cost_of_battery_P_fluct_in_peak_price_ratio = inputs['cost_of_battery_P_fluct_in_peak_price_ratio']
-        
-        hh = (d/2)+clearance
-        d = get_rotor_d(p_rated*1e6/sp)
-        
-        wind_MW = Nwt * p_rated
-        Awpp = wind_MW / wind_MW_per_km2 
-        Awpp = Awpp + 1e-3*(Awpp==0)
-        
-        b_E = b_E_h * b_P
-        
-        outputs['hh'] = hh
-        outputs['d'] = d
-        outputs['p_rated'] = p_rated
-        outputs['Nwt'] = Nwt
-        outputs['Awpp'] = Awpp
-
-        outputs['surface_tilt'] = surface_tilt
-        outputs['surface_azimuth'] = surface_azimuth
-        outputs['solar_MW'] = solar_MW
-
-        outputs['b_P'] = b_P
-        outputs['b_E'] = b_E
-        outputs['cost_of_battery_P_fluct_in_peak_price_ratio'] = cost_of_battery_P_fluct_in_peak_price_ratio
-        
-        
 class hpp_model:
     """HPP design evaluator"""
 
@@ -276,32 +135,13 @@ class hpp_model:
             N_ws = len(ds.ws.values)
         
         model = om.Group()
-
-        model.add_subsystem(
-            'inputs_converter',
-            inputs_converter(),
-            promotes_inputs=[
-                'clearance',
-                'sp',
-                'p_rated',
-                'Nwt',
-                'wind_MW_per_km2',
-                'wind_MW_per_km2',
-                'surface_tilt',
-                'surface_azimuth',
-                'solar_MW',
-                'b_P',
-                'b_E_h',
-                'cost_of_battery_P_fluct_in_peak_price_ratio',
-            ],
-        )
         
         model.add_subsystem(
             'abl', 
             ABL(
                 weather_fn=input_ts_fn, 
                 N_time=N_time),
-            #promotes_inputs=['hh']
+            promotes_inputs=['hh']
             )
         model.add_subsystem(
             'genericWT', 
@@ -309,13 +149,10 @@ class hpp_model:
                 genWT_fn=genWT_fn,
                 N_ws = N_ws),
             promotes_inputs=[
+               'hh',
+               'd',
                'p_rated',
             ])
-            #promotes_inputs=[
-            #    'hh',
-            #    'd',
-            #    'p_rated',
-            #])
         
         model.add_subsystem(
             'genericWake', 
@@ -324,13 +161,10 @@ class hpp_model:
                 N_ws = N_ws),
             promotes_inputs=[
                 'Nwt',
+                'Awpp',
+                'd',
                 'p_rated',
-            ])
-            # promotes_inputs=['Nwt',
-            #                  'Awpp',
-            #                  'd',
-            #                  'p_rated',
-            #                 ])
+                ])
         
         model.add_subsystem(
             'wpp', 
@@ -366,7 +200,7 @@ class hpp_model:
             promotes_inputs=[
                 'price_t',
                 'b_P',
-                #'b_E',
+                'b_E',
                 'G_MW',
                 'battery_depth_of_discharge',
                 'battery_charge_efficiency',
@@ -402,7 +236,7 @@ class hpp_model:
                 life_h = life_h),
             promotes_inputs=[
                 'b_P',
-                #'b_E',
+                'b_E',
                 'G_MW',
                 'battery_depth_of_discharge',
                 'battery_charge_efficiency',
@@ -426,9 +260,10 @@ class hpp_model:
                 N_time = N_time, 
             ),
             promotes_inputs=[
-                #'Awpp',
-                #'hh',
-                #'d',
+                'Nwt',
+                'Awpp',
+                'hh',
+                'd',
                 'p_rated'])
         model.add_subsystem(
             'pvp_cost',
@@ -454,7 +289,7 @@ class hpp_model:
             ),
             promotes_inputs=[
                 'b_P',
-                #'b_E',
+                'b_E',
                 'battery_price_reduction_per_year'])
 
         model.add_subsystem(
@@ -466,7 +301,7 @@ class hpp_model:
             ),
             promotes_inputs=[
                 'G_MW',
-                #'Awpp',
+                'Awpp',
             ])
 
         model.add_subsystem(
@@ -489,25 +324,7 @@ class hpp_model:
                               'OPEX'
                               ],
         )
-        
-        
-        model.connect('inputs_converter.hh', 'abl.hh')
-        
-        model.connect('inputs_converter.hh', 'genericWT.hh')
-        model.connect('inputs_converter.d', 'genericWT.d')
-        
-        model.connect('inputs_converter.Awpp', 'genericWake.Awpp')
-        model.connect('inputs_converter.d', 'genericWake.d')
-        
-        model.connect('inputs_converter.Awpp', 'wpp_cost.Awpp')
-        model.connect('inputs_converter.hh', 'wpp_cost.hh')
-        model.connect('inputs_converter.d', 'wpp_cost.d')
-        
-        model.connect('inputs_converter.Awpp', 'shared_cost.Awpp')
-        
-        model.connect('inputs_converter.b_E', 'ems.b_E')
-        model.connect('inputs_converter.b_E', 'ems_long_term_operation.b_E')
-        model.connect('inputs_converter.b_E', 'battery_cost.b_E')              
+                  
                       
         model.connect('genericWT.ws', 'genericWake.ws')
         model.connect('genericWT.pc', 'genericWake.pc')
@@ -550,6 +367,7 @@ class hpp_model:
         model.connect('shared_cost.CAPEX_sh', 'finance.CAPEX_el')
         model.connect('shared_cost.OPEX_sh', 'finance.OPEX_el')
 
+        model.connect('ems.price_t_ext', 'finance.price_t_ext')
         model.connect('ems_long_term_operation.hpp_t_with_deg', 'finance.hpp_t_with_deg')
         model.connect('ems_long_term_operation.penalty_t_with_deg', 'finance.penalty_t')
         
@@ -580,6 +398,7 @@ class hpp_model:
         self.sim_pars = sim_pars
         self.prob = prob
         self.num_batteries = num_batteries
+    
     
     def evaluate(
         self,
@@ -634,7 +453,7 @@ class hpp_model:
         hh = (d/2)+clearance
         wind_MW = Nwt * p_rated
         Awpp = wind_MW / wind_MW_per_km2 
-        Awpp = Awpp + 1e-3*(Awpp==0)
+        #Awpp = Awpp + 1e-10*(Awpp==0)
         b_E = b_E_h * b_P
         
         # pass design variables        
@@ -657,6 +476,46 @@ class hpp_model:
         
         prob.run_model()
         
+        self.prob = prob
+        
+        self.list_out_vars = [
+            'NPV_over_CAPEX',
+            'NPV [MEuro]',
+            'IRR',
+            'LCOE [Euro/MWh]',
+            'CAPEX [MEuro]',
+            'OPEX [MEuro]',
+            'penalty lifetime [MEuro]',
+            'AEP',
+            'GUF',
+            'grid [MW]',
+            'wind [MW]',
+            'solar [MW]',
+            'Battery Energy [MWh]',
+            'Battery Power [MW]',
+            'Total curtailment [GWh]',
+            'Awpp [km2]',
+            #'Apvp [km2]',
+            'Rotor diam [m]',
+            'Hub height [m]',
+            'Number_of_batteries',
+            ]
+
+        self.list_vars = [
+            'clearance [m]', 
+            'sp [m2/W]', 
+            'p_rated [MW]', 
+            'Nwt', 
+            'wind_MW_per_km2 [MW/km2]', 
+            'solar_MW [MW]', 
+            'surface_tilt [deg]', 
+            'surface_azimuth [deg]', 
+            'DC_AC_ratio', 
+            'b_P [MW]', 
+            'b_E_h [h]',
+            'cost_of_battery_P_fluct_in_peak_price_ratio'
+            ]   
+        
         return np.hstack([
             prob['NPV_over_CAPEX'], 
             prob['NPV']/1e6,
@@ -665,6 +524,7 @@ class hpp_model:
             prob['CAPEX']/1e6,
             prob['OPEX']/1e6,
             prob['penalty_lifetime']/1e6,
+            prob['mean_AEP'],
             # Grid Utilization factor
             prob['mean_AEP']/(self.sim_pars['G_MW']*365*24),
             self.sim_pars['G_MW'],
@@ -678,6 +538,19 @@ class hpp_model:
             hh,
             self.num_batteries
             ])
+    
+    def print_design(self, x_opt, outs):
+        print() 
+        print('Design:') 
+        print('---------------') 
+
+        for i_v, var in enumerate(self.list_vars):
+                print(f'{var}: {x_opt[i_v]:.3f}')
+        print()    
+        print()
+        for i_v, var in enumerate(self.list_out_vars):
+            print(f'{var}: {outs[i_v]:.3f}')
+        print()
     
 # -----------------------------------------------------------------------
 # Auxiliar functions for ems modelling

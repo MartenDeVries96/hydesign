@@ -152,7 +152,7 @@ class genericWake_surrogate(om.ExplicitComponent):
         
         A = get_rotor_area(d)
         sp = p_rated*1e6/A
-        wind_MW_per_km2 = Nwt*p_rated/Awpp
+        wind_MW_per_km2 = Nwt*p_rated/(Awpp + 1e-10*(Awpp==0))
         
         genWake_sm = xr.open_dataset(self.genWake_fn).interp(
             sp=sp, 

@@ -142,7 +142,7 @@ class wpp_cost(om.ExplicitComponent):
             turbine_class = 1,
             blade_has_carbon = False,
             blade_number = 3    ,
-            machine_rating = p_rated_ref/1e3,
+            machine_rating = p_rated_ref*1e3, #kW
             hub_height = hh_ref,
             bearing_number = 2,
             crane = True,  
@@ -154,7 +154,7 @@ class wpp_cost(om.ExplicitComponent):
             turbine_class = 1,
             blade_has_carbon = False,
             blade_number = 3    ,
-            machine_rating = p_rated/1e3,
+            machine_rating = p_rated*1e3, #kW
             hub_height = hh,
             bearing_number = 2,
             crane = True,  
@@ -172,7 +172,7 @@ class wpp_cost(om.ExplicitComponent):
         outputs['CAPEX_w'] = scale*(
             wind_turbine_cost + \
             wind_civil_works_cost) * (Nwt * p_rated)
-        outputs['OPEX_w'] = wind_fixed_onm_cost * (Nwt * p_rated) + mean_aep_wind * wind_variable_onm_cost * p_rated/p_rated_ref
+        outputs['OPEX_w'] = wind_fixed_onm_cost * (Nwt * p_rated) + mean_aep_wind * wind_variable_onm_cost * p_rated_ref/p_rated
 
 
 
