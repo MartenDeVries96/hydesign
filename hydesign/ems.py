@@ -1292,8 +1292,12 @@ def operation_solar_batt_deg(
             b_t_less_sol[i] = np.minimum(b_t[i] + P_loss[i],0)
     # Initialize the SoC
     b_E_SOC_t_sat = np.append(b_E , b_E_SOC_t.copy() )
+    
     if b_E_SOC_0 == None:
-        b_E_SOC_t_sat[0]= b_E_SOC_t[0]
+        try:
+            b_E_SOC_t_sat[0]= b_E_SOC_t[0]
+        except:
+            raise('len(b_E_SOC_t):', len(b_E_SOC_t))
     else:
         b_E_SOC_t_sat[0]= b_E_SOC_0
     # Update the SoC

@@ -116,7 +116,10 @@ class hpp_model:
                 era5_ghi_zarr = era5_ghi_zarr,
                 year_start = year_start,
                 year_end = year_end)
-            price = pd.read_csv(price_fn, index_col=0, parse_dates=True)
+            if type(price_fn) is str:
+                price = pd.read_csv(price_fn, index_col=0, parse_dates=True)
+            else:
+                price = price_fn
             try:
                 weather['Price'] = price.loc[weather.index].bfill()
             except:
@@ -182,7 +185,7 @@ class hpp_model:
                 latitude = latitude,
                 longitude = longitude,
                 altitude = altitude,
-                tracking='single_axis'
+                tracking = sim_pars['tracking']
                ),
             promotes_inputs=[
                 'surface_tilt',
@@ -399,6 +402,44 @@ class hpp_model:
         self.prob = prob
         self.num_batteries = num_batteries
     
+        self.list_out_vars = [
+            'NPV_over_CAPEX',
+            'NPV [MEuro]',
+            'IRR',
+            'LCOE [Euro/MWh]',
+            'CAPEX [MEuro]',
+            'OPEX [MEuro]',
+            'penalty lifetime [MEuro]',
+            'AEP',
+            'GUF',
+            'grid [MW]',
+            'wind [MW]',
+            'solar [MW]',
+            'Battery Energy [MWh]',
+            'Battery Power [MW]',
+            'Total curtailment [GWh]',
+            'Awpp [km2]',
+            #'Apvp [km2]',
+            'Rotor diam [m]',
+            'Hub height [m]',
+            'Number_of_batteries',
+            ]
+
+        self.list_vars = [
+            'clearance [m]', 
+            'sp [m2/W]', 
+            'p_rated [MW]', 
+            'Nwt', 
+            'wind_MW_per_km2 [MW/km2]', 
+            'solar_MW [MW]', 
+            'surface_tilt [deg]', 
+            'surface_azimuth [deg]', 
+            'DC_AC_ratio', 
+            'b_P [MW]', 
+            'b_E_h [h]',
+            'cost_of_battery_P_fluct_in_peak_price_ratio'
+            ]   
+    
     
     def evaluate(
         self,
@@ -477,44 +518,6 @@ class hpp_model:
         prob.run_model()
         
         self.prob = prob
-        
-        self.list_out_vars = [
-            'NPV_over_CAPEX',
-            'NPV [MEuro]',
-            'IRR',
-            'LCOE [Euro/MWh]',
-            'CAPEX [MEuro]',
-            'OPEX [MEuro]',
-            'penalty lifetime [MEuro]',
-            'AEP',
-            'GUF',
-            'grid [MW]',
-            'wind [MW]',
-            'solar [MW]',
-            'Battery Energy [MWh]',
-            'Battery Power [MW]',
-            'Total curtailment [GWh]',
-            'Awpp [km2]',
-            #'Apvp [km2]',
-            'Rotor diam [m]',
-            'Hub height [m]',
-            'Number_of_batteries',
-            ]
-
-        self.list_vars = [
-            'clearance [m]', 
-            'sp [m2/W]', 
-            'p_rated [MW]', 
-            'Nwt', 
-            'wind_MW_per_km2 [MW/km2]', 
-            'solar_MW [MW]', 
-            'surface_tilt [deg]', 
-            'surface_azimuth [deg]', 
-            'DC_AC_ratio', 
-            'b_P [MW]', 
-            'b_E_h [h]',
-            'cost_of_battery_P_fluct_in_peak_price_ratio'
-            ]   
         
         return np.hstack([
             prob['NPV_over_CAPEX'], 

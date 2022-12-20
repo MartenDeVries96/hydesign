@@ -1,0 +1,49 @@
+France_good_solar:
+  latitude: 44.422011
+  longitude: 4.229736
+  altitude: 204
+  price_col: FR_R
+  
+France_good_wind:
+  longitude: 48.744116
+  latitude: -0.864258
+  altitude: 302
+  price_col: FR_R
+  
+France_bad_solar_n_wind:
+  longitude: 47.428087
+  latitude: 2.167969
+  altitude: 140
+  price_col: FR_R
+  
+# --------------------------------------  
+Germany_bad_solar_n_wind:
+  latitude: 48.848628
+  longitude: 12.82196
+  altitude: 312
+  price_col: DE_ME
+  
+Germany_good_wind:
+  longitude: 53.287111
+  latitude: 7.873535
+  altitude: 5
+  price_col: DE_NW
+
+Germany_bad_solar_n_wind:
+  latitude: 49.310798
+  longitude: 10.766602
+  altitude: 442
+  price_col: DE_ME
+
+# --------------------------------------  
+Denmark_good_solar:
+  latitude: 55.39776
+  longitude: 11.813965
+  altitude: 42
+  price_col: DK_E
+  
+Denmark_good_wind:
+  latitude: 56.227322
+  longitude: 8.594398
+  altitude: 85
+  price_col: DK_W

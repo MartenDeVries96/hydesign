@@ -130,7 +130,8 @@ class genericWake_surrogate(om.ExplicitComponent):
         self.N_ws = N_ws
 
     def setup(self):
-        self.add_discrete_input(
+        #self.add_discrete_input(
+        self.add_input(
             'Nwt',
             val=1,
             desc="Number of wind turbines")
@@ -169,10 +170,11 @@ class genericWake_surrogate(om.ExplicitComponent):
     def setup_partials(self):
         self.declare_partials('*', '*', method='fd')
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):#, discrete_inputs, discrete_outputs):
 
         ws = inputs['ws']
-        Nwt = discrete_inputs['Nwt']
+        Nwt = inputs['Nwt']
+        #Nwt = discrete_inputs['Nwt']
         Awpp = inputs['Awpp']  # in km2
         d = inputs['d']  # in m
         p_rated = inputs['p_rated']

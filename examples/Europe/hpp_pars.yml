@@ -2,7 +2,7 @@
 # HPP Global
 # --------------------------------------------------------------------------------------------
 G_MW: 300 # Grid capacity
-year: '1990' # Single representative year
+year: '2012' # Single representative year
 N_life: 25
 
 # --------------------------------------------------------------------------------------------
@@ -53,10 +53,10 @@ n_steps_in_LoH: 20 # Number of battery degradation levels for discretization of 
 min_LoH: 0.7 # Minimum energy storage capacity in percent for the storage to be replaced
 
 # Penalty is defined as: Number of peak hours of full load expected per day.
-# n_full_power_hours_expected_per_day_at_peak_price: 0 
+n_full_power_hours_expected_per_day_at_peak_price: 0 
 
 # Indian case Penalty has expected hours at 0.85*3= 2.55
-n_full_power_hours_expected_per_day_at_peak_price: 2.55
+# n_full_power_hours_expected_per_day_at_peak_price: 2.55
 
 # --------------------------------------------------------------------------------------------
 # Shared costs

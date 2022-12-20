@@ -62,9 +62,11 @@ class wpp_cost(om.ExplicitComponent):
         self.N_time= N_time
 
     def setup(self):
-        self.add_discrete_input('Nwt',
-                                val=1,
-                                desc="Number of wind turbines")
+        #self.add_discrete_input(
+        self.add_input(
+            'Nwt',
+            val=1,
+            desc="Number of wind turbines")
         self.add_input('Awpp',
                        desc="Land use area of WPP",
                        units='km**2')
@@ -91,7 +93,7 @@ class wpp_cost(om.ExplicitComponent):
     def setup_partials(self):
         self.declare_partials('*', '*', method='fd')
 
-    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+    def compute(self, inputs, outputs):#, discrete_inputs, discrete_outputs):
         """ Computing the CAPEX and OPEX of the wind power plant.
 
         Parameters
@@ -109,7 +111,8 @@ class wpp_cost(om.ExplicitComponent):
         OPEX_w : OPEX of the wind power plant [Eur/year]
         """
         
-        Nwt = discrete_inputs['Nwt']
+        #Nwt = discrete_inputs['Nwt']
+        Nwt = inputs['Nwt']
         Awpp = inputs['Awpp']
         hh = inputs['hh']
         d = inputs['d']
