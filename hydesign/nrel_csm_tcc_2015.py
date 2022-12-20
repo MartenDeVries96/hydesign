@@ -17,7 +17,20 @@ from hydesign.turbine_costsse_2015 import Turbine_CostsSE_2015
 
 # --------------------------------------------------------------------
 class BladeMass(om.ExplicitComponent):
-    
+    """ Calculating the blade mass
+
+    Parameters
+    ----------
+    rotor_diameter : rotor diameter of the machine [m]
+    turbine_class : turbine class
+    blade_has_carbon : does the blade have carbon?
+    blade_mass_coeff : blade mass coefficient
+    blade_user_exp : optional user-entered exp for the blade mass equation
+
+    Returns
+    -------
+    blade_mass : Blade component mass [kg]
+    """
     def setup(self):
         
         # Variables
@@ -58,7 +71,18 @@ class BladeMass(om.ExplicitComponent):
 
   # --------------------------------------------------------------------
 class HubMass(om.ExplicitComponent):
+    """ Calculating the hub mass
 
+    Parameters
+    ----------
+    blade_mass : Component mass [kg]
+    hub_mass_coeff : hub mass coefficient
+    hub_mass_intercept : hub mass intercept
+
+    Returns
+    -------
+    hub_mass : Hub component cost [kg]
+    """
     def setup(self):
         
         # Variables
@@ -80,7 +104,21 @@ class HubMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class PitchSystemMass(om.ExplicitComponent):
-    
+    """ Calculating the pitch system mass
+
+    Parameters
+    ----------
+    blade_mass : Component mass [kg]
+    blade_number : number of rotor blades
+    pitch_bearing_mass_coeff : pitch bearing mass coefficient
+    pitch_bearing_mass_intercept : pitch bearing mass intercept
+    bearing_housing_percent : bearing housing percentage
+    mass_sys_offset : mass system offset
+
+    Returns
+    -------
+    pitch_system_mass : pitch system mass [kg]
+    """    
     def setup(self):
         
         self.add_input('blade_mass', 0.0, units='kg', desc= 'component mass [kg]')
@@ -108,7 +146,18 @@ class PitchSystemMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class SpinnerMass(om.ExplicitComponent):
+    """ Calculating the spinner mass
 
+    Parameters
+    ----------
+    rotor_diameter : rotor diameter of the machine [m]
+    spinner_mass_coeff : spinner mass coefficient
+    spinner_mass_intercept : spinner mass intercept
+
+    Returns
+    -------
+    spinner_mass : spinner system mass [kg]
+    """   
     def setup(self):
     
         # Variables
@@ -130,7 +179,20 @@ class SpinnerMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class LowSpeedShaftMass(om.ExplicitComponent):
+    """ Calculating low speed shaft mass
 
+    Parameters
+    ----------
+    blade_mass : mass for a single wind turbine blade [kg]
+    machine_rating : machine rating
+    lss_mass_coeff : lss mass coefficient
+    lss_mass_exp : lss mass exp
+    lss_mass_intercept : lss mass intercept
+
+    Returns
+    -------
+    lss_mass : low speed shaft mass [kg]
+    """
     def setup(self):
         
         # Variables
@@ -156,7 +218,18 @@ class LowSpeedShaftMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class BearingMass(om.ExplicitComponent):
+    """ Calculating bearing mass
 
+    Parameters
+    ----------
+    rotor_diameter : rotor diameter of the machine [m]
+    bearing_mass_coeff : bearing mass coefficient
+    bearing_mass_exp : bearing mass exp
+
+    Returns
+    -------
+    main_bearing_mass : main bearing mass [kg]
+    """
     def setup(self):
 
         # Variables
@@ -178,7 +251,18 @@ class BearingMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class GearboxMass(om.ExplicitComponent):
+    """ Calculating gearbox mass
 
+    Parameters
+    ----------
+    rotor_torque : rotor torque
+    gearbox_mass_coeff : gearbox mass coefficient
+    gearbox_mass_exp : gearbox mass exp
+
+    Returns
+    -------
+    gearbox_mass : gearbox mass [kg]
+    """
     def __init__(self):
   
         super(GearboxMass, self).__init__()
@@ -202,7 +286,17 @@ class GearboxMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class HighSpeedSideMass(om.ExplicitComponent):
+    """ Calculating high speed shaft mass
 
+    Parameters
+    ----------
+    machine_rating : machine rating
+    hss_mass_coeff : NREL CSM hss equation; removing intercept since it is negligible
+
+    Returns
+    -------
+    hss_mass : high speed shaft mass [kg]
+    """
     def __init__(self):
       
         super(HighSpeedSideMass, self).__init__()
@@ -224,7 +318,18 @@ class HighSpeedSideMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class GeneratorMass(om.ExplicitComponent):
+    """ Calculating generator mass
 
+    Parameters
+    ----------
+    machine_rating : machine rating [kw]
+    generator_mass_coeff : A in the generator mass equation: A*rated_power + B
+    generator_mass_intercept : B in the generator mass equation: A*rated_power + B
+
+    Returns
+    -------
+    generator_mass : generator mass [kg]
+    """
     def __init__(self):
       
         
@@ -249,7 +354,17 @@ class GeneratorMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class BedplateMass(om.ExplicitComponent):
+    """ Calculating bedplate mass
 
+    Parameters
+    ----------
+    rotor_diameter : rotor diameter of the machine [m]
+    bedplate_mass_exp : exp in the bedplate mass equation: rotor_diameter^exp
+
+    Returns
+    -------
+    bedplate_mass : bedplate mass [kg]
+    """
     def setup(self):
 
         # Variables
@@ -269,7 +384,18 @@ class BedplateMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class YawSystemMass(om.ExplicitComponent):
-  
+    """ Calculating yaw system mass
+
+    Parameters
+    ----------
+    rotor_diameter : rotor diameter of the machine [m]
+    yaw_mass_coeff : A in the yaw mass equation: A*rotor_diameter^exp
+    yaw_mass_exp : exp in the yaw mass equation: A*rotor_diameter^exp
+
+    Returns
+    -------
+    yaw_mass : yaw system mass [kg]
+    """  
     def setup(self):
 
         # Variables
@@ -293,7 +419,17 @@ class YawSystemMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class HydraulicCoolingMass(om.ExplicitComponent):
-    
+    """ Calculating hydraulic cooling system mass
+
+    Parameters
+    ----------
+    machine_rating : machine_rating [kw]
+    hvac_mass_coeff : hvac linear coeff
+
+    Returns
+    -------
+    hvac_mass : hydraulic cooling mass [kg]
+    """     
     def __init__(self):
     
         super(HydraulicCoolingMass, self).__init__()
@@ -315,7 +451,18 @@ class HydraulicCoolingMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class NacelleCoverMass(om.ExplicitComponent):
+    """ Calculating nacelle cover mass
 
+    Parameters
+    ----------
+    machine_rating : machine_rating [kw]
+    cover_mass_coeff : A in the spinner mass equation: A*rotor_diameter + B
+    cover_mass_intercept : B in the spinner mass equation: A*rotor_diameter + B
+
+    Returns
+    -------
+    cover_mass : nacelle cover mass [kg]
+    """
     def __init__(self):
     
         super(NacelleCoverMass, self).__init__()
@@ -342,7 +489,19 @@ class NacelleCoverMass(om.ExplicitComponent):
 # --------------------------------------------------------------------
 class OtherMainframeMass(om.ExplicitComponent):
     # nacelle platforms, service crane, base hardware
-    
+    """ Calculating other main frame components mass
+
+    Parameters
+    ----------
+    bedplate_mass : bedplate mass [kg]
+    platforms_mass_coeff : platform mass coefficient
+    crane : flag for presence of onboard crane
+    crane_weight : weight of onboard crane
+
+    Returns
+    -------
+    other_mass : other main frame components mass [kg]
+    """    
     def __init__(self):
     
         super(OtherMainframeMass, self).__init__()
@@ -377,7 +536,18 @@ class OtherMainframeMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class TransformerMass(om.ExplicitComponent):
+    """ Calculating transformer mass
 
+    Parameters
+    ----------
+    machine_rating : machine rating [kw]
+    transformer_mass_coeff : A in the transformer mass equation: A*rated_power + B
+    transformer_mass_intercept : B in the transformer mass equation: A*rated_power + B
+
+    Returns
+    -------
+    transformer_mass : transformer mass [kg]
+    """ 
     def __init__(self):
     
         super(TransformerMass, self).__init__()
@@ -401,7 +571,18 @@ class TransformerMass(om.ExplicitComponent):
 
 # --------------------------------------------------------------------
 class TowerMass(om.ExplicitComponent):
-  
+    """ Calculating tower mass
+
+    Parameters
+    ----------
+    hub_height : hub height of wind turbine above ground / sea level
+    tower_mass_coeff : A in the tower mass equation: A*hub_height^B
+    tower_mass_exp : B in the tower mass equation: A*hub_height^B
+
+    Returns
+    -------
+    tower_mass : tower mass [kg]
+    """   
     def setup(self):
 
         # Variables
@@ -424,7 +605,36 @@ class TowerMass(om.ExplicitComponent):
 # --------------------------------------------------------------------
 # Turbine mass adder
 class turbine_mass_adder(om.ExplicitComponent):
-    
+    """ Calculating turbine mass
+
+    Parameters
+    ----------
+    blade_mass : blade mass
+    hub_mass : hub mass
+    pitch_system_mass : pitch system mass
+    spinner_mass : spinner mass
+    lss_mass : lss mass
+    main_bearing_mass : main bearing mass
+    gearbox_mass : gearbox mass
+    hss_mass : hss mass
+    generator_mass : genreator mass
+    bedplate_mass : bedplate mass
+    yaw_mass : yaw mass
+    hvac_mass : hvac mass
+    cover_mass : cover mass
+    other_mass : other componenents mass
+    transformer_mass : transformer mass
+    tower_mass : tower mass
+    blade_number : blade number
+    bearing_number : bearing number
+
+    Returns
+    -------
+    hub_system_mass : hub system mass [kg]
+    rotor_mass : rotor mass [kg]
+    nacelle_mass : nacelle mass [kg]
+    turbine_mass : turbine mass [kg]
+    """     
     def setup(self):
     
         # Inputs

@@ -18,7 +18,19 @@ from docplex.mp.model import Model
 import rainflow
 
 class battery_degradation(om.ExplicitComponent):
-    """Energy management optimization model"""
+    """
+    Battery degradation model to predict the degradation of the battery throughout the lifetime of the plant
+
+    Parameters
+    ----------
+    b_E_SOC_t : battery energy SOC time series
+    min_LoH : minimum level of health before death of battery
+
+    Returns
+    -------
+    ii_time : indices on the lifetime timeseries on which Hydesign operates in at constant battery health
+    SoH : battery state of health at discretization levels
+    """
 
     def __init__(
         self, 
@@ -95,13 +107,34 @@ class battery_degradation(om.ExplicitComponent):
 def battery_replacement(
     rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, 
     min_LoH, n_steps_in_LoH, num_batteries):
+    """
+    Battery degradation in steps and battery replacement
+
+    Parameters
+    ----------
+    rf_DoD: depth of discharge after rainflow counting
+    rf_SoC: mean SoC after rainflow counting
+    rf_count: half or full cycle after rainflow counting, ethier 0.5 or 1
+    rf_i_start: time index for the cycles [in hours]
+    avr_tem: average temperature in the location, yearly or more long. default value is 20
+    min_LoH: minimum level of health before death of battery
+    n_steps_in_LoH: number of discretizations in battery state of health
+    num_batteries: number of battery replacements
+
+    Returns
+    -------
+    LoC: battery level of capacity
+    ind_q: time indices for constant health levels
+    ind_q_last: time index for battery replacement
+    """
+
     #rf_DoD: depth of discharge after rainflow counting
     #rf_SoC: mean SoC after rainflow counting
     #rf_count: half or full cycle after rainflow counting, ethier 0.5 or 1
     #rf_i_start: time index for the cycles [in hours]
     #avr_tem: average temperature in the location, yearly or more long. default value is 20
 
-    #LoC: loss of capacity
+    #LoC: loss of capacity: LoC = 1 - LoH 
     
     LoC, LoC1, LLoC  = degradation(rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, LLoC_0=0)
 
@@ -146,6 +179,23 @@ def battery_replacement(
     return LoC, ind_q, ind_q_last
 
 def degradation(rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, LLoC_0=0):
+    """
+    Calculating the new level of capacity of the battery
+
+    Parameters
+    ----------
+    rf_DoD: depth of discharge after rainflow counting
+    rf_SoC: mean SoC after rainflow counting
+    rf_count: half or full cycle after rainflow counting, ethier 0.5 or 1
+    rf_i_start: time index for the cycles [in hours]
+    avr_tem: average temperature in the location, yearly or more long. default value is 20
+
+    Returns
+    -------
+    LoC: battery level of capacity
+    LoC1: 
+    LLoC: 
+    """
     #rf_DoD: depth of discharge after rainflow counting
     #rf_SoC: mean SoC after rainflow counting
     #rf_count: half or full cycle after rainflow counting, ethier 0.5 or 1
@@ -173,7 +223,22 @@ def degradation(rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, LLoC_0=0):
     return LoC, LoC1, LLoC 
 
 def Linear_Degfun(rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem): 
+    """
+    Linear degradation function
 
+    Parameters
+    ----------
+    rf_DoD: depth of discharge after rainflow counting
+    rf_SoC: mean SoC after rainflow counting
+    rf_count: half or full cycle after rainflow counting, ethier 0.5 or 1
+    rf_i_start: time index for the cycles [in hours]
+    avr_tem: average temperature in the location, yearly or more long. default value is 20
+
+    Returns
+    -------
+    np.array(LLoC_hist): 
+
+    """
     #LLoC:linear estimation of LoC
     #S_DoD:stress model of depth of discharge
     #S_time:stress model of time duration
@@ -220,6 +285,20 @@ def RFcount(SoC):
                        for rng, mean, count, i_start, i_end  in rainflow.extract_cycles(SoC)]),
         columns=['rng_', 'mean_', 'count_', 'i_start', 'i_end']
     )
+    """
+    Rainflow count
+
+    Parameters
+    ----------
+    SoC : state of charge time series
+
+    Returns
+    -------
+    rf_DoD: depth of discharge after rainflow counting
+    rf_SoC: mean SoC after rainflow counting
+    rf_count: half or full cycle after rainflow counting, ethier 0.5 or 1
+    rf_i_start: time index for the cycles [in hours]
+    """
     
     rf_df = rf_df.sort_values(by='i_start')
     return rf_df.rng_.values, rf_df.mean_.values, rf_df.count_.values, rf_df.i_start.astype(int).values

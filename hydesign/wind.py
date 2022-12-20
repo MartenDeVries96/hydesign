@@ -12,7 +12,7 @@ import openmdao.api as om
 
 class genericWT_surrogate(om.ExplicitComponent):
     """
-    Metamodel of WT
+    Metamodel of the wind turbine.
 
     It relies on a look-up table (genWT_fn) of the WT performance for different 
     specific powers (sp=p_rated/rotor_area [W/m2]). 
@@ -20,6 +20,19 @@ class genericWT_surrogate(om.ExplicitComponent):
     WT performance is: 
         (1) power vs hub height ws curve 
         (2) thurst coefficient vs hub heigh ws curve.
+
+    Parameters
+    ----------
+    Turbine's hub height : the hub height of the wind turbine
+    Turbine's diameter : the diameter of the blade
+    Turbine's rated power : the rated power of the wind turbine
+
+    Returns
+    -------
+    Turbine's ws : wind speed points in the power curve
+    Turbine's power curve : power curve of the wind turbine 
+    Turbine's ct curve : ct curve of the wind turbine
+    
     """
 
     def __init__(
@@ -90,6 +103,20 @@ class genericWake_surrogate(om.ExplicitComponent):
         (2) Number of wind turbines
         (3) Wind farm installation density (wind_MW_per_km2) in [MW/km2]
     
+    Parameters
+    ----------
+    Nwt : Number of wind turbines
+    Awpp : Land use area of the wind power plant
+    d : Turbine's diameter
+    p_rated : Turbine's rated power
+    ws : wind speed points in the power curve
+    pc : Turbine's power curve
+    ct : Turbine's Ct coefficient curve
+
+    Returns
+    -------
+    pcw : Wake affected power curve
+
     """
     def __init__(
         self, 
@@ -169,7 +196,20 @@ class genericWake_surrogate(om.ExplicitComponent):
 
 class wpp(om.ExplicitComponent):
     """
-    wind power plant model
+    Wind power plant model
+
+    Provides the wind power time series using wake affected power curve and the wind speed time series.
+
+    Parameters
+    ----------
+    ws : Turbine's ws
+    pcw : Wake affected power curve
+    wst : wind speed time series at the hub height
+
+    Returns
+    -------
+    wind_t : power time series at the hub height
+
     """
 
     def __init__(

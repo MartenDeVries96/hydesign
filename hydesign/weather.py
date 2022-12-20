@@ -18,7 +18,18 @@ from statsmodels.distributions.empirical_distribution import ECDF, monotone_fn_i
 
 
 class ABL(om.ExplicitComponent):
-    """Atmospheric boundary layer WS interpolation and gradient"""
+    """Atmospheric boundary layer WS interpolation and gradient
+    
+    Parameters
+    ----------
+    hh : Turbine's hub height
+
+    Returns
+    -------
+    wst : wind speed time series at the hub height
+
+    """
+
 
     def __init__(self, weather_fn, N_time):
         super().__init__()
@@ -62,7 +73,7 @@ class ABL(om.ExplicitComponent):
 # -----------------------------------------------------------------------
 
 def interpolate_WS_loglog(weather, hh):
-    '''
+    """
     Auxiliar functions for WS, shear and WS gradient interpolation.
 
     Parameters
@@ -72,14 +83,14 @@ def interpolate_WS_loglog(weather, hh):
         The columns must be named WS_hh (for example  WS_1, WS_10, WS_50).
     
     hh: float
-        Eleveation (of a wind turbine) to interpolate WS, shear and dWS_dz
+        Elevation (of a wind turbine) to interpolate WS, shear and dWS_dz
 
     Returns
     --------
     ds_interpolated: xr.Dataset
         Dataset that contains the interpolated time-series: WS, shear and dWS_dz
 
-    '''
+    """
     ws_vars = [var for var in weather.columns if 'WS_' in var]
     heights = np.array([float(var.split('_')[-1]) for var in ws_vars])
 
@@ -125,6 +136,22 @@ def extract_weather_for_HPP(
     year_start = '1990',
     year_end = '1990',
     ):
+    """
+    Extracting weather data using the era5 datasets, by specifying the location coordinates.
+
+    Parameters
+    ----------
+    longitude: location longitude
+    latitude: location latitude
+    altitude: location altitude
+    year_start: first year of the lifetime
+    year_end: last year of the last time
+
+    Returns
+    --------
+    weather: weather time series including wind speed, wind direction, temperature, ghi, dni, dhi
+
+    """
     
     # Extract ERA5
     ds = xr.open_zarr(era5_zarr,consolidated=False)
@@ -247,16 +274,16 @@ def select_years(
     weeks_per_season_per_year=1,
     vars_extract_ratio=[],
 ):
-    '''
+    """
     Method to select a number of weeks per season per year from a time series df
     To each variable a isoprobabilistic trasnformation is applied in order to
-    force the sample distribution be the same as the long term fistribution.
+    force the sample distribution to be the same as the long term distribution.
     Correlations are kept in rank-sense.
 
     For the variables in vars_extract_ratio, the iso-probabilistic transformation is not
     applied directly but a ratio is extracted to be applied. Usefull for applying multiple
     long term correction factors to correct wind at multiple heights.
-    '''
+    """
     df_ratio = df.copy()
     columns = df_ratio.columns
     df_ratio['year'] = df_ratio.index.year
