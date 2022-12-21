@@ -1,6 +1,7 @@
+import argparse
 import glob
 import os
-
+import yaml
 import time
 import numpy as np
 from numpy import newaxis as na
@@ -11,6 +12,8 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from scipy import optimize
 from scipy.stats import norm
+
+from multiprocessing import Pool
 
 import smt
 from smt.applications.ego import EGO, Evaluator
@@ -69,14 +72,27 @@ def get_sm(xdoe, ydoe, mixint=None):
     sm = KPLSK(
         corr="squar_exp",
         poly='linear',
-        theta0=[1e0],
-        theta_bounds=[1e-6, 1e3],
+        theta0=[1e-1],
+        theta_bounds=[1e-7, 1e4],
         n_start=20,
         print_global=False)
-
+    
+    # xlimits = mixint._xlimits
+    # xtypes = mixint._xtypes
+    # sm = MixedIntegerSurrogateModel(
+    #     categorical_kernel=smt.applications.mixed_integer.GOWER,
+    #     xtypes=xtypes,
+    #     xlimits=xlimits,
+    #     surrogate=KRG(
+    #         theta0=[1e-1], 
+    #         corr="squar_exp", 
+    #         n_start=20,
+    #         print_global=False,
+    #     ),
+    # )
     sm.set_training_values(xdoe, ydoe)
     sm.train()
-
+    
     return sm
 
 
@@ -90,7 +106,6 @@ def get_sm_pred(sm, mixint, seed=0, npred=1e3, fmin=1e10):
     sampling = mixint.build_sampling_method(Random)
     #sampling = mixint.build_sampling_method(
     #    LHS, criterion="maximin", random_state=int(seed))
-
     xpred = sampling(npred)    
     #ypred_LB = LCB(sm=sm, point=xpred)
     ypred_LB = EI(sm=sm, point=xpred, fmin=fmin)
@@ -101,31 +116,10 @@ def opt_sm(sm, mixint, x0, fmin=1e10):
     '''
     Function that optimizes the surrogate based on lower confidence bound predictions
     '''
-
-    # ndims = mixint.get_unfolded_dimension()
-    # res = optimize.minimize(
-    #     #fun = lambda x:  LCB(sm, x.reshape([1,ndims])),
-    #     fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin),
-    #     ## No jacobian for LCB. Only for actual sm evaluation
-    #     #fun = lambda x:  KB(sm, x.reshape([1,ndims])),
-    #     #jac = lambda x: np.stack([sm.predict_derivatives(
-    #     #    x.reshape([1,ndims]), kx=i) 
-    #     #    for i in range(ndims)] ).reshape([1,ndims]),
-    #     x0 = x0.reshape([1,ndims]),
-    #     method="SLSQP",
-    #     bounds=mixint.get_unfolded_xlimits(),
-    #     options={
-    #         "maxiter": 200,
-    #         'eps':1e-3,
-    #         'disp':False
-    #     },
-    # )
-    # return res.x.reshape([1,-1])
-    
     ndims = mixint.get_unfolded_dimension()
     res = optimize.minimize(
-        fun = lambda x:  EI(sm, x, fmin=fmin),
-        x0 = x0,
+        fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin)[0,0],
+        x0 = x0.reshape([1,ndims]),
         method="SLSQP",
         bounds=mixint.get_unfolded_xlimits(),
         options={
@@ -134,7 +128,7 @@ def opt_sm(sm, mixint, x0, fmin=1e10):
             'disp':False
         },
     )
-    return res.x.reshape([1,-1])    
+    return res.x.reshape([1,-1]) 
 
 def get_candiate_points(
     x, y, quantile=0.25, n_clusters=32 ): 
@@ -227,56 +221,67 @@ class ParallelRunner():
             ).reshape(-1,1)    
         return results
 
-
-
+    
 if __name__ == "__main__":
-
-    from multiprocessing import Pool    
-
-    # Required inputs
-    # -----------------
-    # name = 'Indian_site_good_solar'
-    # longitude = 68.54220353096616
-    # latitude = 23.54209921071357
-    # altitude = 29.883557407411217
-
-    # name = 'Indian_site_good_wind'
-    # longitude = 77.50022582725498
-    # latitude = 8.334293917013909
-    # altitude = 679.8034540123396
-
-    name = 'Indian_site_bad_solar_bad_wind'
-    longitude = 77.91687802708239
-    latitude = 17.292316213302755
-    altitude = 627.4246425926144
     
-    num_batteries = 1 
-    ems_type = 'pyomo'
-    opt_var = 'NPV_over_CAPEX'
-    work_dir = f'../examples/Indian_site/{name}/'
-    n_procs = 5 # number of parallel process
-    #input_ts_fn = './results_C/input_ts.csv'
-    input_ts_fn = None    
-    sim_pars_fn = '../examples/Indian_site/hpp_pars.yml'
-
-    if input_ts_fn == None: # If None then it computes the weather
-        price_fn = '../examples/Indian_site/elec_price_t_new.csv' # If input_ts_fn is given it should include Price column.
+    # -----------------------------------------------
+    # Arguments from the outer .sh (shell) script
+    # -----------------------------------------------
+    parser=argparse.ArgumentParser()
+    parser.add_argument('--case', help='India or Europe')
+    parser.add_argument('--site', help='name of site')
+    parser.add_argument('--opt_var', help='objective variable for sizing optimization')
+    args=parser.parse_args()
+    case = str(args.case)
+    name = str(args.site)
+    opt_var = str(args.opt_var)
+    
+    if case == 'India':
+        work_dir = f'../examples/Indian_site/{name}/'
+        input_ts_fn = f'{work_dir}input_ts.csv'
+        sim_pars_fn = '../examples/Indian_site/hpp_pars.yml'
+        site_fn = '../examples/Indian_site/example_sites.yml'
+    elif case == 'Europe':
+        work_dir = f'../examples/Europe/{name}/'
+        input_ts_fn = f'{work_dir}input_ts.csv'
+        sim_pars_fn = '../examples/Europe/hpp_pars.yml'
+        site_fn = '../examples/Europe/example_sites.yml'
     else:
-        price_fn = None
+        raise(f'Not a valid case: {case}')
         
-    # paralel EGO parameters
-    n_doe = 42
-    n_seed = 0
-    max_iter = 20
-    tol = 1e-6
-    min_conv_iter = 3
+    with open(site_fn) as file:
+        sites  = yaml.load(file, Loader=yaml.FullLoader)
+    try:
+        longitude = sites[name]['longitude']
+        latitude = sites[name]['latitude']
+        altitude = sites[name]['altitude']
+    except:
+        raise(f'{name} not in {list(sites.keys())}')
+        
+    # -----------------
+    # INPUTS
+    # -----------------
     
+
+    num_batteries = 1
+    ems_type = 'cplex'
+    
+    # paralel EGO parameters
+    n_procs = 31 # number of parallel process. Max number of processors - 1.
+    #n_doe = n_procs*6
+    n_doe = n_procs*12
+    n_seed = 0
+    max_iter = 10
+    tol = 1e-6
+    min_conv_iter = 10
+    
+    # -----------------
     # HPP model
     # -----------------
     print()
     print('Hydesign hybrid power plant sizing and design:')
     print('\n\n\n')
-    print('Sizing a HPP plant at:')
+    print(f'Sizing a HPP plant at {name}:')
     print()
     hpp_m = hpp_model(
             latitude,
@@ -287,51 +292,14 @@ if __name__ == "__main__":
             work_dir = work_dir,
             sim_pars_fn = sim_pars_fn,
             input_ts_fn = input_ts_fn,
-            price_fn = price_fn,
     )
     print('\n\n')
     
     # Lists of all possible outputs, inputs to the hpp model
     # -------------------------------------------------------
-    list_out_vars = ['NPV_over_CAPEX',
-                 'NPV [MEuro]',
-                 'IRR',
-                 'LCOE [Euro/MWh]',
-                 'CAPEX [MEuro]',
-                 'OPEX [MEuro]',
-                 'penalty lifetime [MEuro]',
-                 'GUF',
-                 'grid [MW]',
-                 'wind [MW]',
-                 'solar [MW]',
-                 #'surface_tilt [deg]',
-                 #'surface_azimuth [deg]',
-                 #'DC_AC_ratio',
-                 'Battery Energy [MWh]',
-                 'Battery Power [MW]',
-                 'Total curtailment [GWh]',
-                 'Awpp [km2]',
-                 #'Apvp [km2]',
-                 'Rotor diam [m]',
-                 'Hub height [m]',
-                 'Number_of_batteries',
-                ]
-    
+    list_vars = hpp_m.list_vars
+    list_out_vars = hpp_m.list_out_vars
     list_minimize = ['LCOE [Euro/MWh]']
-
-    list_vars = ['clearance [m]', 
-                 'sp [m2/W]', 
-                 'p_rated [MW]', 
-                 'Nwt', 
-                 'wind_MW_per_km2 [MW/km2]', 
-                 'solar_MW [MW]', 
-                 'surface_tilt [deg]', 
-                 'surface_azimuth [deg]', 
-                 'DC_AC_ratio', 
-                 'b_P [MW]', 
-                 'b_E_h [h]',
-                 'cost_of_battery_P_fluct_in_peak_price_ratio'
-                ]
     
     # Get index of output var to optimize
     op_var_index = list_out_vars.index(opt_var)
@@ -357,7 +325,7 @@ if __name__ == "__main__":
         #p_rated
         [1, 10],
         #Nwt
-        [0, 300],
+        [0, 100],
         #wind_MW_per_km2
         [5, 9],
         #solar_MW
@@ -369,17 +337,22 @@ if __name__ == "__main__":
         #DC_AC_ratio
         [1, 2.0],
         #b_P in MW
-        [0, 300],
+        [0, 100],
         #b_E_h in h
         [1, 10],
-        #cost_of_battery_P_fluct_in_peak_price_ratio: limits battery deggradation in EMS optimization
+        #cost_of_battery_P_fluct_in_peak_price_ratio
         [0, 20],
-        ])   
+        ])    
+    
+    # Scale design variables
+    scaler = MinMaxScaler()
+    scaler.fit(xlimits.T)
     
     # Create a parallel evaluator of the model
     # -------------------------------------------------------
     def fun(x): 
         try:
+            #x = scaler.inverse_transform(x)
             return np.array(
                 opt_sign*hpp_m.evaluate(*x[0,:])[op_var_index])
         except:
@@ -412,29 +385,26 @@ if __name__ == "__main__":
     # -------------------------------------------------------        
     start_total = time.time()
     
-    # Scale design variables
-    scaler = MinMaxScaler()
-    scaler.fit(xlimits.T)
-    
     # LHS intial doe
     mixint = MixedIntegerContext(xtypes, xlimits)
     sampling = mixint.build_sampling_method(
-       LHS, criterion="ese", random_state=n_seed)
+      LHS, criterion="ese", random_state=n_seed)
     xdoe = sampling(n_doe)
 
     # Evaluate model at initial doe
     start = time.time()
     ydoe = ParallelEvaluator(
         n_procs = n_procs).run(fun=fun,x=xdoe)    
+    
     lapse = np.round((time.time() - start)/60, 2)
     print(f'Initial {xdoe.shape[0]} simulations took {lapse} minutes\n')
     
-    
-    # Initialize iterative optimization
+        # Initialize iterative optimization
     itr = 0
     error = 1e10
     conv_iter = 0
     yopt = ydoe[[np.argmin(ydoe)],:]
+    yold = np.copy(yopt)
     xold = None
     while itr < max_iter:
         # Iteration
@@ -475,14 +445,16 @@ if __name__ == "__main__":
         print(f'New {xnew.shape[0]} simulations took {lapse} minutes')
         
         # optimize the sm starting on the cluster based candidates 
-        def fun_opt(x): return opt_sm(sm, mixint, x, fmin=yopt[0,0])
+        def fun_opt(x): 
+            return opt_sm(sm, mixint, x, fmin=yopt[0,0])
         with Pool(n_procs) as p:
             xopt = np.vstack(
-                    p.map(fun_opt, [xnew[ii,:] 
+                    p.map(fun_opt, [xnew[[ii],:] 
                     for ii in range(xnew.shape[0])] ) 
                 )
-        xopt = smt.applications.mixed_integer.cast_to_discrete_values(
-            xtypes, xopt)
+            
+        xopt = np.array([mixint.cast_to_mixed_integer(xopt[i,:]) 
+                         for i in range(xopt.shape[0])]).reshape(xopt.shape)
         xopt, _ = drop_duplicates(xopt,np.zeros_like(xopt))
 
         # run model at all surrogate optimal points
@@ -496,7 +468,8 @@ if __name__ == "__main__":
         # update the db of model evaluations, xdoe and ydoe
         xnew, ynew = concat_to_existing(xnew,ynew, xopt,yopt)
         xdoe_upd, ydoe_upd = concat_to_existing(xdoe,ydoe, xnew,ynew)
-          
+        xdoe_upd, ydoe_upd = drop_duplicates(xdoe_upd, ydoe_upd)
+        
         # Drop yopt if it is not better than best design seen
         if np.min(yopt) > np.min(ydoe):
             xopt = xdoe[[np.argmin(ydoe)],:]
@@ -504,12 +477,10 @@ if __name__ == "__main__":
         else:
             xopt = xopt[[np.argmin(yopt)],:]
             yopt = yopt[[np.argmin(yopt)],:]
-
+        
         if itr > 0:
-            error = np.linalg.norm(
-               scaler.transform( np.atleast_2d(np.array(xopt)) ) +
-               - scaler.transform( np.atleast_2d(np.array(xold)) )
-            )
+            error = float(1 - yopt/yold)
+            print(f'  rel_yopt_change = {error:.2E}')
 
         xdoe = xdoe_upd
         ydoe = ydoe_upd
@@ -522,15 +493,12 @@ if __name__ == "__main__":
 
         if (error < tol):
             conv_iter += 1
-            #print(f'     |delta_xopt| = {error:.2E} < {tol:.4E}\n')
             if (conv_iter >= min_conv_iter):
                 print(f'Surrogate based optimization is converged.')
-                print(f'     |delta_xopt| = {error:.2E}\n') 
                 break
         else:
             conv_iter = 0
-            #print(f'     |delta_xopt| = {error:.2E}\n') 
-
+    
     # Re-Evaluate the last design to get all outputs
     outs = hpp_m.evaluate(*xopt[0,:])
     yopt = np.array(opt_sign*outs[[op_var_index]])[:,na]
@@ -549,5 +517,4 @@ if __name__ == "__main__":
 
     design_df['opt time [min]'] = lapse
 
-    design_df.to_csv(f'{work_dir}design_df.csv')
-
+    design_df.to_csv(f'{work_dir}design_df_{opt_var}.csv')

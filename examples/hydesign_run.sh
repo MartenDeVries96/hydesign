@@ -4,8 +4,8 @@
 #SBATCH --error=output_hydesign_%J.log
 
 # #SBATCH --partition=rome
-#SBATCH --partition=workq 
-# #SBATCH --partition=windq 
+# #SBATCH --partition=workq 
+#SBATCH --partition=windq 
 # #SBATCH --partition=windfatq
 
 #SBATCH --ntasks-per-core 1 
@@ -31,7 +31,15 @@ echo -----------------------------------------------------------------
 # Set environment
 source /home/jumu/miniconda3/bin/activate
 conda activate hydesign
-python /home/jumu/hydesign/hydesign/EGO_surrogate_based_optimization.py --case India --site 
+# python /home/jumu/hydesign/hydesign/EGO_surrogate_based_optimization.py --case "India" --site "Indian_site_bad_solar_bad_wind" --opt_var "NPV_over_CAPEX"
+
+# Examples of other runs
+# ----------------------
+python /home/jumu/hydesign/hydesign/EGO_surrogate_based_optimization.py --case "India" --site "Indian_site_bad_solar_bad_wind" --opt_var "LCOE [Euro/MWh]"
+
+# python /home/jumu/hydesign/hydesign/EGO_surrogate_based_optimization.py --case "Europe" --site "Denmark_good_solar" --opt_var "NPV_over_CAPEX"
+# python /home/jumu/hydesign/hydesign/EGO_surrogate_based_optimization.py --case "Europe" --site "Denmark_good_solar" --opt_var "LCOE [Euro/MWh]"
+
 
 # Example usage:
 # --------------
