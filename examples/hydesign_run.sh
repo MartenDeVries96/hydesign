@@ -29,9 +29,9 @@ echo Sophia job identifier: $SLURM_JOBID
 echo -----------------------------------------------------------------
 
 # Set environment
-source /groups/INP/miniconda3/bin/activate
-conda activate HyDesign_openmdao_dev
-python EGO_surrogate_based_optimization.py
+source /home/jumu/miniconda3/bin/activate
+conda activate hydesign
+python /home/jumu/hydesign/hydesign/EGO_surrogate_based_optimization.py --case India --site 
 
 # Example usage:
 # --------------
