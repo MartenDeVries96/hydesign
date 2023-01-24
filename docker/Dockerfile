@@ -46,4 +46,7 @@ RUN /opt/conda/envs/py37/bin/pip install nbsphinx --upgrade
 RUN /opt/conda/envs/py37/bin/pip install nbconvert --upgrade
 RUN /opt/conda/envs/py37/bin/pip install sphinx_rtd_theme
 
+RUN /opt/conda/envs/py37/bin/pip uninstall -y h5py
+RUN /opt/conda/envs/py37/bin/pip install --no-cache-dir h5py
+
 RUN /opt/conda/envs/py37/bin/ipython kernel install --name "python3" --user
