@@ -30,15 +30,14 @@ Explanations of hydesign's core objects can be found in the following tutorials:
 	:caption: Contents
     
         installation
-        notebooks/Overview  
                
     .. toctree::
         :maxdepth: 1
 	:caption: Tutorials
        
 	notebooks/Quickstart
-	notebooks/hpp_evaluation
-	notebooks/ems_battery_degradation
+	notebooks/Advanced_hpp_model
+    notebooks/hpp_sizing
 
     .. toctree::
         :maxdepth: 1
