@@ -179,7 +179,7 @@ class ems(om.ExplicitComponent):
         # indexing in ems
         WSPr_df = pd.DataFrame(
             index=pd.date_range(
-                start='01-01-1990 00:00',
+                start='01-01-1991 00:00',
                 periods=len(wind_t),
                 freq='1h'))
 
@@ -408,7 +408,9 @@ class ems_long_term_operation(om.ExplicitComponent):
         penalty_t_with_deg_all = np.zeros_like(wind_t_ext)
 
         for ii, times_int in enumerate(time_intervals):
-            times_op = slice(*times_int,1)
+            #times_op = slice(*times_int,1)
+            times_op = slice(times_int[0],times_int[1],1)
+            times_op_SOC = slice(times_int[0],times_int[1]+1,1)
 
             if ii==0:
                 b_E_SOC_0 = None
@@ -423,7 +425,7 @@ class ems_long_term_operation(om.ExplicitComponent):
                 solar_t = solar_t_ext[times_op],
                 hpp_curt_t = hpp_curt_t[times_op],
                 b_t = b_t[times_op],
-                b_E_SOC_t = b_E_SOC_t[times_op],
+                b_E_SOC_t = b_E_SOC_t[times_op_SOC],
                 G_MW = G_MW[0],
                 b_E = b_E[0],
                 battery_depth_of_discharge = battery_depth_of_discharge[0],
@@ -486,13 +488,12 @@ def ems_cplex(
     batches[-1] = batches_all[-2]+batches_all[-1]
     
     # allocate vars
-    P_HPP_ts = np.array([]) 
-    P_curtailment_ts = np.array([])
-    P_charge_discharge_ts = np.array([]) 
-    E_SOC_ts = np.array([])
-    penalty_ts = np.array([])
+    P_HPP_ts = np.zeros(len(wind_ts))
+    P_curtailment_ts = np.zeros(len(wind_ts))
+    P_charge_discharge_ts = np.zeros(len(wind_ts))
+    E_SOC_ts = np.zeros(len(wind_ts)+1)
+    penalty_ts = np.zeros(len(wind_ts))
     
-    #print('\n\nEMS solved with pyomo\n')
     for ib, batch in enumerate(batches):
         wind_ts_sel = wind_ts.iloc[batch]
         solar_ts_sel = solar_ts.iloc[batch]
@@ -515,15 +516,25 @@ def ems_cplex(
             n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price,
         )
         
-        P_HPP_ts = np.append(P_HPP_ts, P_HPP_ts_batch)
-        P_curtailment_ts = np.append(
-            P_curtailment_ts, P_curtailment_ts_batch)
-        P_charge_discharge_ts = np.append(
-            P_charge_discharge_ts,P_charge_discharge_ts_batch)
-        E_SOC_ts = np.append(E_SOC_ts, E_SOC_ts_batch)
-        penalty_ts = np.append(penalty_ts, penalty_batch)
+        # print()
+        # print()
+        # print()
+        # print(ib, len(batch))
+        # print()
+        # print('len(wind_ts_sel)',len(wind_ts_sel))
+        # print('len(P_HPP_ts_batch)',len(P_HPP_ts_batch))
+        # print('len(P_curtailment_ts_batch)',len(P_curtailment_ts_batch))
+        # print('len(P_charge_discharge_ts_batch)',len(P_charge_discharge_ts_batch))
+        # print('len(E_SOC_ts_batch)',len(E_SOC_ts_batch))
+        # print('len(penalty_batch)',len(penalty_batch))
         
-    E_SOC_ts = np.append(E_SOC_ts, E_SOC_ts[0])
+        P_HPP_ts[batch] = P_HPP_ts_batch
+        P_curtailment_ts[batch] = P_curtailment_ts_batch
+        P_charge_discharge_ts[batch] = P_charge_discharge_ts_batch
+        E_SOC_ts[batch] = E_SOC_ts_batch[:-1]
+        penalty_ts[batch] = penalty_batch
+
+    E_SOC_ts[-1] = E_SOC_ts[0] 
     
     return P_HPP_ts, P_curtailment_ts, P_charge_discharge_ts, E_SOC_ts, penalty_ts
 
@@ -581,7 +592,7 @@ def ems_cplex_parts(
     mdl = Model(name='EMS')
     mdl.context.cplex_parameters.threads = 1
     # CPLEX parameter pg 87 Emphasize feasibility over optimality
-    # mdl.context.cplex_parameters.emphasis.mip = 1 
+    mdl.context.cplex_parameters.emphasis.mip = 1 
     #mdl.context.cplex_parameters.timelimit = 1e-2
     #mdl.context.cplex_parameters.mip.limits.strongit = 3
     #mdl.context.cplex_parameters.mip.strategy.search = 1 #  branch and cut strategy; disable dynamic
@@ -635,10 +646,6 @@ def ems_cplex_parts(
            fabs(P_charge_discharge[t + pd.Timedelta('1hour')] - \
                 P_charge_discharge[t])*cost_of_battery_P_fluct_in_peak_price_ratio*price_ts_to_max[t]
            for t in time[:-1])  
-        #- mdl.sum(
-        #    fabs(P_charge_discharge[t + pd.Timedelta('1hour')] - \
-        #         P_charge_discharge[t])*cost_of_battery_P_fluct_in_peak_price_ratio*price_peak
-        #    for t in time[:-1])  
     ) 
         
     #Constraints
@@ -698,23 +705,34 @@ def ems_cplex_parts(
     #print(mdl.export_to_string())
     #sol.display() 
     
-    P_HPP_ts = pd.DataFrame.from_dict(
-        sol.get_value_dict(P_HPP_t), orient='index').loc[:,0].values
+    P_HPP_ts_df = pd.DataFrame.from_dict(
+        sol.get_value_dict(P_HPP_t), orient='index').loc[:,0]
 
-    P_curtailment_ts = pd.DataFrame.from_dict(
-        sol.get_value_dict(P_curtailment_t), orient='index').loc[:,0].values
+    P_curtailment_ts_df = pd.DataFrame.from_dict(
+        sol.get_value_dict(P_curtailment_t), orient='index').loc[:,0]
 
-    P_charge_discharge_ts = pd.DataFrame.from_dict(
-        sol.get_value_dict(P_charge_discharge), orient='index').loc[:,0].values
+    P_charge_discharge_ts_df = pd.DataFrame.from_dict(
+        sol.get_value_dict(P_charge_discharge), orient='index').loc[:,0]
 
-    E_SOC_ts = pd.DataFrame.from_dict(
-        sol.get_value_dict(E_SOC_t), orient='index').loc[:,0].values
+    E_SOC_ts_df = pd.DataFrame.from_dict(
+        sol.get_value_dict(E_SOC_t), orient='index').loc[:,0]
     
     #make a time series like P_HPP with a constant penalty 
     penalty_2 = sol.get_value(penalty)
     penalty_ts = np.ones(N_t) * (penalty_2/N_t)
     
     mdl.end()
+    
+    # Cplex sometimes returns missing values :O
+    P_HPP_ts = P_HPP_ts_df.reindex(time,fill_value=0).values
+    P_curtailment_ts = P_curtailment_ts_df.reindex(time,fill_value=0).values
+    P_charge_discharge_ts = P_charge_discharge_ts_df.reindex(time,fill_value=0).values
+    E_SOC_ts = E_SOC_ts_df.reindex(SOCtime,fill_value=0).values
+    
+    if len(P_HPP_ts_df) < len(wind_ts):
+        #print('recomputing p_hpp')
+        P_HPP_ts = wind_ts.values + solar_ts.values +\
+            - P_curtailment_ts + P_charge_discharge_ts
     
     return P_HPP_ts, P_curtailment_ts, P_charge_discharge_ts, E_SOC_ts, penalty_ts
 
@@ -1291,7 +1309,9 @@ def operation_solar_batt_deg(
         if b_t[i] < 0:
             b_t_less_sol[i] = np.minimum(b_t[i] + P_loss[i],0)
     # Initialize the SoC
-    b_E_SOC_t_sat = np.append(b_E , b_E_SOC_t.copy() )
+    #b_E_SOC_t_sat = np.append(b_E , b_E_SOC_t.copy() )
+    #b_E_SOC_t_sat = np.append(b_E_SOC_t.copy(), 0)
+    b_E_SOC_t_sat = b_E_SOC_t.copy()
     
     if b_E_SOC_0 == None:
         try:

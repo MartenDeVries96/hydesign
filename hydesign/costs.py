@@ -189,6 +189,7 @@ class pvp_cost(om.ExplicitComponent):
     def __init__(self,
                  solar_PV_cost,
                  solar_hardware_installation_cost,
+                 solar_inverter_cost,
                  solar_fixed_onm_cost,
                  ):
 
@@ -204,13 +205,18 @@ class pvp_cost(om.ExplicitComponent):
         super().__init__()
         self.solar_PV_cost = solar_PV_cost
         self.solar_hardware_installation_cost = solar_hardware_installation_cost
+        self.solar_inverter_cost = solar_inverter_cost
         self.solar_fixed_onm_cost = solar_fixed_onm_cost
 
     def setup(self):
-        self.add_input('solar_MW',
-                       val=1,
-                       desc="Solar PV plant installed capacity",
-                       units='MW')
+        self.add_input(
+            'solar_MW',
+            val=1,
+            desc="Solar PV plant installed capacity",
+            units='MW')
+        self.add_input(
+            'DC_AC_ratio',
+            desc="DC/AC PV ratio")
 
         self.add_output('CAPEX_s',
                         desc="CAPEX solar pvp")
@@ -226,6 +232,7 @@ class pvp_cost(om.ExplicitComponent):
         Parameters
         ----------
         solar_MW : AC nominal capacity of the PV plant [MW]
+        DC_AC_ratio: Ratio of DC power rating with respect AC rating of the PV plant
 
         Returns
         -------
@@ -234,25 +241,31 @@ class pvp_cost(om.ExplicitComponent):
         """
         
         solar_MW = inputs['solar_MW']
-
+        DC_AC_ratio = inputs['DC_AC_ratio']
         solar_PV_cost = self.solar_PV_cost
         solar_hardware_installation_cost = self.solar_hardware_installation_cost
+        solar_inverter_cost= self.solar_inverter_cost
         solar_fixed_onm_cost = self.solar_fixed_onm_cost
-
-        outputs['CAPEX_s'] = (
-            solar_PV_cost + solar_hardware_installation_cost) * solar_MW
-        outputs['OPEX_s'] = solar_fixed_onm_cost * solar_MW
+        DC_AC_ratio_tech_ref =  1.25 #extracted from danish energy agency technology catalogue reference
+        outputs['CAPEX_s'] = (solar_PV_cost + solar_hardware_installation_cost ) * solar_MW * DC_AC_ratio + \
+             solar_inverter_cost * DC_AC_ratio_tech_ref/DC_AC_ratio * solar_MW
+        outputs['OPEX_s'] = solar_fixed_onm_cost * solar_MW * DC_AC_ratio
 
     def compute_partials(self, inputs, partials):
         solar_MW = inputs['solar_MW']
-
+        DC_AC_ratio = inputs['DC_AC_ratio']
+        DC_AC_ratio_tech_ref =  1.25
         solar_PV_cost = self.solar_PV_cost
         solar_hardware_installation_cost = self.solar_hardware_installation_cost
+        solar_inverter_cost = self.solar_inverter_cost
         solar_fixed_onm_cost = self.solar_fixed_onm_cost
 
-        partials['CAPEX_s', 'solar_MW'] = solar_PV_cost + \
-            solar_hardware_installation_cost 
-        partials['OPEX_s', 'solar_MW'] = solar_fixed_onm_cost
+        partials['CAPEX_s', 'solar_MW'] = (solar_PV_cost + solar_hardware_installation_cost ) * DC_AC_ratio + \
+             solar_inverter_cost * DC_AC_ratio_tech_ref/DC_AC_ratio 
+        partials['CAPEX_s', 'DC_AC_ratio'] = (solar_PV_cost + \
+            solar_hardware_installation_cost + solar_inverter_cost * DC_AC_ratio_tech_ref/(- DC_AC_ratio ** 2)) * solar_MW
+        partials['OPEX_s', 'solar_MW'] = solar_fixed_onm_cost * DC_AC_ratio
+        partials['OPEX_s', 'DC_AC_ratio'] = solar_fixed_onm_cost * solar_MW
 
 
 class battery_cost(om.ExplicitComponent):
@@ -427,10 +440,6 @@ class shared_cost(om.ExplicitComponent):
         hpp_BOS_soft_cost = self.hpp_BOS_soft_cost
         hpp_grid_connection_cost = self.hpp_grid_connection_cost
         
-        #land_use_per_solar_MW = 0.01226 #[km2] # add source
-        #Apvp = solar_MW * land_use_per_solar_MW
-        #print(Awpp)
-        #print(Apvp)
         if (Awpp>=Apvp):
             land_rent = land_cost * Awpp
         else:

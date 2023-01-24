@@ -37,6 +37,8 @@ Explanations of hydesign's core objects can be found in the following tutorials:
 	:caption: Tutorials
        
 	notebooks/Quickstart
+	notebooks/hpp_evaluation
+	notebooks/ems_battery_degradation
 
     .. toctree::
         :maxdepth: 1
@@ -47,4 +49,12 @@ Explanations of hydesign's core objects can be found in the following tutorials:
         api/EGO_surrogate_based_optimization
         api/ems
         api/finance
+        api/hpp_assembly
+        api/pv
+        api/wind
+        api/weather
+        api/nrel_csm_tcc_2015
+        api/turbine_costsse_2015
+
+
     

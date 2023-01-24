@@ -36,7 +36,7 @@ class hpp_model:
         sim_pars_fn=None,
         work_dir = './',
         num_batteries = 1,
-        ems_type='pyomo',
+        ems_type='cplex',
         input_ts_fn = None, # If None then it computes the weather
         price_fn = None, # If input_ts_fn is given it should include Price column.
         genWT_fn = lut_filepath+'genWT_v3.nc',
@@ -273,9 +273,10 @@ class hpp_model:
             pvp_cost(
                 solar_PV_cost=sim_pars['solar_PV_cost'],
                 solar_hardware_installation_cost=sim_pars['solar_hardware_installation_cost'],
+                solar_inverter_cost=sim_pars['solar_inverter_cost'],
                 solar_fixed_onm_cost=sim_pars['solar_fixed_onm_cost'],
             ),
-            promotes_inputs=['solar_MW'])
+            promotes_inputs=['solar_MW', 'DC_AC_ratio'])
 
         model.add_subsystem(
             'battery_cost',
@@ -350,6 +351,9 @@ class hpp_model:
         model.connect('ems.wind_t_ext', 'ems_long_term_operation.wind_t_ext')
         model.connect('ems.solar_t_ext', 'ems_long_term_operation.solar_t_ext')
         model.connect('ems.price_t_ext', 'ems_long_term_operation.price_t_ext')
+        model.connect('ems.hpp_curt_t', 'ems_long_term_operation.hpp_curt_t')
+        model.connect('ems.b_E_SOC_t', 'ems_long_term_operation.b_E_SOC_t')
+        model.connect('ems.b_t', 'ems_long_term_operation.b_t')
 
         model.connect('wpp.wind_t', 'wpp_cost.wind_t')
         
@@ -410,7 +414,7 @@ class hpp_model:
             'CAPEX [MEuro]',
             'OPEX [MEuro]',
             'penalty lifetime [MEuro]',
-            'AEP',
+            'AEP [GWh]',
             'GUF',
             'grid [MW]',
             'wind [MW]',
@@ -527,7 +531,7 @@ class hpp_model:
             prob['CAPEX']/1e6,
             prob['OPEX']/1e6,
             prob['penalty_lifetime']/1e6,
-            prob['mean_AEP'],
+            prob['mean_AEP']/1e3, #[GWh]
             # Grid Utilization factor
             prob['mean_AEP']/(self.sim_pars['G_MW']*365*24),
             self.sim_pars['G_MW'],

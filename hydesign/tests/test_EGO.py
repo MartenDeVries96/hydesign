@@ -6,8 +6,9 @@ Created on Fri Nov 25 14:43:04 2022
 """
 import numpy as np
 # import matplotlib.pyplot as plt
-from hydesign.EGO_surrogate_based_optimization import (get_sm, LCB, EI, KStd, KB, get_sm_pred, opt_sm,
-                                                       get_candiate_points)
+from hydesign.EGO_surrogate_based_optimization import (
+    get_sm, LCB, EI, KStd, KB, eval_sm, opt_sm,
+    get_candiate_points)
 from hydesign.tests.test_files import tfp
 import pandas as pd
 import pytest
@@ -70,14 +71,14 @@ xlimits = np.array([[4, 22], [0.1, 4.5], [-0.65, 1.75], [8, 270], [1, 4.9],
 mixint = MixedIntegerContext(xtypes, xlimits)
 
 @pytest.mark.parametrize('fmin', fmins)
-def test_get_sm_pred(fmin):
-    a, b = get_sm_pred(sm, mixint, npred=5, fmin=fmin)
+def test_eval_sm(fmin):
+    a, b = eval_sm(sm, mixint, npred=5, fmin=fmin)
     a_ref, b_ref = get_data2(fmin)
     np.testing.assert_allclose(a, a_ref)
     np.testing.assert_allclose(b.ravel(), b_ref)
 
 def test_get_candidate_points():
-    xpred, ypred_LB = get_sm_pred(sm, mixint, npred=5, fmin=10)
+    xpred, ypred_LB = eval_sm(sm, mixint, npred=5, fmin=10)
     xnew = get_candiate_points(
     xpred, ypred_LB, 
     n_clusters = 1, 

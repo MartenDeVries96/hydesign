@@ -41,7 +41,11 @@ setup(name='hydesign',
       package_data={
           'hydesign': [
             'tests/test_files/sm.pkl',
-            'look_up_tables/*.nc'
+            'tests/test_files/*.pickle',
+            'look_up_tables/*.nc',
+            'examples/*.csv',
+            'examples/*/*.csv',
+            'examples/*/*/*.csv',
             ],},
       install_requires=[
           'finitediff',

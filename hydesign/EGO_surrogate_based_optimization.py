@@ -10,6 +10,7 @@ import warnings
 
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
+
 from scipy import optimize
 from scipy.stats import norm
 
@@ -27,7 +28,11 @@ from smt.surrogate_models import KRG, KPLS, KPLSK, GEKPLS
 from smt.applications.mixed_integer import MixedIntegerSurrogateModel
 from smt.sampling_methods import LHS, Random, FullFactorial
 
-from hydesign.hpp_assembly import hpp_model, mkdir
+from hydesign.hpp_assembly_simplified import hpp_model_simple, mkdir
+from hydesign.examples import examples_filepath
+
+import os
+EGO_path = os.path.dirname(__file__).replace("\\", "/") + '/'
 
 def LCB(sm, point):
     """
@@ -36,6 +41,7 @@ def LCB(sm, point):
     pred = sm.predict_values(point)
     var = sm.predict_variances(point)
     res = pred - 3.0 * np.sqrt(var)
+    
     return res
 
 def EI(sm, point, fmin=1e3):
@@ -44,6 +50,7 @@ def EI(sm, point, fmin=1e3):
     """
     pred = sm.predict_values(point)
     sig = np.sqrt(sm.predict_variances(point))
+    
     args0 = (fmin - pred) / sig
     args1 = (fmin - pred) * norm.cdf(args0)
     args2 = sig * norm.pdf(args0)
@@ -56,7 +63,7 @@ def KStd(sm, point):
     Lower confidence bound optimization: minimize by using mu - 3*sigma
     """
     res = np.sqrt( sm.predict_variances(point) )
-    return res    
+    return res
 
 def KB(sm, point):
     """
@@ -68,45 +75,52 @@ def KB(sm, point):
 def get_sm(xdoe, ydoe, mixint=None):
     '''
     Function that trains the surrogate and uses it to predict on random input points
-    '''
-    sm = KPLSK(
+    '''    
+    sm = KRG(
         corr="squar_exp",
         poly='linear',
-        theta0=[1e-1],
-        theta_bounds=[1e-7, 1e4],
-        n_start=20,
+        theta0=[1e-2],
+        theta_bounds=[1e-2, 1e2],
         print_global=False)
-    
-    # xlimits = mixint._xlimits
-    # xtypes = mixint._xtypes
-    # sm = MixedIntegerSurrogateModel(
-    #     categorical_kernel=smt.applications.mixed_integer.GOWER,
-    #     xtypes=xtypes,
-    #     xlimits=xlimits,
-    #     surrogate=KRG(
-    #         theta0=[1e-1], 
-    #         corr="squar_exp", 
-    #         n_start=20,
-    #         print_global=False,
-    #     ),
-    # )
+
+    # # surrogate = KRG( 
+    # #     corr="squar_exp",
+    # #     theta0=[1e-2],
+    # #     theta_bounds=[1e-2, 1e2],
+    # #     n_start=5,
+    # #     print_global=False)
+
+    # # xlimits = mixint._xlimits
+    # # xtypes = mixint._xtypes
+    # # sm = MixedIntegerSurrogateModel(
+    # #     categorical_kernel=smt.applications.mixed_integer.GOWER,
+    # #     xtypes=xtypes,
+    # #     xlimits=xlimits,
+    # #     surrogate=surrogate,
+    # # )
+
     sm.set_training_values(xdoe, ydoe)
     sm.train()
     
     return sm
 
 
-def get_sm_pred(sm, mixint, seed=0, npred=1e3, fmin=1e10):
+def eval_sm(sm, mixint, scaler=None, seed=0, npred=1e3, fmin=1e10):
     '''
-    Function that predicts sm on random input points
+    Function that predicts the xepected improvement (EI) of the surrogate model based on random input points
     '''
-
+    ndims = mixint.get_unfolded_dimension()
     npred = int(npred)
+    
     np.random.seed(int(seed))
     sampling = mixint.build_sampling_method(Random)
-    #sampling = mixint.build_sampling_method(
-    #    LHS, criterion="maximin", random_state=int(seed))
-    xpred = sampling(npred)    
+    xpred = sampling(npred)
+    
+    if scaler == None:
+        pass
+    else:
+        xpred = scaler.transform(xpred)
+        
     #ypred_LB = LCB(sm=sm, point=xpred)
     ypred_LB = EI(sm=sm, point=xpred, fmin=fmin)
 
@@ -118,10 +132,12 @@ def opt_sm(sm, mixint, x0, fmin=1e10):
     '''
     ndims = mixint.get_unfolded_dimension()
     res = optimize.minimize(
-        fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin)[0,0],
+        #fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin)[0,0],
+        fun = lambda x:  LCB(sm, x.reshape([1,ndims]))[0,0],
         x0 = x0.reshape([1,ndims]),
         method="SLSQP",
-        bounds=mixint.get_unfolded_xlimits(),
+        #bounds=mixint.get_unfolded_xlimits(),
+        bounds=[(0,1)]*ndims,
         options={
             "maxiter": 200,
             'eps':1e-3,
@@ -150,20 +166,14 @@ def get_candiate_points(
         for i in range(n_clusters)])
     return xbest_per_clst
 
-def drop_duplicates(x,y):
-    x_cols = [f'x{i}' for i in range(x.shape[1])]
-    y_cols = [f'y{i}' for i in range(y.shape[1])]
-
-    df = pd.DataFrame(
-        data=x,
-        columns=x_cols
-        )
-    for i,y_col in enumerate(y_cols):
-        df[y_col] = y[:,i]
-
-    df.drop_duplicates(subset=x_cols, inplace=True)
-
-    return df.loc[:,x_cols].values, df.loc[:,y_cols].values
+def drop_duplicates(x,y, decimals=3):
+    
+    x_rounded = np.around(x, decimals=decimals)
+    
+    _, indices = np.unique(x_rounded, axis=0, return_index=True)
+    x_unique = x[indices,:]
+    y_unique = y[indices,:]
+    return x_unique, y_unique
 
 def concat_to_existing(x,y,xnew,ynew):
     x_concat, y_concat = drop_duplicates(
@@ -171,21 +181,6 @@ def concat_to_existing(x,y,xnew,ynew):
         np.vstack([y,ynew])
         )
     return x_concat, y_concat
-
-def print_design(x_opt, outs, list_vars, list_out_vars, xtypes):
-    print() 
-    print('Final design:') 
-
-    for i_v, var in enumerate(list_vars):
-        if xtypes[i_v]==INT:
-            print(var+':', int(x_opt[i_v]))
-        else:
-            print(var+':', x_opt[i_v])
-    print()    
-    print()
-    for i_v, var in enumerate(list_out_vars):
-        print(f'{var}: {outs[i_v]:.3f}')
-    print()
 
 
 class ParallelRunner():
@@ -228,58 +223,87 @@ if __name__ == "__main__":
     # Arguments from the outer .sh (shell) script
     # -----------------------------------------------
     parser=argparse.ArgumentParser()
-    parser.add_argument('--case', help='India or Europe')
-    parser.add_argument('--site', help='name of site')
-    parser.add_argument('--opt_var', help='objective variable for sizing optimization')
+    parser.add_argument('--example', default=None, help='ID (index( to run an example site, based on ./examples/examples_sites.csv')
+    parser.add_argument('--name', help = "Site name")
+    parser.add_argument('--longitude', help = "Site longitude")
+    parser.add_argument('--latitude', help = "Site latitude")
+    parser.add_argument('--altitude', help = "Site altitude")
+    parser.add_argument('--input_ts_fn', help = "Input ts file name")
+    parser.add_argument('--sim_pars_fn', help = "Simulation parameters file name")
+    parser.add_argument('--opt_var', help="Objective function for sizing optimization, should be one of: ['NPV_over_CAPEX','NPV [MEuro]','IRR','LCOE [Euro/MWh]','CAPEX [MEuro]','OPEX [MEuro]','penalty lifetime [MEuro]']")
+    parser.add_argument('--num_batteries', help='Maximum number of batteries to be considered in the design.')
+    
+    parser.add_argument('--n_procs', help='Number of processors to use')
+    parser.add_argument('--n_doe', help='Number of initial model simulations')
+    parser.add_argument('--n_clusters', help='Number of clusters to explore local vs global optima')
+    parser.add_argument('--n_seed', help='Seed number to reproduce the sampling in EGO', default=0)
+    parser.add_argument('--max_iter', help='Maximum number of parallel EGO ierations', default=10)
+    
+    parser.add_argument('--final_design_fn', help='File name of the final design stored as csv', default=None)
+    
     args=parser.parse_args()
-    case = str(args.case)
-    name = str(args.site)
+    
+    example = args.example
+    
+    if example == None:
+        name = str(args.name)
+        longitude = int(args.longitude)
+        latitude = int(args.latitude)
+        altitude = int(args.altitude)
+        input_ts_fn = examples_filepath+str(args.input_ts_fn)
+        sim_pars_fn = examples_filepath+str(args.sim_pars_fn)
+        
+    else:
+        examples_sites = pd.read_csv(f'{examples_filepath}examples_sites.csv', index_col=0)
+        
+        try:
+            ex_site = examples_sites.iloc[int(example),:]
+
+            print('Selected example site:')
+            print('---------------------------------------------------')
+            print(ex_site.T)
+
+            name = ex_site['name']
+            longitude = ex_site['longitude']
+            latitude = ex_site['latitude']
+            altitude = ex_site['altitude']
+            input_ts_fn = examples_filepath+ex_site['input_ts_fn']
+            sim_pars_fn = examples_filepath+ex_site['sim_pars_fn']
+            
+        except:
+            raise(f'Not a valid example: {int(example)}')
+    
     opt_var = str(args.opt_var)
     
-    if case == 'India':
-        work_dir = f'../examples/Indian_site/{name}/'
-        input_ts_fn = f'{work_dir}input_ts.csv'
-        sim_pars_fn = '../examples/Indian_site/hpp_pars.yml'
-        site_fn = '../examples/Indian_site/example_sites.yml'
-    elif case == 'Europe':
-        work_dir = f'../examples/Europe/{name}/'
-        input_ts_fn = f'{work_dir}input_ts.csv'
-        sim_pars_fn = '../examples/Europe/hpp_pars.yml'
-        site_fn = '../examples/Europe/example_sites.yml'
-    else:
-        raise(f'Not a valid case: {case}')
+    n_procs = int(args.n_procs)
+    n_doe = int(args.n_doe)
+    n_clusters = int(args.n_clusters)
+    n_seed = int(args.n_seed)    
+    max_iter = int(args.max_iter)
+    final_design_fn = str(args.final_design_fn)
         
-    with open(site_fn) as file:
-        sites  = yaml.load(file, Loader=yaml.FullLoader)
-    try:
-        longitude = sites[name]['longitude']
-        latitude = sites[name]['latitude']
-        altitude = sites[name]['altitude']
-    except:
-        raise(f'{name} not in {list(sites.keys())}')
+    work_dir = './'
+    if final_design_fn == None:
+        final_design_fn = f'{work_dir}design_hpp_simple_{name}_{opt_var}.csv'        
         
     # -----------------
     # INPUTS
     # -----------------
     
-
-    num_batteries = 1
-    ems_type = 'cplex'
-    
-    # paralel EGO parameters
-    n_procs = 31 # number of parallel process. Max number of processors - 1.
-    #n_doe = n_procs*6
-    n_doe = n_procs*12
-    n_seed = 0
-    max_iter = 10
+    ### paralel EGO parameters
+    # n_procs = 31 # number of parallel process. Max number of processors - 1.
+    # n_doe = n_procs*2
+    # n_clusters = int(n_procs/2)
+    #npred = 1e4
+    npred = 1e5
     tol = 1e-6
-    min_conv_iter = 10
+    min_conv_iter = 3
+    
+    start_total = time.time()
     
     # -----------------
     # HPP model
     # -----------------
-    print()
-    print('Hydesign hybrid power plant sizing and design:')
     print('\n\n\n')
     print(f'Sizing a HPP plant at {name}:')
     print()
@@ -288,7 +312,6 @@ if __name__ == "__main__":
             longitude,
             altitude,
             num_batteries = num_batteries,
-            ems_type = ems_type,
             work_dir = work_dir,
             sim_pars_fn = sim_pars_fn,
             input_ts_fn = input_ts_fn,
@@ -325,7 +348,7 @@ if __name__ == "__main__":
         #p_rated
         [1, 10],
         #Nwt
-        [0, 100],
+        [0, 500],
         #wind_MW_per_km2
         [5, 9],
         #solar_MW
@@ -352,11 +375,11 @@ if __name__ == "__main__":
     # -------------------------------------------------------
     def fun(x): 
         try:
-            #x = scaler.inverse_transform(x)
+            x = scaler.inverse_transform(x)
             return np.array(
                 opt_sign*hpp_m.evaluate(*x[0,:])[op_var_index])
         except:
-            print( 'x=['+', '.join(str(x).split())+']' )
+            print( ( 'x='+', '.join(str(x).split()) ).replace('[[','[').replace(']]',']') )
  
     class ParallelEvaluator(Evaluator):
         """
@@ -383,23 +406,23 @@ if __name__ == "__main__":
     
     # START Parallel-EGO optimization
     # -------------------------------------------------------        
-    start_total = time.time()
     
     # LHS intial doe
     mixint = MixedIntegerContext(xtypes, xlimits)
     sampling = mixint.build_sampling_method(
-      LHS, criterion="ese", random_state=n_seed)
+      LHS, criterion="maximin", random_state=n_seed)
     xdoe = sampling(n_doe)
+    xdoe = scaler.transform(xdoe)
 
     # Evaluate model at initial doe
     start = time.time()
     ydoe = ParallelEvaluator(
-        n_procs = n_procs).run(fun=fun,x=xdoe)    
+        n_procs = n_procs).run(fun=fun,x=xdoe)
     
     lapse = np.round((time.time() - start)/60, 2)
     print(f'Initial {xdoe.shape[0]} simulations took {lapse} minutes\n')
     
-        # Initialize iterative optimization
+    # Initialize iterative optimization
     itr = 0
     error = 1e10
     conv_iter = 0
@@ -411,15 +434,17 @@ if __name__ == "__main__":
         start_iter = time.time()
 
         # Train surrogate model
+        np.random.seed(n_seed)
         sm = get_sm(xdoe, ydoe, mixint)
         
         # Evaluate surrogate model in a large number of design points
         # in parallel
         start = time.time()
-        def fun_par(seed): return get_sm_pred(
+        def fun_par(seed): return eval_sm(
             sm, mixint, 
-            seed=seed, 
-            npred=2e4,
+            scaler=scaler,
+            seed=seed*100+itr, #different seed on each iteration
+            npred=npred,
             fmin=yopt[0,0],
         )
         with Pool(n_procs) as p:
@@ -430,68 +455,59 @@ if __name__ == "__main__":
         # Get candidate points from clustering all sm evalautions
         xnew = get_candiate_points(
             xpred, ypred_LB, 
-            n_clusters = n_procs, 
-            quantile = 1e-4) 
+            n_clusters = n_clusters, 
+            quantile = 1/(npred/n_clusters) ) 
             # request candidate points based on global evaluation of current surrogate 
             # returns best designs in n_cluster of points with outputs bellow a quantile
         lapse = np.round( ( time.time() - start )/60, 2)
         print(f'Update sm and extract candidate points took {lapse} minutes')
-
-        # run model on candidates
-        start = time.time()
-        ynew = ParallelEvaluator(
-            n_procs = n_procs).run(fun=fun,x=xnew)
-        lapse = np.round( ( time.time() - start )/60, 2)
-        print(f'New {xnew.shape[0]} simulations took {lapse} minutes')
         
-        # optimize the sm starting on the cluster based candidates 
+        # # optimize the sm starting on the cluster based candidates 
         def fun_opt(x): 
             return opt_sm(sm, mixint, x, fmin=yopt[0,0])
         with Pool(n_procs) as p:
-            xopt = np.vstack(
+            xopt_iter = np.vstack(
                     p.map(fun_opt, [xnew[[ii],:] 
                     for ii in range(xnew.shape[0])] ) 
                 )
-            
-        xopt = np.array([mixint.cast_to_mixed_integer(xopt[i,:]) 
-                         for i in range(xopt.shape[0])]).reshape(xopt.shape)
-        xopt, _ = drop_duplicates(xopt,np.zeros_like(xopt))
+        
+        xopt_iter = scaler.inverse_transform(xopt_iter)
+        xopt_iter = np.array([mixint.cast_to_mixed_integer( xopt_iter[i,:]) 
+                        for i in range(xopt_iter.shape[0])]).reshape(xopt_iter.shape)
+        xopt_iter = scaler.transform(xopt_iter)
+        xopt_iter, _ = drop_duplicates(xopt_iter,np.zeros_like(xopt_iter))
+        xopt_iter, _ = concat_to_existing(xnew,np.zeros_like(xnew), xopt_iter, np.zeros_like(xopt_iter))
 
-        # run model at all surrogate optimal points
+        # run model at all candidate points
         start = time.time()
-        yopt = ParallelEvaluator(
-          n_procs = n_procs).run(fun=fun,x=xopt)
+        yopt_iter = ParallelEvaluator(
+          n_procs = n_procs).run(fun=fun,x=xopt_iter)
         
         lapse = np.round( ( time.time() - start )/60, 2)
-        print(f'Check-optimal candidates: new {xopt.shape[0]} simulations took {lapse} minutes')    
+        print(f'Check-optimal candidates: new {xopt_iter.shape[0]} simulations took {lapse} minutes')    
 
         # update the db of model evaluations, xdoe and ydoe
-        xnew, ynew = concat_to_existing(xnew,ynew, xopt,yopt)
-        xdoe_upd, ydoe_upd = concat_to_existing(xdoe,ydoe, xnew,ynew)
+        xdoe_upd, ydoe_upd = concat_to_existing(xdoe,ydoe, xopt_iter,yopt_iter)
         xdoe_upd, ydoe_upd = drop_duplicates(xdoe_upd, ydoe_upd)
         
         # Drop yopt if it is not better than best design seen
-        if np.min(yopt) > np.min(ydoe):
-            xopt = xdoe[[np.argmin(ydoe)],:]
-            yopt = ydoe[[np.argmin(ydoe)],:]
-        else:
-            xopt = xopt[[np.argmin(yopt)],:]
-            yopt = yopt[[np.argmin(yopt)],:]
+        xopt = xdoe_upd[[np.argmin(ydoe_upd)],:]
+        yopt = ydoe_upd[[np.argmin(ydoe_upd)],:]
         
-        if itr > 0:
-            error = float(1 - yopt/yold)
-            print(f'  rel_yopt_change = {error:.2E}')
+        #if itr > 0:
+        error = float(1 - yopt/yold)
+        print(f'  rel_yopt_change = {error:.2E}')
 
-        xdoe = xdoe_upd
-        ydoe = ydoe_upd
-        xold = xopt
-        yold = yopt
+        xdoe = np.copy(xdoe_upd)
+        ydoe = np.copy(ydoe_upd)
+        xold = np.copy(xopt)
+        yold = np.copy(yopt)
         itr = itr+1
 
         lapse = np.round( ( time.time() - start_iter )/60, 2)
         print(f'Iteration {itr} took {lapse} minutes\n')
 
-        if (error < tol):
+        if (np.abs(error) < tol):
             conv_iter += 1
             if (conv_iter >= min_conv_iter):
                 print(f'Surrogate based optimization is converged.')
@@ -499,22 +515,28 @@ if __name__ == "__main__":
         else:
             conv_iter = 0
     
+    xopt = scaler.inverse_transform(xopt)
+    
     # Re-Evaluate the last design to get all outputs
     outs = hpp_m.evaluate(*xopt[0,:])
     yopt = np.array(opt_sign*outs[[op_var_index]])[:,na]
-    print_design(xopt[0,:], outs, list_vars, list_out_vars, xtypes)
+    hpp_m.print_design(xopt[0,:], outs)
 
+    n_model_evals = xdoe.shape[0] 
+    
     lapse = np.round( ( time.time() - start_total )/60, 2)
-    print(f'Optimization with {itr} iterations took {lapse} minutes\n')
+    print(f'Optimization with {itr} iterations and {n_model_evals} model evaluations took {lapse} minutes\n')
 
     # Store results
     # -----------------
-    design_df = pd.DataFrame()
+    design_df = pd.DataFrame(columns = list_vars, index=[name])
     for iv, var in enumerate(list_vars):
         design_df[var] = xopt[0,iv]
     for iv, var in enumerate(list_out_vars):
         design_df[var] = outs[iv]
-
+    
+    design_df['design obj'] = opt_var
     design_df['opt time [min]'] = lapse
-
-    design_df.to_csv(f'{work_dir}design_df_{opt_var}.csv')
+    design_df['n_model_evals'] = n_model_evals
+    
+    design_df.T.to_csv(final_design_fn)
