@@ -4,6 +4,6 @@ channels:
 dependencies:
   - h5netcdf
   - netcdf4
-  - python=3.7
+  - python=3.8
   - pip
 
