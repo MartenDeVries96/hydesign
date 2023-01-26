@@ -223,7 +223,7 @@ if __name__ == "__main__":
     # Arguments from the outer .sh (shell) script
     # -----------------------------------------------
     parser=argparse.ArgumentParser()
-    parser.add_argument('--example', default=None, help='ID (index( to run an example site, based on ./examples/examples_sites.csv')
+    parser.add_argument('--example', default=None, help='ID (index) to run an example site, based on ./examples/examples_sites.csv')
     parser.add_argument('--name', help = "Site name")
     parser.add_argument('--longitude', help = "Site longitude")
     parser.add_argument('--latitude', help = "Site latitude")

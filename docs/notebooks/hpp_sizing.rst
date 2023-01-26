@@ -8,6 +8,12 @@ type.
 **To execute this setup a server is required as it relies on parallel
 evaluation of the model.**
 
+Executable versions of this notebook and a submission script for a SCRUM based server are provided:
+
+`./hydesign/examples/hydesign_sizing_simple_hpp.ipynb`
+`./hydesign/examples/hydesign_sizing_simple_hpp.sh`
+`./hydesign/examples/hydesign_sizing.sh`
+
 Sizing a hybrid power plant consists on designing the following
 parameters:
 

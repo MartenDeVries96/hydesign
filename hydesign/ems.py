@@ -1277,14 +1277,19 @@ def operation_solar_batt_deg(
 
     Parameters
     ----------
+    pv_degradation: PV degradation as health factor [0=dead,1=new]
+    batt_degradation: Battery degradation as health factor [0=dead,1=new]
     wind_ts : WPP power time series
     solar_ts : PVP power time series
+    hpp_curt_t: HPP curtailment time series results form an EMS planed without degradation
+    b_t: HPP battery power (charge/discharge) time series results form an EMS planed without degradation
+    b_E_SOC_t: HPP battery state of charge (SoC) time series results form an EMS planed without degradation
+    b_E_SOC_0: Initial charge status of the actual operation
     price_ts : price time series
-    P_batt_MW : battery power
+    G_MW : grid connection    
     E_batt_MWh_t : battery energy capacity time series
-    hpp_grid_connection : grid connection
     battery_depth_of_discharge : battery depth of discharge
-    charge_efficiency : battery charge efficiency
+    battery_charge_efficiency : battery charge efficiency
     peak_hr_quantile : quantile of price time series to define peak price hours
     cost_of_battery_P_fluct_in_peak_price_ratio : cost of battery power fluctuations computed as a peak price ratio
     n_full_power_hours_expected_per_day_at_peak_price : Penalty occurs if number of full power hours expected per day at peak price are not reached
@@ -1298,6 +1303,8 @@ def operation_solar_batt_deg(
     penalty_ts : penalty for not reaching expected energy production at peak hours
     """
     
+    #TODO: Why aren't we using the b_P or P_batt_MW to check the results?
+    
     solar_deg_t_sat = solar_t * pv_degradation
     solar_deg_t_sat_loss = solar_t * (1 - pv_degradation)
     hpp_curt_t_deg = hpp_curt_t 
@@ -1308,11 +1315,9 @@ def operation_solar_batt_deg(
     for i in range(len(b_t)):
         if b_t[i] < 0:
             b_t_less_sol[i] = np.minimum(b_t[i] + P_loss[i],0)
-    # Initialize the SoC
-    #b_E_SOC_t_sat = np.append(b_E , b_E_SOC_t.copy() )
-    #b_E_SOC_t_sat = np.append(b_E_SOC_t.copy(), 0)
-    b_E_SOC_t_sat = b_E_SOC_t.copy()
     
+    # Initialize the SoC
+    b_E_SOC_t_sat = b_E_SOC_t.copy()
     if b_E_SOC_0 == None:
         try:
             b_E_SOC_t_sat[0]= b_E_SOC_t[0]
