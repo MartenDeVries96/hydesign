@@ -1,6 +1,6 @@
 image: dtuwindenergy/hydesign:latest
 
-# ===== TEST hydesign debian=====
+# ===== TEST hydesign linux=====
 test_hydesign:
   stage: 
     test
@@ -40,3 +40,27 @@ pages:
   - main
   tags: 
   - debian
+
+# ===== DEPLOY publish hydesign on pypi=====
+pypi:
+  stage:
+    deploy
+  only:
+    - tags
+    - test_pypi
+  script:
+    - apt-get update
+    - apt-get install -y pandoc
+    - pip install --upgrade pip
+    - pip install pypandoc
+    - pip install -e . --upgrade
+    - python -c 'from git_utils import get_tag; get_tag(verbose=True)'
+    - python -m pip install -U setuptools wheel
+    - python setup.py sdist bdist_wheel
+    - python -m pip install -U twine
+    - python -c 'from git_utils import rename_dist_file; rename_dist_file()'
+    - twine upload dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD
+    #- twine upload --repository-url https://test.pypi.org/legacy/ dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD # for testing purposes
+  tags:
+  - debian
+
