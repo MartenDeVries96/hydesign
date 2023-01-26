@@ -36,7 +36,7 @@ setup(name='hydesign',
       },
       author='DTU Wind Energy',
       author_email='jumu@dtu.dk',
-      license='Proprietary',
+      license='MIT',
       packages=find_packages(),
       package_data={
           'hydesign': [
