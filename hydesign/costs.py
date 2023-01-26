@@ -21,10 +21,10 @@ from hydesign.nrel_csm_tcc_2015 import get_WT_cost_wisdem
 
 
 class wpp_cost(om.ExplicitComponent):
-    """Wind power plant cost model is used to assess the overall wind plant cost. It is based on the The NREL Cost and Scaling model *.
+    """Wind power plant cost model is used to assess the overall wind plant cost. It is based on the The NREL Cost and Scaling model [1].
     It estimates the total capital expenditure costs and operational and maintenance costs, as a function of the installed capacity, the cost of the
     turbine, intallation costs and O&M costs.
-    * Dykes, K., et al. 2014. Sensitivity analysis of wind plant performance to key turbine design parameters: a systems engineering approach. Tech. rep. National Renewable Energy Laboratory"""
+    [1] Dykes, K., et al. 2014. Sensitivity analysis of wind plant performance to key turbine design parameters: a systems engineering approach. Tech. rep. National Renewable Energy Laboratory"""
 
     def __init__(self,
                  wind_turbine_cost,

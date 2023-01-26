@@ -15,14 +15,9 @@ License:
 
 Getting Started
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-For new users, the :ref:`Overview </notebooks/Overview.ipynb>` section contains a basic description of hydesign’s architecture and the elements behind it. 
 The :ref:`Quickstart </notebooks/Quickstart.ipynb>` section shows how to set up and perform some basic operations in hydesign.
 
 Explanations of hydesign's core objects can be found in the following tutorials:
-
-	* notebook1
-	* notebook2
-	* ...
 
 
     .. toctree::
@@ -37,7 +32,7 @@ Explanations of hydesign's core objects can be found in the following tutorials:
        
 	notebooks/Quickstart
 	notebooks/Advanced_hpp_model
-    notebooks/hpp_sizing
+	notebooks/hpp_sizing
 
     .. toctree::
         :maxdepth: 1

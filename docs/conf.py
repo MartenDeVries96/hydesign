@@ -103,7 +103,7 @@ napolean_use_rtype = False
 nbsphinx_execute = 'always'
 
 # Use this kernel instead of the one stored in the notebook metadata:
-#nbsphinx_kernel_name = 'python3'
+nbsphinx_kernel_name = 'python3'
 
 # List of arguments to be passed to the kernel that executes the notebooks:
 # nbsphinx_execute_arguments = []
@@ -164,7 +164,7 @@ nbsphinx_prolog = r"""
 # Options for loading require.js
 #nbsphinx_requirejs_options = {'async': 'async'}
 
-mathjax_config = {
+mathjax3_config = {
     'TeX': {'equationNumbers': {'autoNumber': 'AMS', 'useLabelIds': True}},
 }
 

@@ -15,7 +15,7 @@ EGO surrogate based optimization API
 
 .. autofunction:: get_sm
 
-.. autofunction:: get_sm_pred
+.. autofunction:: eval_sm
 
 .. autofunction:: opt_sm
 
@@ -24,8 +24,6 @@ EGO surrogate based optimization API
 .. autofunction:: drop_duplicates
 
 .. autofunction:: concat_to_existing
-
-.. autofunction:: print_design
 
 .. autoclass:: ParallelRunner
 	:members:

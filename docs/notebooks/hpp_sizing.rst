@@ -5,7 +5,7 @@ This **static** notebook illustrates how to solve hybrid power plant
 sizing optimization in a specific location based on preselected turbine
 type.
 
-**To execute this setup a server is required as it relies on paralle
+**To execute this setup a server is required as it relies on parallel
 evaluation of the model.**
 
 Sizing a hybrid power plant consists on designing the following
@@ -39,14 +39,14 @@ Possible objective functions
 
 -  LCOE: Levelized cost of energy.
 -  IRR: Internal rate of return. It is not defined for projects that
-   produce negative Net present values. Hydesigb returns IRR = 0 if the
+   produce negative net present values (NPV). Hydesign returns IRR = 0 if the
    NPV < 0. Nevertheless, optimizations can be problematic for sites
    without a clear case.
 -  NPV/CAPEX: Net present value over total CAPEX. A good proxy variable,
    that will produce optimal sites with the optimal IRR, but that is
    defined on sites with negative NPV.
 
-The available variables for optimiaztion are:
+The available variables for optimization are:
 
 ::
 
@@ -71,7 +71,7 @@ The available variables for optimiaztion are:
     from hydesign.examples import examples_filepath
 
 Optimize using EGO
-==================
+~~~~~~~~~~~~~~~~~~
 
 .. code:: ipython3
 
