@@ -65,7 +65,8 @@ setup(name='hydesign',
           'pvlib',
           'statsmodels',
           'rainflow',
-          'pyyaml',],
+          'pyyaml',
+          ],
       extras_require={
         'test': [
             'pytest',],
