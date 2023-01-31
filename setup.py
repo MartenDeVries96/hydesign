@@ -66,6 +66,7 @@ setup(name='hydesign',
           'statsmodels',
           'rainflow',
           'pyyaml',
+          'wisdem @ git+https://github.com/DTUWindEnergy/WISDEM.git@csm_only'
           ],
       extras_require={
         'test': [

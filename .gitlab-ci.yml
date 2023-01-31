@@ -5,7 +5,6 @@ test_hydesign:
   stage: 
     test
   script:
-  - pip install git+https://github.com/DTUWindEnergy/WISDEM.git@csm_only --no-deps
   - pip install -e .[test]
   - python -m pytest
   tags:
@@ -30,7 +29,6 @@ pages:
   stage:  
     deploy
   script:  
-  - pip install git+https://github.com/DTUWindEnergy/WISDEM.git@csm_only --no-deps
   - pip install -e .[docs] --upgrade
   - cd docs; make html
   - cd ../; mv docs/build/html public/
@@ -55,7 +53,6 @@ pypi:
     - apt-get install -y pandoc
     - pip install --upgrade pip
     - pip install pypandoc
-    - pip install git+https://github.com/DTUWindEnergy/WISDEM.git@csm_only --no-deps
     - pip install -e . --upgrade
     - python -c 'from git_utils import get_tag; get_tag(verbose=True)'
     - python -m pip install -U setuptools wheel
