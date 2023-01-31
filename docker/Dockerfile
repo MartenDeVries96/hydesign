@@ -13,40 +13,36 @@ MAINTAINER Mikkel Friis-Møller <mikf@dtu.dk>
 RUN apt-get update
 RUN apt-get -y install make pandoc graphviz
 
-RUN conda create -n py37 python=3.7
-RUN echo "source activate py37" > ~/.bashrc
-ENV PATH /opt/conda/envs/py37/bin:$PATH
+ENV PATH="/opt/conda/bin:${PATH}"
 
-RUN conda install -n py37 -y -c conda-forge finitediff
-RUN conda install -n py37 -y -c conda-forge numpy
-RUN conda install -n py37 -y -c conda-forge pandas
-RUN conda install -n py37 -y -c conda-forge pip
-RUN conda install -n py37 -y -c conda-forge scikit-learn
-RUN conda install -n py37 -y -c conda-forge scipy
-RUN conda install -n py37 -y -c conda-forge xarray
-RUN conda install -n py37 -y -c conda-forge openmdao[all]
-RUN conda install -n py37 -y -c conda-forge smt
-RUN conda install -n py37 -y -c conda-forge jupyterlab
-RUN conda install -n py37 -y -c conda-forge yaml
-RUN conda install -n py37 -y -c conda-forge pyomo
-RUN conda install -n py37 -y -c conda-forge pyomo.extras
-RUN conda install -n py37 -y -c conda-forge glpk
+RUN conda install -y -c conda-forge finitediff
+RUN conda install -y -c conda-forge numpy
+RUN conda install -y -c conda-forge pandas
+RUN conda install -y -c conda-forge pip
+RUN conda install -y -c conda-forge scikit-learn
+RUN conda install -y -c conda-forge scipy
+RUN conda install -y -c conda-forge xarray
+RUN conda install -y -c conda-forge openmdao[all]
+RUN conda install -y -c conda-forge smt
+RUN conda install -y -c conda-forge jupyterlab
+RUN conda install -y -c conda-forge yaml
+RUN conda install -y -c conda-forge glpk
 
-RUN /opt/conda/envs/py37/bin/pip install cplex
-RUN /opt/conda/envs/py37/bin/pip install docplex
-RUN /opt/conda/envs/py37/bin/pip install numpy-financial
-RUN /opt/conda/envs/py37/bin/pip install pvlib
-RUN /opt/conda/envs/py37/bin/pip install statsmodels
-RUN /opt/conda/envs/py37/bin/pip install rainflow
+RUN pip install netcdf4
+RUN pip install h5netcdf
+RUN pip install cplex
+RUN pip install docplex
+RUN pip install numpy-financial
+RUN pip install pvlib
+RUN pip install statsmodels
+RUN pip install rainflow
 
-RUN /opt/conda/envs/py37/bin/pip install --upgrade pip ipython ipykernel
-RUN /opt/conda/envs/py37/bin/pip install pypandoc
-RUN /opt/conda/envs/py37/bin/pip install sphinx --upgrade
-RUN /opt/conda/envs/py37/bin/pip install nbsphinx --upgrade
-RUN /opt/conda/envs/py37/bin/pip install nbconvert --upgrade
-RUN /opt/conda/envs/py37/bin/pip install sphinx_rtd_theme
+RUN pip install --upgrade pip ipython ipykernel
+RUN pip install pypandoc
+RUN pip install sphinx --upgrade
+RUN pip install nbsphinx --upgrade
+RUN pip install nbconvert --upgrade
+RUN pip install sphinx_rtd_theme
 
-RUN /opt/conda/envs/py37/bin/pip uninstall -y h5py
-RUN /opt/conda/envs/py37/bin/pip install --no-cache-dir h5py
 
-RUN /opt/conda/envs/py37/bin/ipython kernel install --name "python3" --user
+RUN ipython kernel install --name "python3" --user
