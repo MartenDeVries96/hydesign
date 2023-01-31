@@ -10,6 +10,8 @@ import pandas as pd
 import xarray as xr
 import openmdao.api as om
 
+from hydesign.look_up_tables import lut_filepath
+
 class genericWT_surrogate(om.ExplicitComponent):
     """
     Metamodel of the wind turbine.
@@ -37,7 +39,7 @@ class genericWT_surrogate(om.ExplicitComponent):
 
     def __init__(
         self, 
-        genWT_fn='./look_up_tables/genWT.nc',
+        genWT_fn = lut_filepath+'genWT_v3.nc',
         N_ws = 51,
         ):
         super().__init__()
@@ -77,20 +79,13 @@ class genericWT_surrogate(om.ExplicitComponent):
         A = get_rotor_area(inputs['d'])
         sp = p_rated*1e6/A
         
-        genWT = xr.open_dataset(self.genWT_fn).interp(
-            sp=sp, 
-            kwargs={"fill_value": 0}
-            )
-    
-        ws = genWT.ws.values
-        pc = genWT.pc.values
-        ct = genWT.ct.values
+        ws, pc, ct = get_WT_curves(
+            genWT_fn=self.genWT_fn,
+            specific_power=sp) 
         
         outputs['ws'] = ws 
         outputs['pc'] = pc
         outputs['ct'] = ct
-        
-        genWT.close()
     
 
 class genericWake_surrogate(om.ExplicitComponent):
@@ -120,7 +115,7 @@ class genericWake_surrogate(om.ExplicitComponent):
     """
     def __init__(
         self, 
-        genWake_fn='./look_up_tables/genWake_upd.nc',
+        genWake_fn = lut_filepath+'genWake_v3.nc',
         N_ws = 51,
         ):
 
@@ -173,6 +168,7 @@ class genericWake_surrogate(om.ExplicitComponent):
     def compute(self, inputs, outputs):#, discrete_inputs, discrete_outputs):
 
         ws = inputs['ws']
+        pc = inputs['pc']
         Nwt = inputs['Nwt']
         #Nwt = discrete_inputs['Nwt']
         Awpp = inputs['Awpp']  # in km2
@@ -183,18 +179,15 @@ class genericWake_surrogate(om.ExplicitComponent):
         sp = p_rated*1e6/A
         wind_MW_per_km2 = Nwt*p_rated/(Awpp + 1e-10*(Awpp==0))
         
-        genWake_sm = xr.open_dataset(self.genWake_fn).interp(
-            sp=sp, 
-            Nwt=Nwt, 
-            wind_MW_per_km2=wind_MW_per_km2,
-            kwargs={"fill_value": 1}
-            )
-        wl = genWake_sm.wl.values
-        
-        pcw = inputs['pc'] * (1 - wl)        
-        outputs['pcw'] = pcw * Nwt * p_rated
-
-        genWake_sm.close()
+        outputs['pcw'] = get_wake_affected_pc(
+            genWake_fn = self.genWake_fn, 
+            specific_power = sp,
+            Nwt = Nwt,
+            wind_MW_per_km2 = wind_MW_per_km2,
+            ws = ws,
+            pc = pc,
+            p_rated = p_rated
+        )
 
 class wpp(om.ExplicitComponent):
     """
@@ -251,8 +244,12 @@ class wpp(om.ExplicitComponent):
         pcw = inputs['pcw']
         wst = inputs['wst']
 
-        outputs['wind_t'] = self.wpp_efficiency * np.interp(
-            wst, ws, pcw, left=0, right=0, period=None)
+        outputs['wind_t'] = get_wind_ts(
+            ws = ws,
+            pcw = pcw,
+            wst = wst,
+            wpp_efficiency = self.wpp_efficiency,
+        )
 
 # -----------------------------------------------------------------------
 # Auxiliar functions 
@@ -260,3 +257,92 @@ class wpp(om.ExplicitComponent):
 
 def get_rotor_area(d): return np.pi*(d/2)**2
 def get_rotor_d(area): return 2*(area/np.pi)**0.5
+
+def get_WT_curves(genWT_fn, specific_power):
+    """
+    Evaluates a generic WT look-up table
+
+    Parameters
+    ----------
+    genWT_fn : look-up table filename
+    specific_power : WT specific power
+
+    Returns
+    -------
+    ws : Wind speed vector for power and thrust coefficient curves
+    pc : Power curve
+    ct : Thrust coefficient curves
+    """
+    genWT = xr.open_dataset(genWT_fn).interp(
+        sp=specific_power, 
+        kwargs={"fill_value": 0}
+        )
+
+    ws = genWT.ws.values
+    pc = genWT.pc.values
+    ct = genWT.ct.values
+    
+    genWT.close()
+    
+    return ws, pc, ct
+
+def get_wake_affected_pc(
+    genWake_fn, 
+    specific_power,
+    Nwt,
+    wind_MW_per_km2,
+    ws,
+    pc,
+    p_rated,
+):
+    """
+    Evaluates a generic WT look-up table
+
+    Parameters
+    ----------
+    genWake_fn : look-up table filename
+    specific_power : WT specific power
+    Nwt : Number of wind turbines
+    wind_MW_per_km2 : Wind plant installation density
+    ws : Wind speed vector for wake losses curves
+    pc : 
+
+    Returns
+    -------
+    wl : Wind plant wake losses curve
+    """
+    genWake_sm = xr.open_dataset(genWake_fn).interp(
+        ws=ws, 
+        sp=specific_power, 
+        Nwt=Nwt, 
+        wind_MW_per_km2=wind_MW_per_km2,
+        kwargs={"fill_value": 1}
+        )
+    wl = genWake_sm.wl.values
+    
+    genWake_sm.close()
+    
+    pcw = pc * (1 - wl)        
+    return pcw * Nwt * p_rated
+
+def get_wind_ts(
+    ws,
+    pcw,
+    wst,
+    wpp_efficiency
+):
+    """
+    Evaluates a generic WT look-up table
+
+    Parameters
+    ----------
+    ws : Wind speed vector for wake losses curves
+    pcw : Wake affected plant power curve
+    wst : Wind speed time series
+
+    Returns
+    -------
+    wind_ts : Wind plant power time series
+    """
+    wind_ts = wpp_efficiency * np.interp(wst, ws, pcw, left=0, right=0, period=None)
+    return wind_ts

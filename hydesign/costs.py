@@ -17,7 +17,8 @@ from scipy import stats
 import xarray as xr
 
 #Wisdem
-from hydesign.nrel_csm_tcc_2015 import get_WT_cost_wisdem
+# from hydesign.nrel_csm_tcc_2015 import get_WT_cost_wisdem
+from hydesign.nrel_csm_wrapper import wt_cost
 
 
 class wpp_cost(om.ExplicitComponent):
@@ -140,7 +141,18 @@ class wpp_cost(om.ExplicitComponent):
         hh_ref = self.hh_ref
         p_rated_ref = self.p_rated_ref
         
-        WT_cost_ref = get_WT_cost_wisdem(
+        # WT_cost_ref = get_WT_cost_wisdem(
+        #     rotor_diameter = d_ref,
+        #     turbine_class = 1,
+        #     blade_has_carbon = False,
+        #     blade_number = 3    ,
+        #     machine_rating = p_rated_ref*1e3, #kW
+        #     hub_height = hh_ref,
+        #     bearing_number = 2,
+        #     crane = True,  
+        #     verbosity = False
+        #     )
+        WT_cost_ref = wt_cost(
             rotor_diameter = d_ref,
             turbine_class = 1,
             blade_has_carbon = False,
@@ -149,10 +161,20 @@ class wpp_cost(om.ExplicitComponent):
             hub_height = hh_ref,
             bearing_number = 2,
             crane = True,  
-            verbosity = False
-            )
+            )*1e-6
         
-        WT_cost = get_WT_cost_wisdem(
+        # WT_cost = get_WT_cost_wisdem(
+        #     rotor_diameter = d,
+        #     turbine_class = 1,
+        #     blade_has_carbon = False,
+        #     blade_number = 3    ,
+        #     machine_rating = p_rated*1e3, #kW
+        #     hub_height = hh,
+        #     bearing_number = 2,
+        #     crane = True,  
+        #     verbosity = False
+        #     )
+        WT_cost = wt_cost(
             rotor_diameter = d,
             turbine_class = 1,
             blade_has_carbon = False,
@@ -161,8 +183,7 @@ class wpp_cost(om.ExplicitComponent):
             hub_height = hh,
             bearing_number = 2,
             crane = True,  
-            verbosity = False
-            )
+            )*1e-6
         scale = (WT_cost/p_rated)/(WT_cost_ref/p_rated_ref)
         mean_aep_wind = wind_t.mean()*365*24
         

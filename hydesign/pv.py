@@ -16,6 +16,7 @@ from pvlib.location import Location
 from pvlib.modelchain import ModelChain
 from pvlib.temperature import TEMPERATURE_MODEL_PARAMETERS
 
+
 class pvp(om.ExplicitComponent):
     """PV power plant model : It computes the solar power output during the lifetime of the plant using solar plant AC capacity, DC/AC ratio, location coordinates and PV module angles"""
 
@@ -103,89 +104,34 @@ class pvp(om.ExplicitComponent):
     #    self.declare_partials('*', '*',  method='fd')
 
     def compute(self, inputs, outputs):
-
-        """ Computing the output power time series of the PV plant
-
-        Parameters
-        ----------
-        surface_tilt : surface tilt of the PV panels
-        surface_azimuth : azimuth of the PV panels
-        DC_AC_ratio : DC-AC ratio of the PV converter
-        solar_MW : AC nominal capacity of the PV power plant
-
-        Returns
-        -------
-        solar_t : PV power time series 
-        """
-        
-        # Sandia
-        sandia_modules = pvsystem.retrieve_sam('SandiaMod')
-        module_name = 'Canadian_Solar_CS5P_220M___2009_'
-        module = sandia_modules[module_name]
-        module['aoi_model'] = irradiance.aoi
-
-        # 2. Inverter
-        # -------------
-        inverters = pvsystem.retrieve_sam('cecinverter')
-        inverter = inverters['ABB__MICRO_0_25_I_OUTD_US_208__208V_']
-        
-        temp_model = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass']
-        
         surface_tilt = inputs['surface_tilt']
         surface_azimuth = inputs['surface_azimuth']
         solar_MW = inputs['solar_MW'][0]
         land_use_per_solar_MW = inputs['land_use_per_solar_MW'][0]
-        
-        if self.tracking == 'single_axis':
-          
-            mount = pvsystem.SingleAxisTrackerMount(
-                axis_tilt=surface_tilt[0],
-                axis_azimuth=surface_azimuth[0], 
-                max_angle = 90.0, 
-                backtrack = True, 
-                gcr = 0.2857142857142857, 
-                cross_axis_tilt = 0.0,
-                #module_height = 1
-                )
-            array = pvsystem.Array(
-                mount=mount, 
-                module_parameters=module,
-                temperature_model_parameters=temp_model)
-            system = pvsystem.PVSystem(
-                arrays=[array],
-                inverter_parameters=inverter,
-                )
-        else:
-            system = pvsystem.PVSystem(
-                module_parameters=module,
-                inverter_parameters=inverter,
-                temperature_model_parameters=temp_model,
-                surface_tilt=surface_tilt,
-                surface_azimuth=surface_azimuth)
-
-        mc = ModelChain(system, self.pvloc)
-
-        # Run solar with the WRF weather
-        mc.run_model(self.weather)
-
         DC_AC_ratio = inputs['DC_AC_ratio']
-        DC_AC_ratio_ref = inverter.Pdco / inverter.Paco
-        Paco = inverter.Paco * DC_AC_ratio_ref / DC_AC_ratio
-        solar_t = (mc.results.ac / Paco)
-   
-        solar_t[solar_t>1] = 1
-        solar_t[solar_t<0] = 0
+        
+        Apvp = solar_MW * land_use_per_solar_MW
+        solar_t = get_solar_time_series(
+            surface_tilt = surface_tilt, 
+            surface_azimuth = surface_azimuth, 
+            solar_MW = solar_MW, 
+            land_use_per_solar_MW = land_use_per_solar_MW, 
+            DC_AC_ratio = DC_AC_ratio, 
+            tracking = self.tracking, 
+            pvloc = self.pvloc, 
+            weather = self.weather)
+        outputs['solar_t'] = solar_t
+        outputs['Apvp'] = Apvp
 
-        outputs['solar_t'] = solar_MW * solar_t.fillna(0.0)
-        outputs['Apvp'] = solar_MW * land_use_per_solar_MW
+        
 
 
 class pvp_degradation_linear(om.ExplicitComponent):
-    """PV degradation model providing the PV degradation time series throughout the lifetime of the plant, considering a fixed linear degradation of the PV panels"""
-    def __init__(
-        self, 
-        life_h = 25*365*24, 
-        ):
+    """
+    PV degradation model providing the PV degradation time series throughout the lifetime of the plant, 
+    considering a fixed linear degradation of the PV panels
+    """
+    def __init__(self, life_h=25*365*24):
         """Initialization of the PV degradation model
 
         Parameters
@@ -197,39 +143,12 @@ class pvp_degradation_linear(om.ExplicitComponent):
         self.life_h = life_h
         
     def setup(self):
-        self.add_input(
-            'pv_deg_per_year',
-            desc="PV degradation per year",
-            val=0.5 / 100)
-        
-        self.add_output(
-            'SoH_pv',
-            desc="PV state of health time series",
-            shape=[self.life_h])   
+        self.add_input('pv_deg_per_year', desc="PV degradation per year", val=0.5 / 100)
+        self.add_output('SoH_pv', desc="PV state of health time series", shape=[self.life_h])   
 
     def compute(self, inputs, outputs):
-        """ Computing the PV degradation
-
-        Parameters
-        ----------
-        pv_deg_per_year : fixed yearly degradation of PV panels
-
-        Returns
-        -------
-        SoH_pv : degradation of the PV plant throughout the lifetime
-        """
-        
         pv_deg_per_year = inputs['pv_deg_per_year']
-        
-        t_over_year = np.arange(self.life_h)/(365*24)
-        degradation = pv_deg_per_year * t_over_year
-
-        y = 1 - degradation
-        while len(y[y < 0]) > 0:
-            #y[y<0] = 1 + y[y<0] - y[y<0][0]
-            y[y < 0] = 0  # No replacement of PV panels
-
-        outputs['SoH_pv'] = y     
+        outputs['SoH_pv'] = get_linear_solar_degradation(pv_deg_per_year, self.life_h)   
 
 class shadow(om.ExplicitComponent):
     """pv loss model due to shadows of wt"""
@@ -268,3 +187,106 @@ class shadow(om.ExplicitComponent):
         solar_deg_t = inputs['solar_deg_t']
         outputs['solar_deg_shad_t'] = solar_deg_t
 
+
+# -----------------------------------------------------------------------
+# Auxiliar functions 
+# -----------------------------------------------------------------------        
+
+def get_solar_time_series(
+    surface_tilt, 
+    surface_azimuth, 
+    solar_MW, 
+    land_use_per_solar_MW, 
+    DC_AC_ratio, 
+    tracking, 
+    pvloc, 
+    weather):
+
+    """ Computing the output power time series of the PV plant
+
+    Parameters
+    ----------
+    surface_tilt : surface tilt of the PV panels
+    surface_azimuth : azimuth of the PV panels
+    DC_AC_ratio : DC-AC ratio of the PV converter
+    solar_MW : AC nominal capacity of the PV power plant
+
+    Returns
+    -------
+    solar_t : PV power time series 
+    """
+    
+    # Sandia
+    sandia_modules = pvsystem.retrieve_sam('SandiaMod')
+    module_name = 'Canadian_Solar_CS5P_220M___2009_'
+    module = sandia_modules[module_name]
+    module['aoi_model'] = irradiance.aoi
+
+    # 2. Inverter
+    # -------------
+    inverters = pvsystem.retrieve_sam('cecinverter')
+    inverter = inverters['ABB__MICRO_0_25_I_OUTD_US_208__208V_']
+    
+    temp_model = TEMPERATURE_MODEL_PARAMETERS['sapm']['open_rack_glass_glass']
+            
+    if tracking == 'single_axis':
+      
+        mount = pvsystem.SingleAxisTrackerMount(
+            axis_tilt=float(surface_tilt),
+            axis_azimuth=float(surface_azimuth), 
+            max_angle = 90.0, 
+            backtrack = True, 
+            gcr = 0.2857142857142857, 
+            cross_axis_tilt = 0.0,
+            #module_height = 1
+            )
+        array = pvsystem.Array(
+            mount=mount, 
+            module_parameters=module,
+            temperature_model_parameters=temp_model)
+        system = pvsystem.PVSystem(
+            arrays=[array],
+            inverter_parameters=inverter,
+            )
+    else:
+        system = pvsystem.PVSystem(
+            module_parameters=module,
+            inverter_parameters=inverter,
+            temperature_model_parameters=temp_model,
+            surface_tilt=surface_tilt,
+            surface_azimuth=surface_azimuth)
+
+    mc = ModelChain(system, pvloc)
+
+    # Run solar with the WRF weather
+    mc.run_model(weather)
+
+    
+    DC_AC_ratio_ref = inverter.Pdco / inverter.Paco
+    Paco = inverter.Paco * DC_AC_ratio_ref / DC_AC_ratio
+    solar_t = (mc.results.ac / Paco)
+   
+    solar_t[solar_t>1] = 1
+    solar_t[solar_t<0] = 0
+    return solar_MW * solar_t.fillna(0.0)
+
+def get_linear_solar_degradation(pv_deg_per_year, life_h):
+    """ 
+    Computes the PV degradation
+
+    Parameters
+    ----------
+    pv_deg_per_year : fixed yearly degradation of PV panels
+    life_h : lifetime of the plant in hours
+
+    Returns
+    -------
+    SoH_pv : degradation of the PV plant throughout the lifetime
+    """
+    t_over_year = np.arange(life_h)/(365*24)
+    degradation = pv_deg_per_year * t_over_year
+
+    y = 1 - degradation
+    if len(y[y < 0]) > 0:
+        y[y < 0] = 0  # No replacement of PV panels
+    return y

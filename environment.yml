@@ -2,8 +2,6 @@ name: hydesign
 channels:
   - conda-forge
 dependencies:
-  - h5netcdf
-  - netcdf4
-  - python=3.8
+  - python=3.10
   - pip
 

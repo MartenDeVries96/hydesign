@@ -528,14 +528,6 @@ function handleError(evt) {
     white-space: nowrap;
 }
 
-.window-theme-value-info .window-body table tbody tr.even td {
-    background-color:white;
-}
-
-.window-theme-value-info .window-body table tbody tr.odd td {
-    background-color: #e8ffe8;
-}
-
 .show_value_button {
     background-color: #c1c1c1;
  }
@@ -1435,9 +1427,9 @@ rect.outputHighlight {
 #show-error-button-container {
     visibility: hidden;
     position: absolute;
-    bottom: 17px;
+    bottom: 250px;
     right: 115px;
-    z-index:5;
+    z-index: 5;
 }
 
 #show-error-button{
@@ -2957,7 +2949,7 @@ return _;
 
 </head>
 <body>
-<div id="all-diagram-content" class="non-embedded-diagram" data-openmdao-version='3.19.0'>
+<div id="all-diagram-content" class="non-embedded-diagram" data-openmdao-version='3.23.0'>
     <div id="diagram-content">
         <!-- Toolbar -->
         <div id="toolbarLoc">
@@ -3257,7 +3249,7 @@ return _;
 </div>
 
 <script type="text/javascript">
-    var compressedModel = "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";
+    var compressedModel = "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";
 </script>
 
 <script type="text/javascript">
@@ -3389,6 +3381,15 @@ function wipeObj(obj) {
  */
 function visible(elem) {
     return !!( elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length );
+}
+
+/**
+ * An adaptation of the common "basename()" function.
+ * @param {String} filepath The path to get the basename from.
+ * @returns {String} The basename of the current URL, minus the .html/.htm extension.
+ */
+function basename(filepath = window.location.pathname) {
+    return String(filepath).replace(/^.*[\/\\](.+)\.html?$/i, "$1");
 }
 
 // Constants and default values
@@ -4373,8 +4374,8 @@ class NodeConnection {
         else {
             // Collect all parents of the source node.
             srcObjParents.push(this.srcObj);
-            for (let obj = this.srcObj.parent; obj != null; obj = obj.parent) {
-                srcObjParents.push(obj);
+            for (let parentObj = this.srcObj.parent; parentObj != null; parentObj = parentObj.parent) {
+                srcObjParents.push(parentObj);
             }
         }
 
@@ -4666,7 +4667,7 @@ class ModelData {
 
         // If variables were selectively hidden, force the variable selection
         // dialog to rebuild the hiddenVars array.
-        if (node.hasFilters()) { node.filter.inputs.wipe(); node.filter.outputs.wipe(); }
+        if (node.hasFilters()) { node.wipeFilters(); }
 
         if (!foundEntry) { // Not found, reset values to default
             node.expand();
@@ -4772,6 +4773,15 @@ class OmNodeDisplayData extends NodeDisplayData {
  * @typedef OmTreeNode
  */
 class OmTreeNode extends FilterCapableNode {
+    static showLinearSolverNames = true;
+
+    /**
+     * Switch back and forth between showing the linear or non-linear solver names.
+     */
+    static toggleSolverNameType() {
+        this.showLinearSolverNames = !this.showLinearSolverNames;
+    }
+
     constructor(origNode, attribNames, parent) {
         super(origNode, attribNames, parent);
 
@@ -4784,6 +4794,11 @@ class OmTreeNode extends FilterCapableNode {
     get absPathName() { return this.path; }
     set absPathName(newName) { this.path = newName; return newName; }
 
+    /**
+     * Perform special checking for filter and auto-IVC nodes when determining
+     * the node's name.
+     * @returns {String} The label for the node.
+     */
     getTextName() {
         let retVal = this.name;
 
@@ -4799,6 +4814,23 @@ class OmTreeNode extends FilterCapableNode {
         return retVal;
     }
 
+    /**
+     * Return the name of the linear or non-linear solver depending
+     * on the value of OmTreeNode.showLinearSolverNames.
+     * @returns {String} The label for the solver node.
+     */
+    getSolverText() {
+        const solverName = OmTreeNode.showLinearSolverNames? this.linear_solver : this.nonlinear_solver;
+        let suffix = '';
+
+        if (!OmTreeNode.showLinearSolverNames && 'solve_subsystems' in this && this.solve_subsystems) {
+            suffix = ' (sub_solve)';
+        }
+
+        return `${solverName}${suffix}`;
+    }
+
+    /** Create and return a new  OmNodeDisplayData object. */
     _newDisplayData() { return new OmNodeDisplayData(); }
 
     addFilterChild(attribNames) {
@@ -4848,8 +4880,9 @@ class OmTreeNode extends FilterCapableNode {
 
         if (this.hasChildren()) {
             for (const child of this.children) {
-                if (child instanceof OmTreeNode)
+                if (child instanceof OmTreeNode) {
                     child._getNodesInChildrenWithCycleArrows(arr);
+                }
             }
         }
     }
@@ -7535,7 +7568,7 @@ class InfoPropDefault {
     output(msg) { return msg; }
 
     /** Make sure the node has the property and it's got a value. */
-    canShow(node) { return (node.propExists(this.key) && node[this.key] != '') }
+    canShow(node) { return (node.propExists(this.key) && String(node[this.key]) != '') }
 
     /**
      * Add a table row with the supplied description and value.
@@ -7567,6 +7600,70 @@ class InfoPropDefault {
                 this.output(node[this.key]), this.capitalize)
         }
     }
+
+    /**
+     * Convert an element to a string that is human readable.
+     * @param {Object} element The scalar item to convert.
+     * @returns {String} The string representation of the element.
+     */
+     static elementToString(element) {
+        if (typeof element === 'number') {
+            if (Number.isInteger(element)) { return element.toString(); }
+            return this.floatFormatter(element); /* float */
+        }
+
+        if (element === 'nan') { return element; }
+        return JSON.stringify(element);
+    }
+
+    /**
+     * Convert a value to a string that is human readable.
+     * @param {Object} val The item to convert.
+     * @param {Number} level The level of nesting in the display.
+     * @returns {String} The string version of the converted array.
+     */
+    static valToString(val, level = 0) {
+        if (!Array.isArray(val)) { return this.elementToString(val); }
+
+        let indent = ' '.repeat(level);
+        let valStr = indent + '[';
+
+        for (const element of val) {
+            valStr += this.valToString(element, level + 1) + ' ';
+        }
+
+        return valStr.replace(/^(.+) $/, '$1]\n');
+    }
+
+    /**
+     * Convert a value to a string that can be used in Python code.
+     * @param {Object} val The value to convert.
+     * @returns {String} The string of the converted object.
+     */
+     static valToCopyString(val) {
+        if (!Array.isArray(val)) { return this.elementToString(val); }
+
+        let valStr = 'array([';
+        for (const element of val) {
+            valStr += this.valToCopyString(element) + ', ';
+        }
+
+        if (val.length > 0) {
+            return valStr.replace(/^(.+)(, )$/, '$1])');
+        }
+    }
+}
+/**
+ * Output a human-readable number.
+ * @typedef InfoPropNumber
+ */
+class InfoPropNumber extends InfoPropDefault {
+    constructor(key, desc) {
+        super(key, desc, false);
+    }
+
+    /** Truncate a possible float to something readable. */
+    output(val) { return InfoPropDefault.valToString(val); }
 }
 
 /**
@@ -7656,55 +7753,10 @@ class InfoPropArray extends InfoPropDefault {
         this.values = values;
     }
 
-    /**
-     * Convert an element to a string that is human readable.
-     * @param {Object} element The scalar item to convert.
-     * @returns {String} The string representation of the element.
-     */
-    static elementToString(element) {
-        if (typeof element === 'number') {
-            if (Number.isInteger(element)) { return element.toString(); }
-            return this.floatFormatter(element); /* float */
-        }
-
-        if (element === 'nan') { return element; }
-        return JSON.stringify(element);
-    }
-
-    /**
-     * Convert a value to a string that is human readable.
-     * @param {Object} val The item to convert.
-     * @param {Number} level The level of nesting in the display.
-     * @returns {String} The string version of the converted array.
-     */
-    static valToString(val, level = 0) {
-        if (!Array.isArray(val)) { return this.elementToString(val); }
-
-        let indent = ' '.repeat(level);
-        let valStr = indent + '[';
-
-        for (const element of val) {
-            valStr += this.valToString(element, level + 1) + ' ';
-        }
-
-        return valStr.replace(/^(.+) $/, '$1]\n');
-    }
-
-    /**
-     * Convert a value to a string that can be used in Python code.
-     * @param {Object} val The value to convert.
-     * @returns {String} The string of the converted object.
-     */
-    static valToCopyString(val) {
-        if (!Array.isArray(val)) { return this.elementToString(val); }
-
-        let valStr = 'array([';
-        for (const element of val) {
-            valStr += this.valToCopyString(element) + ', ';
-        }
-
-        if (val.length > 0) {
-            return valStr.replace(/^(.+)(, )$/, '$1])');
+    addRow(tbody, node) {
+        if (this.canShow(node)) {
+            InfoPropDefault.addRowWithVal(tbody, this.desc,
+                this.output(node[this.key], node))
         }
     }
 
@@ -7715,10 +7767,10 @@ class InfoPropArray extends InfoPropDefault {
      * @param {Array} array The array to display and save.
      * @returns {String} A string representation of the array.
      */
-    output(array) {
+    output(array, node) {
         if (array == null) { return 'Value too large to include in diagram'; }
 
-        const valStr = InfoPropArray.valToString(array);
+        const valStr = InfoPropDefault.valToString(array);
         const maxLen = ValueInfo.TRUNCATE_LIMIT;
         const isTruncated = valStr.length > maxLen;
 
@@ -7732,8 +7784,12 @@ class InfoPropArray extends InfoPropDefault {
         // Store the original value and formatted value so they can be passed if the panel is pinned.
         this.values[this.key] = {
             'val': array,
+            'min': node.val_min,
+            'min_idx': node.val_min_indices,
+            'max': node.val_max,
+            'max_idx': node.val_max_indices,
             'str': valStr,
-            'copyStr': InfoPropArray.valToCopyString(array),
+            'copyStr': InfoPropDefault.valToCopyString(array),
             'isTruncated': isTruncated
         }
 
@@ -7744,7 +7800,7 @@ class InfoPropArray extends InfoPropDefault {
     canShow(node) { return node.propExists(this.key); }
 }
 
-InfoPropArray.floatFormatter = d3.format('g');
+InfoPropDefault.floatFormatter = d3.format('g');
 
 
 
@@ -7761,10 +7817,10 @@ class ValueInfo extends WindowResizable {
      * @param {PersistentNodeInfo} pnInfo The PersistentNodeInfo window to get data from.
      * @returns {ValueInfo} The newly constructed window.
      */
-    static add(name, val, pnInfo) {
+    static add(name, val, min, max, pnInfo) {
         if (!ValueInfo.existingValueWindows[name]) {
             ValueInfo.existingValueWindows[name] = true;
-            return new ValueInfo(name, val, pnInfo);
+            return new ValueInfo(name, val, min, max, pnInfo);
         }
     }
 
@@ -7780,12 +7836,18 @@ class ValueInfo extends WindowResizable {
      * references to the HTML elements.
      * @param {String} name Variable name.
      * @param {Number} val Variable value.
+     * @param {Number} min Min variable value.
+     * @param {Number} val Max variable value.
      * @param {PersistentNodeInfo} pnInfo The PersistentNodeInfo window to get data from.
      */
-    constructor(name, val, pnInfo) {
+    constructor(name, val, min, max, pnInfo) {
         super('valueInfo-' + uuidv4());
         this.name = name;
         this.val = val;
+        this.val_min = min;
+        this.val_max = max;
+        this.val_range = max - min;
+        this.val_mid = this.val_range / 2;
 
         this.table = this.body.append('table');
         this.tbody = this.table.append('tbody');
@@ -7840,24 +7902,50 @@ class ValueInfo extends WindowResizable {
             .text(function (d) { return d; });
 
         // Construct the table displaying the variable value
-        const evenOdd = ['even', 'odd'];
         const rows = this.tbody
             .selectAll('tr.array-row')
             .data(val)
             .enter()
             .append('tr')
-            // Style alternating rows differently:
-            .attr('class', function (d, i) { return `array-row ${evenOdd[i % 2]}`; });
+            .attr('class', 'array-row');
 
         // Insert the array index into the first column:
         rows.append('th').text(function (d, i) { return i; });
 
         // Add the contents of the array:
+        const self = this;
         rows.selectAll('td')
             .data(function (row) { return row; })
             .enter()
             .append('td')
-            .text(function (d) { return InfoPropArray.floatFormatter(d); });
+            .attr('style', d => {
+                // Since several CSS elements need to be computed at once,
+                // use the style attr instead of setting a single style.
+                let style = 'border: '
+                if ( d == self.val_min) style += '3px dashed #ff00ff; font-weight: bold';
+                else if ( d == self.val_max) style += '3px dashed yellow; font-weight: bold';
+                else style += 'none'
+
+                style += '; background-color: rgb(';
+                let percent = (d - self.val_min) / self.val_range;
+                let color = 'black';
+                if ( percent < 0.5 ) {
+                    const whiteness = 255 * percent * 2;
+                    style += `${whiteness},${whiteness},255`;
+                    if ( percent < 0.25 ) color = 'white';
+                }
+                else {
+                    if ( percent > 0.75 ) color = 'white';
+                    percent = (percent - 0.5) * 2;
+                    const whiteness = 255 * (1 - percent);
+                    style += `255,${whiteness},${whiteness}`;
+                }
+
+                style += `); color: ${color};`;
+
+                return style;
+            })
+            .text(function (d) { return InfoPropDefault.floatFormatter(d); });
 
         const pnInfoPos = pnInfo._getPos();
         this.sizeToContent(17, 17) // TODO: Properly find size of scrollbar + 2
@@ -8067,7 +8155,8 @@ class PersistentNodeInfo extends WindowDraggable {
                 this.window
                     .select(`button#${valName}.show_value_button`)
                     .on('click', c => {
-                        ValueInfo.add(name, self.values[valName].val, self);
+                        const values = self.values[valName];
+                        ValueInfo.add(name, values.val, values.min, values.max, self);
                     })
             }
         }
@@ -8445,7 +8534,7 @@ class UserInterface {
 
             body.style('cursor', 'nwse-resize')
                 .on('mouseup', () => {
-                    diag.manuallyResized = true;
+                    self.diag.manuallyResized = true;
 
                     // Update the slider value and display
                     const defaultHeight = window.innerHeight * .95;
@@ -8507,7 +8596,7 @@ class UserInterface {
                 return;
             }
 
-            if (!diag.manuallyResized) {
+            if (!self.diag.manuallyResized) {
                 clearTimeout(self.resizeTimeout);
                 self.resizeTimeout =
                     setTimeout(function () {
@@ -9010,7 +9099,7 @@ class UserInterface {
      * @param {Object} [extraData={}] Additional items to save.
      */
     saveState(extraData = {}) {
-        const stateFileName = prompt("Filename to save view state as", 'saved.n2view');
+        const stateFileName = basename() + '.n2view';
 
         // Zoomed node
         const zoomedElement = this.diag.zoomedElement.id;
@@ -11409,7 +11498,7 @@ class Matrix {
 
         // Find which variable box each of the variables belong in,
         // while finding the bounds of that box. Top and bottom
-        // rows recorded for each node in this._boxInfo[].
+        // rows recorded for each node.
         for (let ri = 1; ri < this.diagNodes.length; ++ri) {
             const curNode = this.diagNodes[ri];
             const startINode = this.diagNodes[currentBox.startI];
@@ -12104,7 +12193,6 @@ class Diagram {
 
     _newModelData() {
         this.model = new ModelData(this.modelData);
-        console.log(this.model)
     }
 
     /** Create a Layout object. Can be overridden to create different types of Layouts */
@@ -12194,8 +12282,12 @@ class Diagram {
         const svgUrl = URL.createObjectURL(svgBlob);
         const downloadLink = document.createElement("a");
         downloadLink.href = svgUrl;
-        const svgFileName = prompt("Filename to save SVG as", 'partition_tree_n2.svg');
+
+        // To suggest a filename to save as, get the basename of the current HTML file,
+        // remove the .html/.htm extension, and add ".svg".
+        const svgFileName = basename() + ".svg";
         downloadLink.download = svgFileName;
+        
         document.body.appendChild(downloadLink);
         downloadLink.click();
         document.body.removeChild(downloadLink);
@@ -12230,10 +12322,7 @@ class Diagram {
 
         // Get rid of any existing filters before processing children, as they'll
         // be populated while processing the state of each child node.
-        if (node.hasFilters()) {
-            node.filter.inputs.wipe();
-            node.filter.outputs.wipe();
-        }
+        if (node.hasFilters()) { node.wipeFilters(); }
 
         if (node.hasChildren()) {
             for (const child of node.children) {
@@ -12687,15 +12776,13 @@ class OmLayout extends Layout {
      * @param {ModelData} model The pre-processed model object.
      * @param {Object} newZoomedElement The element the new layout is based around.
      * @param {Object} dims The initial sizes for multiple tree elements.
-     * @param {Boolean} showLinearSolverNames Whether to show linear or non-linear solver names.
      * @param {Boolean} showSolvers Whether to display the solver tree.
      */
-    constructor(model, zoomedElement, dims, showLinearSolverNames, showSolvers) {
+    constructor(model, zoomedElement, dims, showSolvers) {
         super(model, zoomedElement, dims, false);
 
         this.zoomedSolverNodes = [];
         this.visibleSolverNodes = [];
-        this.showLinearSolverNames = showLinearSolverNames;
         this.showSolvers = showSolvers;
         this._init();
     }
@@ -12720,22 +12807,6 @@ class OmLayout extends Layout {
     }
 
     /**
-     * Return the name of the linear or non-linear solver depending
-     * on the current setting.
-     * @param {OmTreeNode} node The item to get the solver text from.
-     */
-     getSolverText(node) {
-        let solver_name = this.showLinearSolverNames ? node.linear_solver : node.nonlinear_solver;
-
-        if (!this.showLinearSolverNames && node.hasOwnProperty("solve_subsystems") && node.solve_subsystems) {
-            return solver_name + " (sub_solve)";
-        }
-        else {
-            return solver_name;
-        }
-    }
-
-    /**
      * Determine text widths for all descendents of the specified node.
      * @param {OmTreeNode} [node = this.zoomedElement] Item to begin looking from.
      */
@@ -12743,8 +12814,8 @@ class OmLayout extends Layout {
         if (node.draw.hidden) return;
         super._updateTextWidths(node);
 
-        if (!node.isInputOrOutput()) {
-            node.draw.nameSolverWidthPx = this._getTextWidth(this.getSolverText(node)) + 2 *
+        if (!node.isInputOrOutput() && !node.isFilter()) {
+            node.draw.nameSolverWidthPx = this._getTextWidth(node.getSolverText()) + 2 *
                 this.size.rightTextMargin;
         }
     }
@@ -13118,14 +13189,13 @@ class OmStyle extends Style {
 
     /**
      * Determine the name of the CSS class based on the name of the solver.
-     * @param {boolean} showLinearSolverNames Whether to use the linear or non-linear solver name.
      * @param {Object} solverNames
      * @param {string} solverNames.linear The linear solver name.
      * @param {string} solverNames.nonLinear The non-linear solver name.
      * @return {string} The CSS class of the solver, or for "other" if not found.
      */
-    getSolverClass(showLinearSolverNames, solverNames) {
-        const solverName = showLinearSolverNames? solverNames.linear : solverNames.nonLinear;
+    getSolverClass(solverNames) {
+        const solverName = OmTreeNode.showLinearSolverNames? solverNames.linear : solverNames.nonLinear;
         return this.solvers[solverName]? this.solvers[solverName].class : this.solvers.other.class;
     }
 
@@ -13322,7 +13392,10 @@ class OmNodeInfo extends NodeInfo {
                                 'Non-local values are not available under MPI, showing initial value.'),
             new InfoPropYesNo('distributed', 'Distributed'),
             this.propList[3], // val
-
+            new InfoPropNumber('val_min', 'Minimum'),
+            new InfoPropDefault('val_min_indices', 'Minimum Indices'),
+            new InfoPropNumber('val_max', 'Maximum'),
+            new InfoPropDefault('val_max_indices', 'Maximum Indices'),
             new InfoPropDefault('subsystem_type', 'Subsystem Type', true),
             new InfoPropDefault('component_type', 'Component Type', true),
             new InfoPropYesNo('implicit', 'Implicit'),
@@ -13535,7 +13608,6 @@ class OmLegend extends Legend {
         }
     }
 
-
     /** Add symbols for all of the items that were discovered */
     _setupContents() {
         super._setupContents();
@@ -13548,18 +13620,18 @@ class OmLegend extends Legend {
     }
 
     /**
-     * Wipe the current solvers legend area and populate with the other type.
-     * @param {Boolean} linear True to use linear solvers, false for non-linear.
+     * Wipe the current solvers legend area and populate with the current setting.
      */
-    toggleSolvers(linear) {
+    updateSolvers() {
         const solversLegendTitle = d3.select('#solvers-legend-title');
-        solversLegendTitle.text(linear ? "Linear Solvers" : "Non-Linear Solvers");
+        solversLegendTitle.text(OmTreeNode.showLinearSolverNames?
+            "Linear Solvers" : "Non-Linear Solvers");
 
         const solversLegend = d3.select('#solvers-legend');
         solversLegend.html('');
 
-        const solvers = linear ? this.linearSolvers : this.nonLinearSolvers;
-        for (let item of solvers) this._addItem(item, solversLegend);
+        const solvers = OmTreeNode.showLinearSolverNames? this.linearSolvers : this.nonLinearSolvers;
+        for (const item of solvers) this._addItem(item, solversLegend);
 
         solversLegend.style('width', solversLegend.node().scrollWidth + 'px');
     }
@@ -13603,7 +13675,7 @@ class OmUserInterface extends UserInterface {
 
     /** Determine the style of the inactive handle (overriding superclass) */
     _inactiveResizerHandlerStyle() {
-        return self.diag.showSolvers?
+        return this.diag.showSolvers?
             'inactive-resizer-handle' : 'inactive-resizer-handle-without-solvers'
     }
 
@@ -13613,16 +13685,13 @@ class OmUserInterface extends UserInterface {
      */
     setSolvers(linear) {
         // Update the diagram
-        this.diag.showLinearSolverNames = linear;
+        OmTreeNode.showLinearSolverNames = linear;
 
         // update the legend
-        this.legend.toggleSolvers(this.diag.showLinearSolverNames);
+        this.legend.updateSolvers();
 
         if (this.legend.shown)
-            this.legend.show(
-                this.diag.showLinearSolverNames,
-                this.diag.style.solvers
-            );
+            this.legend.show();
         this.diag.update();
     }
 
@@ -13673,7 +13742,7 @@ class OmUserInterface extends UserInterface {
     saveState() {
         // Solver toggle state.
         const extraData = {
-            'showLinearSolverNames': this.diag.showLinearSolverNames,
+            'showLinearSolverNames': OmTreeNode.showLinearSolverNames,
             'showSolvers': this.diag.showSolvers,            
         }
 
@@ -14066,8 +14135,9 @@ class OmMatrix extends Matrix {
      * @param {Number} endIndex The index of the last diagonal node.
      */
     _drawArrowsInputView(cell, startIndex, endIndex) {
-        const boxStart = this._boxInfo[startIndex],
-            boxEnd = this._boxInfo[endIndex];
+        const boxInfo = this._boxInfo()
+        const boxStart = boxInfo[startIndex],
+            boxEnd = boxInfo[endIndex];
 
         // Draw multiple horizontal lines, but no more than one vertical line
         // for box-to-box connections
@@ -14102,17 +14172,32 @@ class OmMatrix extends Matrix {
     }
 
     /**
+     * Find the index of the first node in this.diagNodes that "has" the supplied node.
+     * For some reason Array.findIndex() did not work correctly for this.
+     * @param {OmTreeNode} node Reference to the node to search for.
+     * @returns {Number} The index of the node if found, otherwise -1.
+     */
+    _findDiagNodeIndex(node) {
+        for (const idx in this.diagNodes) {
+            if (this.diagNodes[idx].hasNode(node)) {
+                return idx;
+            }
+        }
+
+        return -1;
+    }
+
+    /**
      * Look for and draw cycle arrows of the specified cell.
      * @param {OmMatrixCell} cell The off-diagonal cell to draw arrows for.
      */
     drawOffDiagonalArrows(cell) {
         super.drawOffDiagonalArrows(cell);
 
-        /* Cycle arrows are only drawn in the bottom triangle of the diagram */
+        /* Cycle arrows are only drawn for cells in the bottom triangle of the diagram */
         if (cell.row > cell.col) {
             const src = this.diagNodes[cell.row],
                 tgt = this.diagNodes[cell.col];
-
             // Get an array of all the parents and children of the target with cycle arrows
             const relativesWithCycleArrows = tgt.getNodesWithCycleArrows();
 
@@ -14120,13 +14205,11 @@ class OmMatrix extends Matrix {
                 for (const ai of relative.cycleArrows) {
                     if (src.hasNode(ai.src)) {
                         for (const arrow of ai.arrows) {
-                            const firstBeginIndex =
-                                this.diagNodes.findIndex(diagNode => diagNode.hasNode(arrow.begin));
+                            const firstBeginIndex = this._findDiagNodeIndex(arrow.begin);
                             if (firstBeginIndex == -1)
                                 throw ("OmMatrix.drawOffDiagonalArrows() error: first begin index not found");
 
-                            const firstEndIndex =
-                                this.diagNodes.findIndex(diagNode => diagNode.hasNode(arrow.end));
+                            const firstEndIndex = this._findDiagNodeIndex(arrow.end);
                             if (firstEndIndex == -1)
                                 throw ("OmMatrix.drawOffDiagonalArrows() error: first end index not found");
 
@@ -14168,14 +14251,11 @@ class OmDiagram extends Diagram {
 
     /** Override Diagram._newLayout() to create an OmLayout object. */
     _newLayout() {
-        if (this.showLinearSolverNames === undefined)
-            this.showLinearSolverNames = true;
 
         if (this.showSolvers === undefined)
             this.showSolvers = true;
 
-        return new OmLayout(this.model, this.zoomedElement, this.dims,
-            this.showLinearSolverNames, this.showSolvers);
+        return new OmLayout(this.model, this.zoomedElement, this.dims, this.showSolvers);
     }
 
     /** Create a new OmMatrix object. Overrides superclass method. */
@@ -14193,13 +14273,6 @@ class OmDiagram extends Diagram {
         this.layout = this._newLayout();
         this.ui = new OmUserInterface(this);
         this.matrix = this._newMatrix(true);
-    }
-
-    /**
-     * Switch back and forth between showing the linear or non-linear solver names.
-     */
-    toggleSolverNameType() {
-        this.showLinearSolverNames = !this.showLinearSolverNames;
     }
 
     /**
@@ -14253,8 +14326,8 @@ class OmDiagram extends Diagram {
         const enterSelection = enter
             .append("g")
             .attr("class", d => {
-                const solver_class = self.style.getSolverClass(self.showLinearSolverNames,
-                    { 'linear': d.linear_solver, 'nonLinear': d.nonlinear_solver });
+                const solver_class = self.style.getSolverClass({ 'linear': d.linear_solver,
+                    'nonLinear': d.nonlinear_solver });
                 return `${solver_class} solver_group ${self.style.getNodeClass(d)}`;
             })
             .on("click", (e,d) => self.leftClickSelector(e, d))
@@ -14310,7 +14383,7 @@ class OmDiagram extends Diagram {
 
         enterSelection // Add a label
             .append("text")
-            .text(self.layout.getSolverText.bind(self.layout))
+            .text( d => d.getSolverText())
             .style('visibility', 'hidden')
             .attr("dy", ".35em")
             .attr("transform", d => {
@@ -14341,8 +14414,8 @@ class OmDiagram extends Diagram {
         // New location for each group
         const mergedSelection = update
             .attr("class", d => {
-                const solver_class = self.style.getSolverClass(self.showLinearSolverNames,
-                    { 'linear': d.linear_solver, 'nonLinear': d.nonlinear_solver });
+                const solver_class = self.style.getSolverClass({ 'linear': d.linear_solver,
+                    'nonLinear': d.nonlinear_solver });
                 return `${solver_class} solver_group ${self.style.getNodeClass(d)}`;
             })
             .transition(sharedTransition)
@@ -14362,6 +14435,7 @@ class OmDiagram extends Diagram {
          // Move the text label
         mergedSelection
             .select("text")
+            .text( d => d.getSolverText())
             .attr("transform", d => {
                 const anchorX = d.draw.solverDims.width * treeSize.width -
                     self.layout.size.rightTextMargin;
@@ -14410,7 +14484,7 @@ class OmDiagram extends Diagram {
     /** Add the opt-vars class to design variable elements to set the fill color */
     showDesignVars() {
         [Object.keys(modelData.design_vars), Object.keys(modelData.responses)].flat().forEach(
-            item => d3.select("#" + item.replaceAll(".", "_")).classed('opt-vars', true)
+            path => d3.select(`#${TreeNode.pathToId(path)}`).classed('opt-vars', true)
             );
         d3.select('.model_tree_grp #_auto_ivc').classed('opt-vars', true)
     }
@@ -14418,7 +14492,7 @@ class OmDiagram extends Diagram {
     /** Remove the opt-vars class from design variable elements to use the default fill color */
     hideDesignVars() {
         [Object.keys(modelData.design_vars), Object.keys(modelData.responses)].flat().forEach(
-            item => d3.select("#" + item.replaceAll(".", "_")).classed('opt-vars', false)
+            path => d3.select(`#${TreeNode.pathToId(path)}`).classed('opt-vars', false)
             );
         d3.select("#_auto_ivc").classed('opt-vars', false)
     }
@@ -14453,7 +14527,7 @@ class OmDiagram extends Diagram {
      */
      restoreSavedState(oldState) {
         // Solver toggle state.
-        this.showLinearSolverNames = oldState.showLinearSolverNames;
+        OmTreeNode.showLinearSolverNames = oldState.showLinearSolverNames;
         this.ui.setSolvers(oldState.showLinearSolverNames);
         this.showSolvers = oldState.showSolvers;
         
