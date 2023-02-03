@@ -48,6 +48,7 @@ setup(name='hydesign',
             'examples/*/*.csv',
             'examples/*/*/*.csv',
             'examples/*/*.yml',
+            'examples/*.png',
             ],},
       install_requires=[
           'finitediff',
