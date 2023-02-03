@@ -47,6 +47,7 @@ setup(name='hydesign',
             'examples/*.csv',
             'examples/*/*.csv',
             'examples/*/*/*.csv',
+            'examples/*/*.yml',
             ],},
       install_requires=[
           'finitediff',
@@ -66,13 +67,13 @@ setup(name='hydesign',
           'statsmodels',
           'rainflow',
           'pyyaml',
-          'wisdem @ git+https://github.com/DTUWindEnergy/WISDEM.git@csm_only'
+          'wisdem @ git+https://github.com/DTUWindEnergy/WISDEM.git@csm_only',
+          'matplotlib',
           ],
       extras_require={
         'test': [
             'pytest',],
         'optional': [
-            'matplotlib',
             'seaborn',
             'jupyterlab',],
         'docs': [
