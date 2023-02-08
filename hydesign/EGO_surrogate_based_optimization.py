@@ -28,10 +28,9 @@ from smt.surrogate_models import KRG, KPLS, KPLSK, GEKPLS
 from smt.applications.mixed_integer import MixedIntegerSurrogateModel
 from smt.sampling_methods import LHS, Random, FullFactorial
 
-from hydesign.hpp_assembly_simplified import hpp_model_simple, mkdir
+from hydesign.hpp_assembly import hpp_model, mkdir
 from hydesign.examples import examples_filepath
 
-import os
 EGO_path = os.path.dirname(__file__).replace("\\", "/") + '/'
 
 def LCB(sm, point):
@@ -109,7 +108,7 @@ def eval_sm(sm, mixint, scaler=None, seed=0, npred=1e3, fmin=1e10):
     '''
     Function that predicts the xepected improvement (EI) of the surrogate model based on random input points
     '''
-    ndims = mixint.get_unfolded_dimension()
+    # ndims = mixint.get_unfolded_dimension()
     npred = int(npred)
     
     np.random.seed(int(seed))
@@ -192,7 +191,7 @@ class ParallelRunner():
         n_procs : int or None, optional
             Number of processes passed to multiprocessing.Pool
         """
-        self.pool = multiprocessing.Pool(n_procs)
+        self.pool = Pool(n_procs)
 
     def run(self, fun, x):
         """Run in parallel
@@ -281,6 +280,7 @@ if __name__ == "__main__":
     n_seed = int(args.n_seed)    
     max_iter = int(args.max_iter)
     final_design_fn = str(args.final_design_fn)
+    num_batteries = int(args.num_batteries)
         
     work_dir = './'
     if final_design_fn == None:
@@ -510,7 +510,7 @@ if __name__ == "__main__":
         if (np.abs(error) < tol):
             conv_iter += 1
             if (conv_iter >= min_conv_iter):
-                print(f'Surrogate based optimization is converged.')
+                print('Surrogate based optimization is converged.')
                 break
         else:
             conv_iter = 0
