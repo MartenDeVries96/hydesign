@@ -5,8 +5,8 @@
 
 # #SBATCH --partition=rome
 # #SBATCH --partition=workq 
-#SBATCH --partition=windq 
-# #SBATCH --partition=windfatq
+# #SBATCH --partition=windq 
+#SBATCH --partition=windfatq
 
 #SBATCH --ntasks-per-core 1 
 #SBATCH --ntasks-per-node 32 
@@ -34,12 +34,6 @@ conda activate hydesign
 python ../EGO_surrogate_based_optimization.py \
     --example 0 \
     --opt_var "NPV_over_CAPEX"\
-    --rotor_diameter_m 100\
-    --hub_height_m 120\
-    --wt_rated_power_MW 2\
-    --surface_tilt_deg 20\
-    --surface_azimuth_deg 180\
-    --DC_AC_ratio 1\
     --num_batteries 1\
     --n_procs  31\
     --n_doe 31\
