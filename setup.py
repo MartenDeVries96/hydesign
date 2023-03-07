@@ -51,6 +51,7 @@ setup(name='hydesign',
             'examples/*.png',
             ],},
       install_requires=[
+          'dask',
           'finitediff',
           'numpy',
           'pandas',
@@ -70,6 +71,7 @@ setup(name='hydesign',
           'pyyaml',
           'wisdem @ git+https://github.com/DTUWindEnergy/WISDEM.git@csm_only',
           'matplotlib',
+          'zarr',
           ],
       extras_require={
         'test': [

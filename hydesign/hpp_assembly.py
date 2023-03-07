@@ -86,8 +86,17 @@ class hpp_model:
         print('altitude =',altitude)
         
         # Parameters of the simulation
-        year_start = sim_pars['year']
-        year_end = sim_pars['year']
+        if 'year_start' in sim_pars.keys():
+            year_start = sim_pars['year_start']
+        else:
+            year_start = sim_pars['year']
+
+
+        if 'year_end' in sim_pars.keys():
+            year_end = sim_pars['year_end']
+        else:
+            year_end = sim_pars['year']
+            
         N_life = sim_pars['N_life']
         life_h = N_life*365*24
         n_steps_in_LoH = sim_pars['n_steps_in_LoH']
@@ -126,6 +135,7 @@ class hpp_model:
                 raise('Price timeseries does not match the weather')
             
             input_ts_fn = f'{work_dir}input_ts.csv'
+            print(f'input_ts_fn extracted and stored in {input_ts_fn}')
             weather.to_csv(input_ts_fn)
             N_time = len(weather)
             

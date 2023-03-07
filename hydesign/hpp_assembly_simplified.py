@@ -99,8 +99,17 @@ class hpp_model_simple:
         print('DC_AC_ratio =',DC_AC_ratio)
         
         # Parameters of the simulation
-        year_start = sim_pars['year']
-        year_end = sim_pars['year']
+        if 'year_start' in sim_pars.keys():
+            year_start = sim_pars['year_start']
+        else:
+            year_start = sim_pars['year']
+
+
+        if 'year_end' in sim_pars.keys():
+            year_end = sim_pars['year_end']
+        else:
+            year_end = sim_pars['year']
+            
         N_life = sim_pars['N_life']
         life_h = N_life*365*24
         n_steps_in_LoH = sim_pars['n_steps_in_LoH']

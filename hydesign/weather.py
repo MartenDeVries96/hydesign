@@ -192,23 +192,60 @@ def extract_weather_for_HPP(
     # Extract GWA scaling
     ratio_gwa_era5_ds = xr.open_dataset(ratio_gwa_era5)
     var_ratio = list(ratio_gwa_era5_ds.data_vars)[0]
-    ds_x = xr.Dataset(
-            data_vars = {
-                'longitude': (['locs_ID'], px),
-                'latitude': (['locs_ID'], py),
-                'height': (['locs_ID'], heights),
-                },
-            coords = {'locs_ID': ds_interp['locs_ID'].values}  
-        )
-    ws_scale = ratio_gwa_era5_ds[var_ratio].interp(
-                            longitude=ds_x.longitude,
-                            latitude=ds_x.latitude,
-                            height=ds_x.height,
-                            kwargs={"fill_value": 1.0}
-                        )
+
+    ratio_gwa_era5_ds_A = ratio_gwa_era5_ds.isel(height=0)
+    ratio_gwa_era5_ds_A[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_A[var_ratio])
+    ratio_gwa_era5_ds_A['height']=0
+
+    ratio_gwa_era5_ds_B = ratio_gwa_era5_ds.isel(height=0)
+    ratio_gwa_era5_ds_B[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_B[var_ratio])
+    ratio_gwa_era5_ds_B['height']=49.99
+
+
+    ratio_gwa_era5_ds_C = ratio_gwa_era5_ds.sel(height=150)
+    ratio_gwa_era5_ds_C[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_C[var_ratio])
+    ratio_gwa_era5_ds_C['height']=150.01
+
+    ratio_gwa_era5_ds_D = ratio_gwa_era5_ds.sel(height=150)
+    ratio_gwa_era5_ds_D[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_D[var_ratio])
+    ratio_gwa_era5_ds_D['height']=500
+    
+    ratio_gwa_era5_ds_all = xr.concat(
+        [ratio_gwa_era5_ds_A,
+         ratio_gwa_era5_ds_B,
+         ratio_gwa_era5_ds,
+         ratio_gwa_era5_ds_C,
+         ratio_gwa_era5_ds_D],
+        dim = 'height')
+    
+    # weights for interpolation
+    weights_ds_era5 = get_interpolation_weights(
+        px=px,
+        py=py,
+        pz=heights,
+        all_x=ratio_gwa_era5_ds['longitude'].values,
+        all_y=ratio_gwa_era5_ds['latitude'].values,
+        all_z=ratio_gwa_era5_ds['height'].values,
+        n_stencil=2,
+        locs_ID=range(len(heights))
+    )
+
+    # Apply interpolation
+    ws_scale = apply_interpolation_f(
+        wrf_ds=ratio_gwa_era5_ds_all,
+        weights_ds=weights_ds_era5,
+        vars_xy_logz=[],
+        vars_xyz=[var_ratio],
+        vars_xy=[],
+        vars_nearest_xy=[],
+        vars_nearest_xyz=[],
+        var_x_grid='longitude',
+        var_y_grid='latitude',
+        var_z_grid='height',
+        varWD='WD')
 
     # apply scaling
-    ds_interp['WS'] = ds_interp['WS']*ws_scale
+    ds_interp['WS'] = ds_interp['WS']*ws_scale[var_ratio]
 
     # swap coordinate to height
     ds_interp['height'] = xr.DataArray(
