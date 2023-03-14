@@ -194,28 +194,16 @@ def extract_weather_for_HPP(
     var_ratio = list(ratio_gwa_era5_ds.data_vars)[0]
 
     ratio_gwa_era5_ds_A = ratio_gwa_era5_ds.isel(height=0)
-    ratio_gwa_era5_ds_A[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_A[var_ratio])
-    ratio_gwa_era5_ds_A['height']=0
+    #ratio_gwa_era5_ds_A[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_A[var_ratio])
+    ratio_gwa_era5_ds_A['height'] = 1e-6
 
-    ratio_gwa_era5_ds_B = ratio_gwa_era5_ds.isel(height=0)
-    ratio_gwa_era5_ds_B[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_B[var_ratio])
-    ratio_gwa_era5_ds_B['height']=49.99
-
-
-    ratio_gwa_era5_ds_C = ratio_gwa_era5_ds.sel(height=150)
-    ratio_gwa_era5_ds_C[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_C[var_ratio])
-    ratio_gwa_era5_ds_C['height']=150.01
-
-    ratio_gwa_era5_ds_D = ratio_gwa_era5_ds.sel(height=150)
-    ratio_gwa_era5_ds_D[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_D[var_ratio])
-    ratio_gwa_era5_ds_D['height']=500
+    ratio_gwa_era5_ds_B = ratio_gwa_era5_ds.sel(height=150)
+    ratio_gwa_era5_ds_B['height'] = 500
     
-    ratio_gwa_era5_ds_all = xr.concat(
+    ratio_gwa_era5_ds = xr.concat(
         [ratio_gwa_era5_ds_A,
-         ratio_gwa_era5_ds_B,
          ratio_gwa_era5_ds,
-         ratio_gwa_era5_ds_C,
-         ratio_gwa_era5_ds_D],
+         ratio_gwa_era5_ds_B],
         dim = 'height')
     
     # weights for interpolation
@@ -232,7 +220,7 @@ def extract_weather_for_HPP(
 
     # Apply interpolation
     ws_scale = apply_interpolation_f(
-        wrf_ds=ratio_gwa_era5_ds_all,
+        wrf_ds=ratio_gwa_era5_ds,
         weights_ds=weights_ds_era5,
         vars_xy_logz=[],
         vars_xyz=[var_ratio],
