@@ -14,14 +14,16 @@ import matplotlib.pyplot as plt
 from hydesign.hpp_assembly_simplified import hpp_model_simple
 from hydesign.examples import examples_filepath
 
-    
+import argparse
+
 if __name__ == "__main__":
     
     # -----------------------------------------------
     # Arguments from the outer .sh (shell) script
     # -----------------------------------------------
     parser=argparse.ArgumentParser()
-    parser.add_argument('--example', default=None, help='ID (index) to run an example site, based on ./examples/examples_sites.csv')    
+    parser.add_argument('--example', default=None, 
+                        help='ID (index) to run an example site, based on ./examples/examples_sites.csv')    
     args=parser.parse_args()
     
     example = args.example
