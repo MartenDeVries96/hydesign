@@ -33,10 +33,10 @@ source /home/jumu/miniconda3/bin/activate
 conda activate hydesign
 
 # to extract data for a specific example site, requires an integer index 
-python hydesign_extract_example_sites_data.py --example 0 
+# python hydesign_extract_example_sites_data.py --example 0 
     
 # to extract data for all example sites
-# python hydesign_extract_example_sites_data.py
+python hydesign_extract_example_sites_data.py
 
 # Example usage:
 # --------------
