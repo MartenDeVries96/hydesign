@@ -3,9 +3,9 @@
 #SBATCH --output=output_hydesign_simple_%J.log
 #SBATCH --error=output_hydesign_simple_%J.log
 
-# #SBATCH --partition=rome
+#SBATCH --partition=rome
 # #SBATCH --partition=workq 
-#SBATCH --partition=windq 
+# #SBATCH --partition=windq 
 # #SBATCH --partition=windfatq
 
 #SBATCH --ntasks-per-core 1 

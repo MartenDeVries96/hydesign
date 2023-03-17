@@ -194,10 +194,9 @@ def extract_weather_for_HPP(
     var_ratio = list(ratio_gwa_era5_ds.data_vars)[0]
 
     ratio_gwa_era5_ds_A = ratio_gwa_era5_ds.isel(height=0)
-    #ratio_gwa_era5_ds_A[var_ratio] = xr.ones_like(ratio_gwa_era5_ds_A[var_ratio])
     ratio_gwa_era5_ds_A['height'] = 1e-6
 
-    ratio_gwa_era5_ds_B = ratio_gwa_era5_ds.sel(height=150)
+    ratio_gwa_era5_ds_B = ratio_gwa_era5_ds.isel(height=-1)
     ratio_gwa_era5_ds_B['height'] = 500
     
     ratio_gwa_era5_ds = xr.concat(
