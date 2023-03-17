@@ -132,11 +132,9 @@ def opt_sm(sm, mixint, x0, fmin=1e10):
     '''
     ndims = mixint.get_unfolded_dimension()
     res = optimize.minimize(
-        #fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin)[0,0],
-        fun = lambda x:  LCB(sm, x.reshape([1,ndims]))[0,0],
+        fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin)[0,0],
         x0 = x0.reshape([1,ndims]),
         method="SLSQP",
-        #bounds=mixint.get_unfolded_xlimits(),
         bounds=[(0,1)]*ndims,
         options={
             "maxiter": 200,
@@ -311,7 +309,7 @@ if __name__ == "__main__":
     #npred = 1e4
     npred = 1e5
     tol = 1e-6
-    min_conv_iter = 3
+    min_conv_iter = max_iter
     
     start_total = time.time()
     
