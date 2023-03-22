@@ -5,8 +5,8 @@
 
 # #SBATCH --partition=rome
 # #SBATCH --partition=workq 
-#SBATCH --partition=windq 
-# #SBATCH --partition=windfatq
+# #SBATCH --partition=windq 
+#SBATCH --partition=windfatq
 
 #SBATCH --ntasks-per-core 1 
 #SBATCH --ntasks-per-node 32 
@@ -29,10 +29,10 @@ echo Sophia job identifier: $SLURM_JOBID
 echo -----------------------------------------------------------------
 
 # Set environment
-source /home/jumu/miniconda3/bin/activate
+source /home/gupta/miniconda3/bin/activate
 conda activate hydesign
 python ../EGO_surrogate_based_optimization_simple_hpp.py \
-    --example 0 \
+    --example 4 \
     --opt_var "NPV_over_CAPEX"\
     --rotor_diameter_m 100\
     --hub_height_m 120\
@@ -46,7 +46,7 @@ python ../EGO_surrogate_based_optimization_simple_hpp.py \
     --n_clusters 16\
     --n_seed 0\
     --max_iter 10\
-    --final_design_fn 'hydesign_simple_design_0.csv'
+    --final_design_fn 'hydesign_simple_design_4.csv'
     
 # Example usage:
 # --------------

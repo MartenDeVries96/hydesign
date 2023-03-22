@@ -488,4 +488,83 @@ class shared_cost(om.ExplicitComponent):
         partials['OPEX_sh', 'G_MW'] = 0
         partials['OPEX_sh', 'Awpp'] = 0
         partials['OPEX_sh', 'Apvp'] = 0
+
+class ptg_cost(om.ExplicitComponent):
+    """Power to H2 plant cost model is used to calculate the overall H2 plant cost. The cost model includes cost of electrolyzer
+     and compressor for storing Hydrogen (data extracted from the danish energy agency data catalogue and IRENA reports).
+    """
+    def __init__(self,
+                 #stack_replacement_cost,
+                 electrolyzer_capex_cost,
+                 electrolyzer_opex_cost,
+                 electrolyzer_power_electronics_cost,
+                 compressor_capex_cost,
+                 compressor_opex_cost,
+                 water_cost,
+                 water_treatment_cost,
+                 water_consumption,
+                 N_time,
+                 life_h = 25*365*24,):
+
+        super().__init__()
+        #self.stack_replacement_cost = stack_replacement_cost
+        self.electrolyzer_capex_cost = electrolyzer_capex_cost
+        self.electrolyzer_opex_cost = electrolyzer_opex_cost
+        self.electrolyzer_power_electronics_cost = electrolyzer_power_electronics_cost
+        self.compressor_capex_cost = compressor_capex_cost
+        self.compressor_opex_cost = compressor_opex_cost
+        self.water_cost = water_cost
+        self.water_treatment_cost = water_treatment_cost
+        self.water_consumption = water_consumption
+        self.N_time = N_time
+        self.life_h = life_h
+
+    def setup(self):
+
+        self.add_input('ptg_MW',
+                        desc = "Installed capacity for the power to gas plant",
+                        units = 'MW')
+        self.add_input('m_H2_t',
+                        desc = "Produced hydrogen",
+                        units = "kg",
+                        shape=[self.life_h])
+        
+        #Creating outputs:
+        self.add_output('CAPEX_ptg',
+                        desc = "CAPEX power to gas")
+        self.add_output('OPEX_ptg',
+                        desc = "OPEX power to gas") 
+        self.add_output('water_consumption_cost',
+                        desc = "Total water consumption and treatment cost",
+                        )
+
+    def compute(self, inputs, outputs):
+
+       
+        ptg_MW = inputs['ptg_MW']
+        m_H2_t = inputs['m_H2_t']
+        
+        # print('ptg_cost: ')
+        # print(ptg_MW)
+        # print(m_H2_t)
+
+        electrolyzer_capex_cost = self.electrolyzer_capex_cost
+        electrolyzer_opex_cost = self.electrolyzer_opex_cost 
+        electrolyzer_power_electronics_cost = self.electrolyzer_power_electronics_cost
+        compressor_capex_cost = self.compressor_capex_cost
+        compressor_opex_cost =  self.compressor_opex_cost
+        water_cost = self.water_cost
+        water_treatment_cost = self.water_treatment_cost
+        water_consumption = self.water_consumption
+
+        outputs['CAPEX_ptg'] = ptg_MW * (electrolyzer_capex_cost + electrolyzer_power_electronics_cost + compressor_capex_cost)
+        outputs['OPEX_ptg'] = ptg_MW * (electrolyzer_opex_cost + compressor_opex_cost)
+        outputs['water_consumption_cost'] = np.sum(m_H2_t * water_consumption * (water_cost + water_treatment_cost)/1000)
+        
+        # print('CAPEX_ptg:')
+        # print(outputs['CAPEX_ptg'])
+        # print('OPEX_ptg: ')
+        # print(outputs['OPEX_ptg'])
+        # print('Water_ptg: ')
+        # print(outputs['water_consumption_cost'])
        

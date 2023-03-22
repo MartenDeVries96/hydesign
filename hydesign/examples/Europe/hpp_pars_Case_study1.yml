@@ -1,0 +1,103 @@
+# --------------------------------------------------------------------------------------------
+# HPP Global
+# --------------------------------------------------------------------------------------------
+G_MW: 300 # Grid capacity
+year: '2027' # Single representative year
+N_life: 25
+
+# --------------------------------------------------------------------------------------------
+# Wind
+# --------------------------------------------------------------------------------------------
+wind_turbine_cost: 950_000  # [Euro/MW] for reference turbine
+wind_civil_works_cost: 200_000  # [Euro/MW]
+wind_fixed_onm_cost: 50_000  # Wind fixed O&M cost per year [Euro/MW /year]
+wind_variable_onm_cost: 0 #[EUR/MWh_e] Danish Energy Agency
+
+wpp_efficiency: 0.95
+d_ref: 155
+hh_ref: 143
+p_rated_ref: 6.6 #[MW] 
+
+# --------------------------------------------------------------------------------------------
+# PV 
+# --------------------------------------------------------------------------------------------
+solar_PV_cost: 175_000   # [Euro/MW DC]
+solar_hardware_installation_cost: 150_000  # [Euro/MW DC]
+solar_inverter_cost: 25_000 #[Euro/MW]
+solar_fixed_onm_cost: 20_000  # Solar O&M cost per year [Euro/MW] DC
+pv_deg_per_year: 0.5e-2
+land_use_per_solar_MW: 0.0001 # Danish energy agency
+
+#selected tracker
+tracking: 'No' # 'single_axis'  #
+
+# --------------------------------------------------------------------------------------------
+# No Battery
+# --------------------------------------------------------------------------------------------
+#battery_energy_cost: 90_000  # [Euro/MWh]
+#battery_power_cost: 32_000    # Power conversion system cost [Euro/MW]
+# in the excel its in MWh and not labeled as other costs
+battery_energy_cost: 45_000  # [Euro/MWh]
+battery_power_cost: 16_000    # Power conversion system cost [Euro/MW]
+#to fix 2 below, they are unchanged
+battery_BOP_installation_commissioning_cost: 36_000 # Electric BalanceOfPlant, instal+commission cost [Euro/MW]
+battery_control_system_cost: 9_000  # Grid management control system cost[Euro/MW]
+battery_energy_onm_cost: 0 # No costs if we model battery replacement
+
+# EMS and Degradation parameters
+battery_depth_of_discharge: 0.9 # 1 - Minimum energy level in the battery
+battery_charge_efficiency: 0.98  # Charge efficiency for Lithium-ion
+battery_price_reduction_per_year: 0.05 # Battery price reduction per year
+peak_hr_quantile: 0.9 # An hour of peak price has prices above this quantile
+n_steps_in_LoH: 20 # Number of battery degradation levels for discretization of lifetime operation
+min_LoH: 0.7 # Minimum energy storage capacity in percent for the storage to be replaced
+
+# Penalty is defined as: Number of peak hours of full load expected per day.
+n_full_power_hours_expected_per_day_at_peak_price: 0 
+
+# Indian case Penalty has expected hours at 0.85*3= 2.55
+# n_full_power_hours_expected_per_day_at_peak_price: 2.55
+
+# --------------------------------------------------------------------------------------------
+# Battery
+# --------------------------------------------------------------------------------------------
+price_H2: 5 #[Euro/kg]
+storage_eff: 1.0 #Compressor efficiency
+ptg_deg: 0.99 #Weekly degradation for 20 years of lifetime
+hhv: 39.3 #[kWh/kg]
+water_consumption : 10 #l/kg
+electrolyzer_capex_cost : 800_000  #[EUR/MW]
+electrolyzer_opex_cost : 16_000  #Electrolyzer_capex_cost * 0.02 #[EUR/MW]
+electrolyzer_power_electronics_cost : 0  #[EUR/MW]
+water_cost : 3.14 #[EUR/m3]
+water_treatment_cost : 2  #[EUR/m3]
+compressor_capex_cost : 0 #[EUR/MW]
+compressor_opex_cost : 0  #[EUR/MW]
+
+
+# --------------------------------------------------------------------------------------------
+# Shared costs
+# --------------------------------------------------------------------------------------------
+hpp_BOS_soft_cost: 100_000       # [Euro/MW]
+hpp_grid_connection_cost: 150_000 # [Euro/MW]
+#land cost not same format in excel it's per MW
+land_cost: 0  #  [Euro/km**2] from Hybridize imputs 6-12k Euro/acre. 1km2 = 247.105acre
+
+# --------------------------------------------------------------------------------------------
+# Financial and Economic data
+# --------------------------------------------------------------------------------------------
+#discount_factor: 0.06
+wind_WACC: 0.07    # Markup of after tax WACC for onshore WT
+solar_WACC: 0.07   # After tax WACC for solar PV
+battery_WACC: 0.07 # After tax WACC for stationary storge li-ion batteries
+tax_rate: 0.258      # Corporate tax rate
+ptg_WACC: 0.07      # After tax WACC for P2H plant
+
+# --------------------------------------------------------------------------------------------
+# Weather databases
+# Not required if the user provides input_ts_fn.csv to hpp_model
+# --------------------------------------------------------------------------------------------
+era5_zarr: '/groups/reanalyses/era5/app/era5.zarr' # location of wind speed renalysis
+ratio_gwa_era5: '/groups/INP/era5/ratio_gwa2_era5.nc' # location of mean wind speed correction factor
+era5_ghi_zarr: '/groups/INP/era5/ghi.zarr' # location of GHI renalysis
+elevation_fn: '/groups/INP/era5/SRTMv3_plus_ViewFinder_coarsen.nc' # Altitude map for extracting altitude

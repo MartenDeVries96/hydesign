@@ -31,8 +31,8 @@ echo -----------------------------------------------------------------
 # Set environment
 source /home/gupta/miniconda3/bin/activate
 conda activate hydesign
-python ../EGO_surrogate_based_optimization.py \
-    --example 10 \
+python ../EGO_surrogate_based_optimization_P2X.py \
+    --example 4 \
     --opt_var "NPV_over_CAPEX"\
     --num_batteries 1\
     --n_procs  31\
@@ -40,9 +40,9 @@ python ../EGO_surrogate_based_optimization.py \
     --n_clusters 16\
     --n_seed 0\
     --max_iter 10\
-    --final_design_fn 'hydesign_simple_design_10.csv'
+    --final_design_fn 'hydesign_P2X_output_4.csv'
     
 
 # Example usage:
 # --------------
-# sbatch hydesign_sizing.sh
+# sbatch hydesign_sizing_P2X.sh

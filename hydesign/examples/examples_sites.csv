@@ -9,3 +9,4 @@
 7,Europe,Germany_good_wind,7.873535,53.287111,5,Europe/input_ts_Germany_good_wind.csv,Europe/hpp_pars.yml,Europe/2030-EL_PRICE.csv,DE_NW
 8,Europe,Denmark_good_solar,11.813965,55.39776,42,Europe/input_ts_Denmark_good_solar.csv,Europe/hpp_pars.yml,Europe/2030-EL_PRICE.csv,DK_E
 9,Europe,Denmark_good_wind,8.594398,56.227322,85,Europe/input_ts_Denmark_good_wind.csv,Europe/hpp_pars.yml,Europe/2030-EL_PRICE.csv,DK_W
+10,Europe,Netherlands,6.833,53.45,2,Europe/input_ts_Netherlands.csv,Europe/hpp_pars.yml,Europe/2030-EL_PRICE.csv,NL_R
