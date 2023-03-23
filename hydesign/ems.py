@@ -53,13 +53,15 @@ class ems(om.ExplicitComponent):
         self, 
         N_time, 
         life_h = 25*365*24, 
+        weeks_per_season_per_year = None,
         ems_type='cplex'):
 
         super().__init__()
+        self.weeks_per_season_per_year = weeks_per_season_per_year
         self.N_time = int(N_time)
         self.ems_type = ems_type
         self.life_h = int(life_h)
-
+        
     def setup(self):
         self.add_input(
             'wind_t',
@@ -206,21 +208,21 @@ class ems(om.ExplicitComponent):
 
         # Extend (by repeating them and stacking) all variable to full lifetime 
         outputs['wind_t_ext'] = expand_to_lifetime(
-            wind_t, life_h = self.life_h)
+            wind_t, life_h = self.life_h, weeks_per_season_per_year = self.weeks_per_season_per_year)
         outputs['solar_t_ext'] = expand_to_lifetime(
-            solar_t, life_h = self.life_h)
+            solar_t, life_h = self.life_h, weeks_per_season_per_year = self.weeks_per_season_per_year)
         outputs['price_t_ext'] = expand_to_lifetime(
-            price_t, life_h = self.life_h)
+            price_t, life_h = self.life_h, weeks_per_season_per_year = self.weeks_per_season_per_year)
         outputs['hpp_t'] = expand_to_lifetime(
-            P_HPP_ts, life_h = self.life_h)
+            P_HPP_ts, life_h = self.life_h, weeks_per_season_per_year = self.weeks_per_season_per_year)
         outputs['hpp_curt_t'] = expand_to_lifetime(
-            P_curtailment_ts, life_h = self.life_h)
+            P_curtailment_ts, life_h = self.life_h, weeks_per_season_per_year = self.weeks_per_season_per_year)
         outputs['b_t'] = expand_to_lifetime(
-            P_charge_discharge_ts, life_h = self.life_h)
+            P_charge_discharge_ts, life_h = self.life_h, weeks_per_season_per_year = self.weeks_per_season_per_year)
         outputs['b_E_SOC_t'] = expand_to_lifetime(
-            E_SOC_ts[:-1], life_h = self.life_h + 1)
+            E_SOC_ts[:-1], life_h = self.life_h + 1, weeks_per_season_per_year = self.weeks_per_season_per_year)
         outputs['penalty_t'] = expand_to_lifetime(
-            penalty_ts, life_h = self.life_h)
+            penalty_ts, life_h = self.life_h, weeks_per_season_per_year = self.weeks_per_season_per_year)
 
 class ems_long_term_operation(om.ExplicitComponent):
     """Long term operation EMS. Predicts the operation of the plant throughout the entire lifetime, taking into account the battery
@@ -457,13 +459,42 @@ class ems_long_term_operation(om.ExplicitComponent):
 # Auxiliar functions for ems modelling
 # -----------------------------------------------------------------------
 
-def expand_to_lifetime(x, life_h = 25*365*24):
-
-    len_x = len(x)
-    N_repeats = int(np.ceil(life_h/len_x))
-
-    return np.tile(x,N_repeats)[:life_h]
+def expand_to_lifetime(x, life_h = 25*365*24, weeks_per_season_per_year=None):
+    """
+    Expands (by repeating) a given variable to match an expected lifetime length.
     
+    If weeks_per_season_per_year is an int then it will first build a year out of the selected weeks
+    
+    Parameters
+    ----------
+    x: input variable
+    life_h: lifetime in hours.
+    weeks_per_season_per_year: None or int.
+
+    Returns
+    -------
+    x_ext: extended variable
+    """    
+    if weeks_per_season_per_year == None:
+        
+        # Extend the data to match the expected lifetime
+        len_x = len(x)
+        N_repeats = int(np.ceil(life_h/len_x))
+    
+    else:
+        x_ext = np.array([])
+    
+        # extend selected weeks into a year: 4 season of 13 weeks + one extra day.
+        for x_batch in split_in_batch(x,weeks_per_season_per_year*7*24):
+            x_ext = np.append( x_ext, np.tile(x_batch,20)[:24*7*13] )
+        x_ext = np.append( x_ext, x_batch[-24:] )    
+        
+        # extend the constructed year to match the expected lifetime
+        x = x_ext    
+        N_repeats = int(np.ceil(life_h/365*24))
+    
+    return np.tile(x,N_repeats)[:life_h]
+
 
 def ems_cplex(
     wind_ts,
