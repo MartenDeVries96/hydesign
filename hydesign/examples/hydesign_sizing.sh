@@ -40,7 +40,7 @@ python ../EGO_surrogate_based_optimization.py \
     --n_clusters 16\
     --n_seed 0\
     --max_iter 10\
-    --final_design_fn 'hydesign_simple_design_0.csv'
+    --final_design_fn 'hydesign_design_0.csv'
     
 
 # Example usage:
