@@ -13,7 +13,7 @@ wind_civil_works_cost: 260_000  # [Euro/MW]
 wind_fixed_onm_cost: 12_600  # Wind fixed O&M cost per year [Euro/MW /year]
 wind_variable_onm_cost: 1.35 #[EUR/MWh_e] Danish Energy Agency
 
-wpp_efficiency: 0.95
+wpp_efficiency: 1.0
 d_ref: 145
 hh_ref: 100
 p_rated_ref: 5.0 #[MW] 
@@ -36,13 +36,15 @@ tracking: 'No' # 'single_axis'  #
 # --------------------------------------------------------------------------------------------
 #battery_energy_cost: 90_000  # [Euro/MWh]
 #battery_power_cost: 32_000    # Power conversion system cost [Euro/MW]
-# in the excel its in MWh and not labeled as other costs
+#battery_BOP_installation_commissioning_cost: 36_000 # Electric BalanceOfPlant, instal+commission cost [Euro/MW]
+#battery_control_system_cost: 9_000  # Grid management control system cost[Euro/MW]
+#battery_energy_onm_cost: 0 
+
 battery_energy_cost: 45_000  # [Euro/MWh]
 battery_power_cost: 16_000    # Power conversion system cost [Euro/MW]
-#to fix 2 below, they are unchanged
-battery_BOP_installation_commissioning_cost: 36_000 # Electric BalanceOfPlant, instal+commission cost [Euro/MW]
-battery_control_system_cost: 9_000  # Grid management control system cost[Euro/MW]
-battery_energy_onm_cost: 0 # No costs if we model battery replacement
+battery_BOP_installation_commissioning_cost: 18_000 # Electric BalanceOfPlant, instal+commission cost [Euro/MW]
+battery_control_system_cost: 4_500  # Grid management control system cost[Euro/MW]
+battery_energy_onm_cost: 0 
 
 # EMS and Degradation parameters
 battery_depth_of_discharge: 0.9 # 1 - Minimum energy level in the battery
