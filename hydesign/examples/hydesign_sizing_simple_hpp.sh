@@ -28,11 +28,13 @@ echo Sophia job is running on node: ${NODE_ID}
 echo Sophia job identifier: $SLURM_JOBID
 echo -----------------------------------------------------------------
 
-# Set environment
-source /home/jumu/miniconda3/bin/activate
-conda activate hydesign
+# Set environment before running this script or comment in below lines to do it in the process
+# source /home/jumu/miniconda3/bin/activate
+# conda activate hydesign
+ml git
+python check_setup.py
 python ../EGO_surrogate_based_optimization_simple_hpp.py \
-    --example 0 \
+    --example 1 \
     --opt_var "NPV_over_CAPEX"\
     --rotor_diameter_m 100\
     --hub_height_m 120\
