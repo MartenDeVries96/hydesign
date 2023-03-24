@@ -43,6 +43,8 @@ class hpp_model:
         price_fn = None, # If input_ts_fn is given it should include Price column.
         genWT_fn = lut_filepath+'genWT_v3.nc',
         genWake_fn = lut_filepath+'genWake_v3.nc',
+        verbose = True,
+        **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
 
@@ -84,12 +86,12 @@ class hpp_model:
                                 longitude=longitude,
                                 kwargs={"fill_value": 0.0}
                             ).values
-        
-        print(f'\nFixed parameters on the site')
-        print(f'-------------------------------')
-        print('longitude =',longitude)
-        print('latitude =',latitude)
-        print('altitude =',altitude)
+        if verbose:
+            print(f'\nFixed parameters on the site')
+            print(f'-------------------------------')
+            print('longitude =',longitude)
+            print('latitude =',latitude)
+            print('altitude =',altitude)
         
         # Parameters of the simulation
         if 'year_start' in sim_pars.keys():

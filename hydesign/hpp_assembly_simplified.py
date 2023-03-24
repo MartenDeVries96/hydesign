@@ -49,6 +49,8 @@ class hpp_model_simple:
         price_fn = None, # If input_ts_fn is given it should include Price column.
         genWT_fn = lut_filepath+'genWT_v3.nc',
         genWake_fn = lut_filepath+'genWake_v3.nc',
+        verbose = True,
+        **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
 
@@ -90,19 +92,19 @@ class hpp_model_simple:
                                 longitude=longitude,
                                 kwargs={"fill_value": 0.0}
                             ).values
-        
-        print(f'\nFixed parameters on the site')
-        print(f'-------------------------------')
-        print('longitude =',longitude)
-        print('latitude =',latitude)
-        print('altitude =',altitude)
-        print()
-        print('rotor_diameter_m =',rotor_diameter_m)
-        print('hub_height_m =',hub_height_m)
-        print('wt_rated_power_MW =',wt_rated_power_MW)
-        print('surface_tilt_deg =',surface_tilt_deg)
-        print('surface_azimuth_deg =',surface_azimuth_deg)
-        print('DC_AC_ratio =',DC_AC_ratio)
+        if verbose:
+            print(f'\nFixed parameters on the site')
+            print(f'-------------------------------')
+            print('longitude =',longitude)
+            print('latitude =',latitude)
+            print('altitude =',altitude)
+            print()
+            print('rotor_diameter_m =',rotor_diameter_m)
+            print('hub_height_m =',hub_height_m)
+            print('wt_rated_power_MW =',wt_rated_power_MW)
+            print('surface_tilt_deg =',surface_tilt_deg)
+            print('surface_azimuth_deg =',surface_azimuth_deg)
+            print('DC_AC_ratio =',DC_AC_ratio)
         
         # Parameters of the simulation
         if 'year_start' in sim_pars.keys():
