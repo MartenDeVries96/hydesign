@@ -116,20 +116,17 @@ def derive_example_info(kwargs):
            
 
 def get_kwargs(kwargs):
-    # -----------------------------------------------
-    # Arguments from the outer .sh (shell) if this script is run from the command line
-    # -----------------------------------------------
     kwargs = derive_example_info(kwargs)
     for x in ['num_batteries', 'n_procs', 'n_doe', 'n_clusters',
               'n_seed', 'max_iter']:
         kwargs[x] = int(kwargs[x])
     
+    if kwargs['final_design_fn'] == None:
+        kwargs['final_design_fn'] = f'{kwargs["work_dir"]}design_hpp_{kwargs["name"]}_{kwargs["opt_var"]}.csv'  
+
     for x in ['opt_var', 'final_design_fn']:
         kwargs[x] = str(kwargs[x])
         
-    kwargs['work_dir'] = './'
-    if kwargs['final_design_fn'] == None:
-        kwargs['final_design_fn'] = f'{kwargs["work_dir"]}design_hpp_{kwargs["name"]}_{kwargs["opt_var"]}.csv'  
     return kwargs
 
 class EfficientGlobalOptimizationDriver(Driver):
@@ -330,9 +327,6 @@ class EfficientGlobalOptimizationDriver(Driver):
         self.result = design_df
 
 if __name__ == '__main__':
-    # -----------------------------------------------
-    # Arguments that are used if no arguments have been passed from shell
-    # -----------------------------------------------
     inputs = {
         'example': 0,
         'name': None,
