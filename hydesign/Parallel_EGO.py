@@ -359,7 +359,9 @@ if __name__ == '__main__':
         'npred': 1e5,
         'tol': 1e-6,
         'min_conv_iter': 3,
+        'work_dir': './',
         }
+
     kwargs = get_kwargs(inputs)
     kwargs['xtypes'] = [
         #clearance, sp, p_rated, Nwt, wind_MW_per_km2, 
