@@ -4,7 +4,6 @@ Created on Fri Feb 17 12:44:06 2023
 
 @author: mikf
 """
-import argparse
 import time
 import numpy as np
 from numpy import newaxis as na
@@ -24,7 +23,6 @@ from hydesign.EGO_surrogate_based_optimization_simple_hpp import (get_sm, eval_s
                                                                   concat_to_existing)
 from sys import version_info
 from openmdao.core.driver import Driver
-from hydesign.Parallel_EGO import get_kwargs
 
 def surrogate_optimization(inputs): # Calling the optimization of the surrogate model
     x, kwargs = inputs
@@ -84,37 +82,6 @@ class ParallelEvaluator(Evaluator):
             return np.vstack(p.map(fun, [(x[[ii],:], kwargs) for ii in range(x.shape[0])]))
     
 
-def get_args():
-    parser=argparse.ArgumentParser()
-    parser.add_argument('--example', default=None, help='ID (index) to run an example site, based on ./examples/examples_sites.csv')
-    parser.add_argument('--name', help = "Site name")
-    parser.add_argument('--longitude', help = "Site longitude")
-    parser.add_argument('--latitude', help = "Site latitude")
-    parser.add_argument('--altitude', help = "Site altitude")
-    parser.add_argument('--input_ts_fn', help = "Input ts file name")
-    parser.add_argument('--sim_pars_fn', help = "Simulation parameters file name")
-    parser.add_argument('--opt_var', help="Objective function for sizing optimization, should be one of: ['NPV_over_CAPEX','NPV [MEuro]','IRR','LCOE [Euro/MWh]','CAPEX [MEuro]','OPEX [MEuro]','penalty lifetime [MEuro]']")
-    parser.add_argument('--rotor_diameter_m', help='WT rotor diameter [m]')
-    parser.add_argument('--hub_height_m', help='WT hub height [m]')
-    parser.add_argument('--wt_rated_power_MW', help='WT rated power [MW]')
-    parser.add_argument('--surface_tilt_deg', help='PV surface tilt [deg]')
-    parser.add_argument('--surface_azimuth_deg', help='PV surface azimuth [deg]')
-    parser.add_argument('--DC_AC_ratio', help='PV DC/AC ratio, this ratio defines how much overplanting of DC power is done with respect the inverter. P_DC/P_AC [-]')
-    parser.add_argument('--num_batteries', help='Maximum number of batteries to be considered in the design.')
-    parser.add_argument('--weeks_per_season_per_year', help='Number of weeks per season to be considered in the design.', default=None)
-    parser.add_argument('--n_procs', help='Number of processors to use')
-    parser.add_argument('--n_doe', help='Number of initial model simulations')
-    parser.add_argument('--n_clusters', help='Number of clusters to explore local vs global optima')
-    parser.add_argument('--n_seed', help='Seed number to reproduce the sampling in EGO', default=0)
-    parser.add_argument('--max_iter', help='Maximum number of parallel EGO ierations', default=10)
-    parser.add_argument('--work_dir', help='Working directory', default='./')   
-    parser.add_argument('--final_design_fn', help='File name of the final design stored as csv', default=None)
-    
-    args=parser.parse_args()
-    args_dict = vars(args)
-    
-    return args_dict
-
 def derive_example_info(kwargs):
     example = kwargs['example']
     
@@ -144,9 +111,17 @@ def derive_example_info(kwargs):
             
         except:
             raise(f'Not a valid example: {int(example)}')
+    return kwargs
+           
+
+def get_kwargs(kwargs):
+    # -----------------------------------------------
+    # Arguments from the outer .sh (shell) if this script is run from the command line
+    # -----------------------------------------------
+    kwargs = derive_example_info(kwargs)
     
     for x in ['rotor_diameter_m', 'hub_height_m', 'wt_rated_power_MW', 'surface_tilt_deg',
-              'surface_azimuth_deg', 'DC_AC_ratio']:
+              'surface_azimuth_deg', 'DC_AC_ratio', ]:
         kwargs[x] = float(kwargs[x])
 
     for x in ['num_batteries', 'n_procs', 'n_doe', 'n_clusters',
@@ -160,21 +135,6 @@ def derive_example_info(kwargs):
     if kwargs['final_design_fn'] == None:
         kwargs['final_design_fn'] = f'{kwargs["work_dir"]}design_hpp_simple_{kwargs["name"]}_{kwargs["opt_var"]}.csv'  
     return kwargs
-           
-
-# def get_kwargs(inputs):
-#     # -----------------------------------------------
-#     # Arguments from the outer .sh (shell) if this script is run from the command line
-#     # -----------------------------------------------
-#     args_dict = get_args()
-#     kwargs = inputs.copy()
-#     for k, v in args_dict.items():
-#         if v is not None:
-#             kwargs[k] = v
-#         # elif k in inputs:
-#         #     kwargs[k] = inputs[k]
-#     kwargs = derive_example_info(kwargs)
-#     return kwargs
 
 class EfficientGlobalOptimizationDriver(Driver):
     def __init__(self, **kwargs):
@@ -376,6 +336,13 @@ if __name__ == '__main__':
     # -----------------------------------------------
     inputs = {
         'example': 0,
+        'name': None,
+        'longitude': None,
+        'latitude': None,
+        'altitude': None,
+        'input_ts_fn': None,
+        'sim_pars_fn': None,
+        
         'opt_var': "NPV_over_CAPEX",
         'rotor_diameter_m': 100,
         'hub_height_m': 120,
@@ -393,7 +360,9 @@ if __name__ == '__main__':
         'npred': 1e5,
         'tol': 1e-6,
         'min_conv_iter': 3,
+        'work_dir': './',
         }
+
     kwargs = get_kwargs(inputs)
     kwargs['xtypes'] = [
             #Nwt, wind_MW_per_km2, 
