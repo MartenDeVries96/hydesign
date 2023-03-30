@@ -367,7 +367,8 @@ class finance_P2X(om.ExplicitComponent):
         
         df = pd.DataFrame()
         
-        df['hpp_t'] = inputs['hpp_t_with_deg']
+        df['hpp_t'] = inputs['hpp_t']
+        df['m_H2_t'] = inputs['m_H2_t']
         price_H2 = inputs['price_H2']
         df['price_t'] = inputs['price_t_ext']
         df['penalty_t'] = inputs['penalty_t']

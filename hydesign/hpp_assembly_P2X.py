@@ -41,6 +41,9 @@ class hpp_model_P2X:
         price_fn = None, # If input_ts_fn is given it should include Price column.
         genWT_fn = lut_filepath+'genWT_v3.nc',
         genWake_fn = lut_filepath+'genWake_v3.nc',
+        verbose = True,
+        **kwargs
+
         ):
         """Initialization of the hybrid power plant evaluator
 
@@ -215,8 +218,10 @@ class hpp_model_P2X:
                 'storage_eff',
                 'ptg_deg',
                 'hhv',
-                ]
-            )
+                ],
+            promotes_outputs=[
+                'total_curtailment'
+            ])
         # model.add_subsystem(
         #     'battery_degradation', 
         #     battery_degradation(
@@ -536,7 +541,14 @@ class hpp_model_P2X:
         hh : hub height of the wind turbine [m]
         self.num_batteries : Number of allowed replacements of the battery
         """
-
+        # print(clearance)
+        # print(sp)
+        # print(p_rated)
+        # print(Nwt)
+        # print(wind_MW_per_km2)
+        # print(solar_MW)
+        # print(surface_tilt)
+        # print(surface_azimuth)
         prob = self.prob
         
         d = get_rotor_d(p_rated*1e6/sp)

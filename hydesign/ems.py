@@ -618,6 +618,10 @@ class ems_P2X(om.ExplicitComponent):
             'epc_t',
             desc="Electrolyzer efficiency time series",
             shape=[self.life_h])
+        self.add_output(
+            'total_curtailment',
+            desc="total curtailment in the lifetime",
+            units='GW*h')
         
     # def setup_partials(self):
     #    self.declare_partials('*', '*',  method='fd')
@@ -640,8 +644,8 @@ class ems_P2X(om.ExplicitComponent):
             ems_WSB = ems_rule_based
         
         # Avoid running an expensive optimization based ems if there is no battery
-        if ( b_P <= 1e-2 ) or (b_E == 0):
-            ems_WSB = ems_rule_based
+        # if ( b_P <= 1e-2 ) or (b_E == 0):
+          #  ems_WSB = ems_rule_based
     
         battery_depth_of_discharge = inputs['battery_depth_of_discharge']
         battery_charge_efficiency = inputs['battery_charge_efficiency']
@@ -713,7 +717,7 @@ class ems_P2X(om.ExplicitComponent):
             m_H2_ts, life_h = self.life_h)
         outputs['epc_t'] = expand_to_lifetime(
             epc_ts, life_h = self.life_h)
-
+        outputs['total_curtailment'] = outputs['hpp_curt_t'].sum()
 # -----------------------------------------------------------------------
 # Auxiliar functions for ems modelling
 # -----------------------------------------------------------------------
@@ -1015,7 +1019,7 @@ def ems_cplex_P2X(
     peak_hr_quantile = 0.9,
     cost_of_battery_P_fluct_in_peak_price_ratio = 0.5, #[0, 0.8]. For higher values might cause errors
     n_full_power_hours_expected_per_day_at_peak_price = 3,    
-    batch_size = 2*24,
+    batch_size = 1*24,
 ):
     
     # split in batches, ussually a week
@@ -1269,21 +1273,19 @@ def ems_cplex_parts_P2X(
         mdl.add_constraint(P_charge_discharge[t] >= -P_batt_MW/charge_efficiency)
         
         # Caclulating electrolyzer efficiency as a function of load (piecewise linear approximation)
-        LTAEC = mdl.piecewise(0, [(0.05 * ptg_MW, 0), (0.0501 * ptg_MW, 0.785 * 0.0501 * ptg_MW), (0.1 * ptg_MW, 0.75 * 0.1 * ptg_MW), (0.15 * ptg_MW, 0.72 * 0.15 * ptg_MW), (0.2 * ptg_MW, 0.695 * 0.2 * ptg_MW),(0.25 * ptg_MW, 0.665 * 0.25 * ptg_MW), 
-                             (0.3 * ptg_MW, 0.645 * 0.3 * ptg_MW), (0.35 * ptg_MW, 0.62 * 0.35 * ptg_MW), (0.4 * ptg_MW, 0.6 * 0.4 * ptg_MW), (0.45 * ptg_MW, 0.58 * 0.45 * ptg_MW), (0.5 * ptg_MW, 0.56 * 0.5 * ptg_MW), (0.55 * ptg_MW, 0.545 * 0.55 * ptg_MW),
-                             (0.6 * ptg_MW, 0.53 * 0.6 * ptg_MW), (0.65 * ptg_MW, 0.51 * 0.65 * ptg_MW), (0.7 * ptg_MW, 0.495 * 0.7 * ptg_MW), (0.75 * ptg_MW, 0.485 * 0.75 * ptg_MW), (0.8 * ptg_MW, 0.465 * 0.8 * ptg_MW), (0.85 * ptg_MW, 0.455 * 0.85 * ptg_MW),
-                             (0.9 * ptg_MW, 0.445 * 0.9 * ptg_MW), (0.95 * ptg_MW, 0.43 * 0.95 * ptg_MW), (1 * ptg_MW, 0.42 * 1 * ptg_MW), (1.001 * ptg_MW , 0)], 0) 
+        LTAEC = mdl.piecewise(0, [(0.05 * ptg_MW, 0), (1 * ptg_MW, 0.52 * 1 * ptg_MW), (1.001 * ptg_MW , 0)], 0)
+        # LTAEC = mdl.piecewise(0, [(0.05 * ptg_MW, 0), (0.35 * ptg_MW, 0.745 * 0.35 * ptg_MW), (0.55 * ptg_MW, 0.66 * 0.55 * ptg_MW),
+        #                       (0.85 * ptg_MW, 0.56 * 0.85 * ptg_MW), (1 * ptg_MW, 0.52 * 1 * ptg_MW), (1.001 * ptg_MW , 0)], 0)
+        
+        # LTAEC = mdl.piecewise(0, [(0.05 * ptg_MW, 0), (0.0501 * ptg_MW, 0.785 * 0.0501 * ptg_MW), (0.1 * ptg_MW, 0.75 * 0.1 * ptg_MW), (0.15 * ptg_MW, 0.72 * 0.15 * ptg_MW), (0.2 * ptg_MW, 0.695 * 0.2 * ptg_MW),(0.25 * ptg_MW, 0.665 * 0.25 * ptg_MW), (0.3 * ptg_MW, 0.645 * 0.3 * ptg_MW), (0.35 * ptg_MW, 0.62 * 0.35 * ptg_MW), (0.4 * ptg_MW, 0.6 * 0.4 * ptg_MW), (0.45 * ptg_MW, 0.58 * 0.45 * ptg_MW), (0.5 * ptg_MW, 0.56 * 0.5 * ptg_MW), (0.55 * ptg_MW, 0.545 * 0.55 * ptg_MW), (0.6 * ptg_MW, 0.53 * 0.6 * ptg_MW), (0.65 * ptg_MW, 0.51 * 0.65 * ptg_MW), (0.7 * ptg_MW, 0.495 * 0.7 * ptg_MW), (0.75 * ptg_MW, 0.485 * 0.75 * ptg_MW), (0.8 * ptg_MW, 0.465 * 0.8 * ptg_MW), (0.85 * ptg_MW, 0.455 * 0.85 * ptg_MW), (0.9 * ptg_MW, 0.445 * 0.9 * ptg_MW), (0.95 * ptg_MW, 0.43 * 0.95 * ptg_MW), (1 * ptg_MW, 0.42 * 1 * ptg_MW), (1.001 * ptg_MW , 0)], 0) 
        
-        HTAEC = mdl.piecewise(0, [(0.05 * ptg_MW, 0), (0.0501 * ptg_MW, 0.815 * 0.0501 * ptg_MW), (0.1 * ptg_MW, 0.815 * 0.1 * ptg_MW), (0.15 * ptg_MW, 0.815 * 0.15 * ptg_MW), (0.2 * ptg_MW, 0.815 * 0.2 * ptg_MW),(0.25 * ptg_MW, 0.8 * 0.25 * ptg_MW), 
-                             (0.3 * ptg_MW, 0.775 * 0.3 * ptg_MW), (0.35 * ptg_MW, 0.745 * 0.35 * ptg_MW), (0.4 * ptg_MW, 0.725 * 0.4 * ptg_MW), (0.45 * ptg_MW, 0.7 * 0.45 * ptg_MW), (0.5 * ptg_MW, 0.68 * 0.5 * ptg_MW), (0.55 * ptg_MW, 0.66 * 0.55 * ptg_MW),
-                             (0.6 * ptg_MW, 0.64 * 0.6 * ptg_MW), (0.65 * ptg_MW, 0.62 * 0.65 * ptg_MW), (0.7 * ptg_MW, 0.605 * 0.7 * ptg_MW), (0.75 * ptg_MW, 0.59 * 0.75 * ptg_MW), (0.8 * ptg_MW, 0.575 * 0.8 * ptg_MW), (0.85 * ptg_MW, 0.56 * 0.85 * ptg_MW),
-                             (0.9 * ptg_MW, 0.545 * 0.9 * ptg_MW), (0.95 * ptg_MW, 0.53 * 0.95 * ptg_MW), (1 * ptg_MW, 0.52 * 1 * ptg_MW), (1.001 * ptg_MW , 0)], 0) 
+       # HTAEC = mdl.piecewise(0, [(0.05 * ptg_MW, 0), (0.0501 * ptg_MW, 0.815 * 0.0501 * ptg_MW), (0.1 * ptg_MW, 0.815 * 0.1 * ptg_MW), (0.15 * ptg_MW, 0.815 * 0.15 * ptg_MW), (0.2 * ptg_MW, 0.815 * 0.2 * ptg_MW),(0.25 * ptg_MW, 0.8 * 0.25 * ptg_MW), (0.3 * ptg_MW, 0.775 * 0.3 * ptg_MW), (0.35 * ptg_MW, 0.745 * 0.35 * ptg_MW), (0.4 * ptg_MW, 0.725 * 0.4 * ptg_MW), (0.45 * ptg_MW, 0.7 * 0.45 * ptg_MW), (0.5 * ptg_MW, 0.68 * 0.5 * ptg_MW), (0.55 * ptg_MW, 0.66 * 0.55 * ptg_MW), (0.6 * ptg_MW, 0.64 * 0.6 * ptg_MW), (0.65 * ptg_MW, 0.62 * 0.65 * ptg_MW), (0.7 * ptg_MW, 0.605 * 0.7 * ptg_MW), (0.75 * ptg_MW, 0.59 * 0.75 * ptg_MW), (0.8 * ptg_MW, 0.575 * 0.8 * ptg_MW), (0.85 * ptg_MW, 0.56 * 0.85 * ptg_MW), (0.9 * ptg_MW, 0.545 * 0.9 * ptg_MW), (0.95 * ptg_MW, 0.53 * 0.95 * ptg_MW), (1 * ptg_MW, 0.52 * 1 * ptg_MW), (1.001 * ptg_MW , 0)], 0) 
         
         
         mdl.add_constraint(epc_t[t] == LTAEC(P_ptg_t[t]))
          
         #Electrolyzer consumption constraint
-        mdl.add_constraint(P_ptg_t[t] <= (wind_ts[t] + solar_ts[t] + P_charge_discharge[t] / charge_efficiency))
+        # mdl.add_constraint(P_ptg_t[t] <= (wind_ts[t] + solar_ts[t] + P_charge_discharge[t] / charge_efficiency))
         mdl.add_constraint(P_ptg_t[t] <= ptg_MW)
    
         mdl.add_constraint(m_H2_t[t] == LTAEC(P_ptg_t[t])* storage_eff / hhv * 1000  * ptg_deg)
@@ -1311,13 +1313,13 @@ def ems_cplex_parts_P2X(
         sol.get_value_dict(E_SOC_t), orient='index').loc[:,0]
     
     P_ptg_ts_df = pd.DataFrame.from_dict(
-        sol.get_value_dict(P_ptg_t), orient='index')
+        sol.get_value_dict(P_ptg_t), orient='index').loc[:,0]
     
     m_H2_ts_df = pd.DataFrame.from_dict(
-        sol.get_value_dict(m_H2_t), orient='index')
+        sol.get_value_dict(m_H2_t), orient='index').loc[:,0]
     
     epc_ts_df = pd.DataFrame.from_dict(
-        sol.get_value_dict(epc_t), orient='index')
+        sol.get_value_dict(epc_t), orient='index').loc[:,0]
     
     #make a time series like P_HPP with a constant penalty 
     penalty_2 = sol.get_value(penalty)

@@ -3,10 +3,10 @@
 #SBATCH --output=output_hydesign_%J.log
 #SBATCH --error=output_hydesign_%J.log
 
-# #SBATCH --partition=rome
+#SBATCH --partition=rome
 # #SBATCH --partition=workq 
 # #SBATCH --partition=windq 
-#SBATCH --partition=windfatq
+# #SBATCH --partition=windfatq
 
 #SBATCH --ntasks-per-core 1 
 #SBATCH --ntasks-per-node 32 
@@ -32,7 +32,7 @@ echo -----------------------------------------------------------------
 source /home/gupta/miniconda3/bin/activate
 conda activate hydesign
 python ../EGO_surrogate_based_optimization.py \
-    --example 10 \
+    --example 9 \
     --opt_var "NPV_over_CAPEX"\
     --num_batteries 1\
     --n_procs  31\
@@ -40,7 +40,7 @@ python ../EGO_surrogate_based_optimization.py \
     --n_clusters 16\
     --n_seed 0\
     --max_iter 10\
-    --final_design_fn 'hydesign_simple_design_10.csv'
+    --final_design_fn 'hydesign_simple_design_9.csv'
     
 
 # Example usage:
