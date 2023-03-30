@@ -15,7 +15,7 @@ import scipy as sp
 from scipy import stats
 import xarray as xr
 
-from hydesign.weather import extract_weather_for_HPP, ABL
+from hydesign.weather import extract_weather_for_HPP, ABL, select_years
 from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_area, get_rotor_d
 from hydesign.pv import pvp, pvp_degradation_linear
 from hydesign.ems import ems, ems_long_term_operation
@@ -37,10 +37,14 @@ class hpp_model:
         work_dir = './',
         num_batteries = 1,
         ems_type='cplex',
+        weeks_per_season_per_year = None,
+        seed=0, # For selecting random weeks pe season to reduce the computational time
         input_ts_fn = None, # If None then it computes the weather
         price_fn = None, # If input_ts_fn is given it should include Price column.
         genWT_fn = lut_filepath+'genWT_v3.nc',
         genWake_fn = lut_filepath+'genWake_v3.nc',
+        verbose = True,
+        **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
 
@@ -52,6 +56,8 @@ class hpp_model:
         sims_pars_fn : Case study input values of the HPP 
         work_dir : Working directory path
         num_batteries : Number of battery replacements
+        weeks_per_season_per_year: Number of weeks per season to select from the input data, to reduce computation time. Default is `None` which uses all the input time series
+        seed: seed number for week selection
         ems_type : Energy management system optimization type: cplex solver or rule based
         inputs_ts_fn : User provided weather timeseries, if not provided, the weather data is calculated using ERA5 datasets
         price_fn : Price timeseries
@@ -80,10 +86,12 @@ class hpp_model:
                                 longitude=longitude,
                                 kwargs={"fill_value": 0.0}
                             ).values
-        
-        print('longitude =',longitude)
-        print('latitude =',latitude)
-        print('altitude =',altitude)
+        if verbose:
+            print(f'\nFixed parameters on the site')
+            print(f'-------------------------------')
+            print('longitude =',longitude)
+            print('latitude =',latitude)
+            print('altitude =',altitude)
         
         # Parameters of the simulation
         if 'year_start' in sim_pars.keys():
@@ -142,6 +150,17 @@ class hpp_model:
         else: # User provided weather timeseries
             weather = pd.read_csv(input_ts_fn, index_col=0, parse_dates=True)
             N_time = len(weather)
+            
+        if weeks_per_season_per_year != None:
+            weather = select_years(
+                weather,
+                seed=seed,
+                weeks_per_season_per_year=weeks_per_season_per_year,
+            )
+            N_time = len(weather)
+            input_ts_fn = f'{work_dir}input_ts_sel.csv'
+            print(f'\n\nSelected input time series based on {weeks_per_season_per_year} weeks per season are stored in {input_ts_fn}')
+            weather.to_csv(input_ts_fn)
         
         with xr.open_dataset(genWT_fn) as ds: 
             # number of points in the power curves
@@ -208,6 +227,7 @@ class hpp_model:
             'ems', 
             ems(
                 N_time = N_time,
+                weeks_per_season_per_year = weeks_per_season_per_year,
                 life_h = life_h, 
                 ems_type=ems_type),
             promotes_inputs=[

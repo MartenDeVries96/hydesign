@@ -296,22 +296,17 @@ def select_years(
     df,
     seed=0,
     weeks_per_season_per_year=1,
-    vars_extract_ratio=[],
 ):
     """
     Method to select a number of weeks per season per year from a time series df
     To each variable a isoprobabilistic trasnformation is applied in order to
     force the sample distribution to be the same as the long term distribution.
     Correlations are kept in rank-sense.
-
-    For the variables in vars_extract_ratio, the iso-probabilistic transformation is not
-    applied directly but a ratio is extracted to be applied. Usefull for applying multiple
-    long term correction factors to correct wind at multiple heights.
     """
-    df_ratio = df.copy()
-    columns = df_ratio.columns
-    df_ratio['year'] = df_ratio.index.year
-    df_ratio['week'] = df_ratio.index.isocalendar().week
+    df_inter = df.copy()
+    columns = df_inter.columns
+    df_inter['year'] = df_inter.index.year
+    df_inter['week'] = df_inter.index.isocalendar().week
     month_to_season = {
         1: 'DJF',
         2: 'DJF',
@@ -325,52 +320,48 @@ def select_years(
         10: 'SON',
         11: 'SON',
         12: 'DJF'}
-    df_ratio['season'] = df_ratio.index.month.map(month_to_season)
+    df_inter['season'] = df_inter.index.month.map(month_to_season)
 
     # to ensure only full weeks are sampled
-    week_sel_table = df_ratio.groupby(
+    week_sel_table = df_inter.groupby(
         ['year', 'week', 'season']).count().iloc[:, :1].reset_index()
     week_sel_table.columns = ['year', 'week', 'season', 'tmsp']
     week_sel_table = week_sel_table.loc[week_sel_table.tmsp == 168, :]
 
-    df_ratio_sel = []
+    df_inter_sel = []
     years = np.random.RandomState(
         seed=seed).permutation(
-        df_ratio.index.year.unique())
+        df_inter.index.year.unique())
     for iy, year in enumerate(years):
         i_week = 0
-        for season in df_ratio.season.unique():
-            df_ratio_yr_ss = df_ratio.loc[
-                (df_ratio.year == year) & (df_ratio.season == season), :].copy()
-            df_ratio_yr_ss['i_year'] = iy
+        for season in df_inter.season.unique():
+            df_inter_yr_ss = df_inter.loc[
+                (df_inter.year == year) & (df_inter.season == season), :].copy()
+            df_inter_yr_ss['i_year'] = iy
             seed += 1
             week = np.random.RandomState(seed).permutation(
                 week_sel_table.loc[
                     (week_sel_table.year == year) & (week_sel_table.season == season),
                     'week'].unique())[:weeks_per_season_per_year]
-            aux = df_ratio_yr_ss.loc[df_ratio_yr_ss.week.isin(week), :].copy()
+            aux = df_inter_yr_ss.loc[df_inter_yr_ss.week.isin(week), :].copy()
             for week in aux.week.unique():
                 aux['i_week'] = i_week
                 i_week += 1
-            df_ratio_sel += [aux]
+            df_inter_sel += [aux]
 
-    df_ratio_sel = pd.concat(df_ratio_sel)
+    df_inter_sel = pd.concat(df_inter_sel)
 
-    df_ratio_sel['i_life'] = df_ratio_sel.i_year + \
-        df_ratio_sel.i_week / (4 * weeks_per_season_per_year)
+    df_inter_sel['i_life'] = df_inter_sel.i_year + \
+        df_inter_sel.i_week / (4 * weeks_per_season_per_year)
 
-    df_out = df_ratio_sel
+    df_out = df_inter_sel
     for var in columns:
-        ecdf_orig = ECDF(df_ratio[var].values)
-        ecdf_sample = ECDF(df_ratio_sel[var].values)
-        ecdf_sample_y = ecdf_sample(df_ratio_sel[var].values)
+        ecdf_orig = ECDF(df_inter[var].values)
+        ecdf_sample = ECDF(df_inter_sel[var].values)
+        ecdf_sample_y = ecdf_sample(df_inter_sel[var].values)
 
         y = scipy.interpolate.interp1d(ecdf_orig.y, ecdf_orig.x)(ecdf_sample_y)
-
-        if var in vars_extract_ratio:
-            df_out[var + '_ratio'] = y / df_ratio_sel[var].values
-        else:
-            df_out[var] = y
+        df_out[var] = y
 
     return df_out
 

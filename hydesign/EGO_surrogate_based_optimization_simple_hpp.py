@@ -76,28 +76,12 @@ def get_sm(xdoe, ydoe, mixint=None):
     '''
     Function that trains the surrogate and uses it to predict on random input points
     '''    
-    sm = KRG(
+    sm = KPLSK(
         corr="squar_exp",
         poly='linear',
-        theta0=[1e-2],
-        theta_bounds=[1e-2, 1e2],
+        theta0=[1e-3],
+        theta_bounds=[1e-6, 1e4],
         print_global=False)
-
-    # # surrogate = KRG( 
-    # #     corr="squar_exp",
-    # #     theta0=[1e-2],
-    # #     theta_bounds=[1e-2, 1e2],
-    # #     n_start=5,
-    # #     print_global=False)
-
-    # # xlimits = mixint._xlimits
-    # # xtypes = mixint._xtypes
-    # # sm = MixedIntegerSurrogateModel(
-    # #     categorical_kernel=smt.applications.mixed_integer.GOWER,
-    # #     xtypes=xtypes,
-    # #     xlimits=xlimits,
-    # #     surrogate=surrogate,
-    # # )
 
     sm.set_training_values(xdoe, ydoe)
     sm.train()
@@ -132,15 +116,13 @@ def opt_sm(sm, mixint, x0, fmin=1e10):
     '''
     ndims = mixint.get_unfolded_dimension()
     res = optimize.minimize(
-        #fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin)[0,0],
-        fun = lambda x:  LCB(sm, x.reshape([1,ndims]))[0,0],
+        fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin)[0,0],
         x0 = x0.reshape([1,ndims]),
         method="SLSQP",
-        #bounds=mixint.get_unfolded_xlimits(),
         bounds=[(0,1)]*ndims,
         options={
             "maxiter": 200,
-            'eps':1e-3,
+            'eps':1e-4,
             'disp':False
         },
     )
@@ -158,8 +140,11 @@ def get_candiate_points(
     ind_up = np.where(y<yq)[0]
     xup = x[ind_up]
     yup = y[ind_up]
-    kmeans = KMeans(n_clusters=n_clusters, 
-                    random_state=0).fit(xup)    
+    kmeans = KMeans(
+        n_clusters=n_clusters, 
+        random_state=0,
+        n_init=10
+        ).fit(xup)    
     clust_id = kmeans.predict(xup)
     xbest_per_clst = np.vstack([
         xup[np.where( yup== np.min(yup[np.where(clust_id==i)[0]]) )[0],:] 
@@ -238,13 +223,14 @@ if __name__ == "__main__":
     parser.add_argument('--surface_azimuth_deg', help='PV surface azimuth [deg]')
     parser.add_argument('--DC_AC_ratio', help='PV DC/AC ratio, this ratio defines how much overplanting of DC power is done with respect the inverter. P_DC/P_AC [-]')
     parser.add_argument('--num_batteries', help='Maximum number of batteries to be considered in the design.')
+    parser.add_argument('--weeks_per_season_per_year', help='Number of weeks per season to be considered in the design.', default=None)
     
     parser.add_argument('--n_procs', help='Number of processors to use')
     parser.add_argument('--n_doe', help='Number of initial model simulations')
     parser.add_argument('--n_clusters', help='Number of clusters to explore local vs global optima')
     parser.add_argument('--n_seed', help='Seed number to reproduce the sampling in EGO', default=0)
     parser.add_argument('--max_iter', help='Maximum number of parallel EGO ierations', default=10)
-    
+    parser.add_argument('--work_dir', help='Working directory', default='./')
     parser.add_argument('--final_design_fn', help='File name of the final design stored as csv', default=None)
     
     args=parser.parse_args()
@@ -288,15 +274,18 @@ if __name__ == "__main__":
     surface_azimuth_deg = float(args.surface_azimuth_deg)
     DC_AC_ratio = float(args.DC_AC_ratio)
     num_batteries = int(args.num_batteries)
+    weeks_per_season_per_year = args.weeks_per_season_per_year
+    if weeks_per_season_per_year != None:
+        weeks_per_season_per_year = int(weeks_per_season_per_year)
     
     n_procs = int(args.n_procs)
     n_doe = int(args.n_doe)
     n_clusters = int(args.n_clusters)
     n_seed = int(args.n_seed)    
     max_iter = int(args.max_iter)
+    work_dir = str(args.work_dir) 
     final_design_fn = str(args.final_design_fn)
         
-    work_dir = './'
     if final_design_fn == None:
         final_design_fn = f'{work_dir}design_hpp_simple_{name}_{opt_var}.csv'        
         
@@ -308,10 +297,9 @@ if __name__ == "__main__":
     # n_procs = 31 # number of parallel process. Max number of processors - 1.
     # n_doe = n_procs*2
     # n_clusters = int(n_procs/2)
-    #npred = 1e4
-    npred = 1e5
+    npred = 3e4
     tol = 1e-6
-    min_conv_iter = 3
+    min_conv_iter = max_iter
     
     start_total = time.time()
     
@@ -322,19 +310,21 @@ if __name__ == "__main__":
     print(f'Sizing a HPP plant at {name}:')
     print()
     hpp_m = hpp_model_simple(
-            latitude,
-            longitude,
-            altitude,
-            rotor_diameter_m = rotor_diameter_m,
-            hub_height_m = hub_height_m,
-            wt_rated_power_MW = wt_rated_power_MW,
-            surface_tilt_deg = surface_tilt_deg,
-            surface_azimuth_deg = surface_azimuth_deg,
-            DC_AC_ratio = DC_AC_ratio,
-            num_batteries = num_batteries,
-            work_dir = work_dir,
-            sim_pars_fn = sim_pars_fn,
-            input_ts_fn = input_ts_fn,
+        latitude,
+        longitude,
+        altitude,
+        rotor_diameter_m = rotor_diameter_m,
+        hub_height_m = hub_height_m,
+        wt_rated_power_MW = wt_rated_power_MW,
+        surface_tilt_deg = surface_tilt_deg,
+        surface_azimuth_deg = surface_azimuth_deg,
+        DC_AC_ratio = DC_AC_ratio,
+        num_batteries = num_batteries,
+        work_dir = work_dir,
+        sim_pars_fn = sim_pars_fn,
+        input_ts_fn = input_ts_fn,
+        weeks_per_season_per_year = weeks_per_season_per_year,
+        seed = n_seed,
     )
     
     print('\n\n')
@@ -367,7 +357,7 @@ if __name__ == "__main__":
         #wind_MW_per_km2
         [5, 9],
         #solar_MW
-        [0, 500],
+        [0, 400],
         #b_P in MW
         [0, 300],
         #b_E_h in h
@@ -465,7 +455,7 @@ if __name__ == "__main__":
         xnew = get_candiate_points(
             xpred, ypred_LB, 
             n_clusters = n_clusters, 
-            quantile = 1/(npred/n_clusters) ) 
+            quantile = 0.01 ) 
             # request candidate points based on global evaluation of current surrogate 
             # returns best designs in n_cluster of points with outputs bellow a quantile
         lapse = np.round( ( time.time() - start )/60, 2)
@@ -529,6 +519,9 @@ if __name__ == "__main__":
     # Re-Evaluate the last design to get all outputs
     outs = hpp_m.evaluate(*xopt[0,:])
     yopt = np.array(opt_sign*outs[[op_var_index]])[:,na]
+    print()
+    print(f'Objective function: {opt_var} \n')
+    print()
     hpp_m.print_design(xopt[0,:], outs)
 
     n_model_evals = xdoe.shape[0] 
