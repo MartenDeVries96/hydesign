@@ -71,7 +71,6 @@ land_cost: 300_000  #  [Euro/km**2] from Hybridize imputs 6-12k Euro/acre. 1km2 
 # --------------------------------------------------------------------------------------------
 # Financial and Economic data
 # --------------------------------------------------------------------------------------------
-discount_factor: 0.06
 wind_WACC: 0.052    # Markup of after tax WACC for onshore WT
 solar_WACC: 0.048   # After tax WACC for solar PV
 battery_WACC: 0.080 # After tax WACC for stationary storge li-ion batteries

@@ -19,10 +19,13 @@ from smt.sampling_methods import LHS
 from hydesign.hpp_assembly import hpp_model
 from hydesign.examples import examples_filepath
 from hydesign.EGO_surrogate_based_optimization import (get_sm, eval_sm,
-                                                       get_candiate_points, opt_sm, drop_duplicates,
+                                                       get_candiate_points, drop_duplicates, opt_sm,
                                                        concat_to_existing)
 from sys import version_info
 from openmdao.core.driver import Driver
+import pickle
+from datetime import datetime
+import os
 
 
 def surrogate_optimization(inputs): # Calling the optimization of the surrogate model
@@ -140,7 +143,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         """
         for k, v in self.kwargs.items():
             self.options.declare(k, v)
-    def run(self):
+    def run(self, state=None):
         kwargs = self.kwargs
 
         # -----------------
@@ -174,6 +177,8 @@ class EfficientGlobalOptimizationDriver(Driver):
         sampling = mixint.build_sampling_method(
           LHS, criterion="maximin", random_state=kwargs['n_seed'])
         xdoe = sampling(kwargs['n_doe'])
+        if state is not None:
+            xdoe, _ = concat_to_existing(state, np.zeros_like(state), xdoe, np.zeros_like(xdoe))
         xdoe = scaler.transform(xdoe)
         # -----------------
         # HPP model
@@ -225,10 +230,13 @@ class EfficientGlobalOptimizationDriver(Driver):
         kwargs['yopt'] = yopt
         yold = np.copy(yopt)
         # xold = None
+        rec_vars = ['xopt_iter', 'yopt_iter', 'itr', 'start_iter', 'error']
+        self.recorder = {r: [] for r in rec_vars}
         while itr < kwargs['max_iter']:
+            self.recorder['itr'].append(itr)
             # Iteration
             start_iter = time.time()
-        
+            self.recorder['start_iter'].append('start_iter')
             # Train surrogate model
             np.random.seed(kwargs['n_seed'])
             sm = get_sm(xdoe, ydoe, mixint)
@@ -262,10 +270,11 @@ class EfficientGlobalOptimizationDriver(Driver):
             xopt_iter = scaler.transform(xopt_iter)
             xopt_iter, _ = drop_duplicates(xopt_iter,np.zeros_like(xopt_iter))
             xopt_iter, _ = concat_to_existing(xnew,np.zeros_like(xnew), xopt_iter, np.zeros_like(xopt_iter))
-        
+            self.recorder['xopt_iter'].append(xopt_iter)
             # run model at all candidate points
             start = time.time()
             yopt_iter = PE.run_ydoe(fun=model_evaluation,x=xopt_iter, **kwargs)
+            self.recorder['yopt_iter'].append(yopt_iter)
             
             lapse = np.round( ( time.time() - start )/60, 2)
             print(f'Check-optimal candidates: new {xopt_iter.shape[0]} simulations took {lapse} minutes')    
@@ -280,6 +289,7 @@ class EfficientGlobalOptimizationDriver(Driver):
             
             #if itr > 0:
             error = float(1 - yopt/yold)
+            self.recorder['error'].append(error)
             print(f'  rel_yopt_change = {error:.2E}')
         
             xdoe = np.copy(xdoe_upd)
@@ -298,7 +308,19 @@ class EfficientGlobalOptimizationDriver(Driver):
                     break
             else:
                 conv_iter = 0
-        
+        # refine = True
+        # if refine:
+        #     refine_input = kwargs.copy()
+        #     # limits = 
+        #     xopt_iter = PE.run_xopt_iter(surrogate_optimization, xnew, **kwargs)
+        #     from scipy.optimize import minimize
+        #     print('Current solution: ', yopt)
+        #     def refine_solution(x):
+        #         return kwargs['opt_sign']*hpp_m.evaluate(*kwargs['scaler'].inverse_transform(x.reshape(1, -1)).ravel())[kwargs['op_var_index']]
+        #     res = minimize(refine_solution, xopt, method='SLSQP')
+        #     xopt = res.x
+        #     yopt = res.fun
+        #     print('Refined solution: ', yopt)
         xopt = scaler.inverse_transform(xopt)
         
         # Re-Evaluate the last design to get all outputs
@@ -325,6 +347,55 @@ class EfficientGlobalOptimizationDriver(Driver):
         
         design_df.T.to_csv(kwargs['final_design_fn'])
         self.result = design_df
+        self.recorder['meta_data'] = kwargs
+
+class refine:
+    def __init__(self, hpp_model, desvars, **kwargs):
+        from openmdao.drivers.scipy_optimizer import ScipyOptimizeDriver
+        driver = ScipyOptimizeDriver(optimizer='SLSQP')
+        self.hpp_m = hpp_model(**kwargs)
+        prob = self.hpp_m.prob
+        prob.driver = driver
+        prob.driver.recording_options['record_desvars'] = True
+        prob.driver.recording_options['includes'] = ['*']
+        prob.driver.recording_options['record_inputs'] = True
+        for k, v in desvars.items():
+            prob.model.add_design_var(k, lower=v[1], upper=v[2])
+        prob.model.add_objective(kwargs['opt_var'], scaler=kwargs['opt_sign'])
+        prob.setup()   
+        self.prob = prob
+        
+    def update_state(self, state):
+        for k, v in state.items():
+            try:
+                c = self.prob[k]  # fail if k not exists
+                v = np.array(v)
+                if hasattr(c, 'shape') and c.shape != v.shape:
+                    v = v.reshape(c.shape)
+                self.prob[k] = v
+            except KeyError:
+                pass
+
+    def evaluate(
+        self,
+        clearance, sp, p_rated, Nwt, wind_MW_per_km2,
+        solar_MW,  surface_tilt, surface_azimuth, DC_AC_ratio,
+        b_P, b_E_h, cost_of_battery_P_fluct_in_peak_price_ratio
+        ):
+        return self.hpp_m.evaluate(clearance, sp, p_rated, Nwt, wind_MW_per_km2,
+                solar_MW,  surface_tilt, surface_azimuth, DC_AC_ratio,
+                b_P, b_E_h, cost_of_battery_P_fluct_in_peak_price_ratio)
+    
+    def optimize(self, state, disp=True):
+        self.prob.setup()
+        self.update_state(state)
+        t = time.time()
+        self.prob.run_driver()
+        self.prob.cleanup()
+        if disp:
+            print("Optimized in\t%.3fs" % (time.time() - t))
+
+
 
 if __name__ == '__main__':
     inputs = {
@@ -344,13 +415,13 @@ if __name__ == '__main__':
         'surface_azimuth_deg': 180,
         'DC_AC_ratio': 1,
         'num_batteries': 1,
-        'n_procs': 8,
-        'n_doe': 16,
-        'n_clusters': 4,
+        'n_procs': 7,
+        'n_doe': 50,
+        'n_clusters': 10,
         'n_seed': 0,
-        'max_iter': 4,
+        'max_iter': 10,
         'final_design_fn': 'hydesign_design_0.csv',
-        'npred': 1e5,
+        'npred': 3e4,
         'tol': 1e-6,
         'min_conv_iter': 3,
         'work_dir': './',
@@ -392,5 +463,73 @@ if __name__ == '__main__':
         [0, 20],
         ])    
     EGOD = EfficientGlobalOptimizationDriver(model=hpp_model, **kwargs)
-    EGOD.run()
-    result = EGOD.result
+    # states that you want to include e.g. an edge case
+    state = np.array([15, 292, 2, 145, 7, 3, 25, 178, 1.6, 29, 2, 4])
+    kwargs['xlimits'] = state[:, na]*np.asarray([0.95, 1.05])
+    if 1:
+        EGOD.run(state=state)
+        result = EGOD.result
+        recorder = EGOD.recorder
+        if not os.path.exists('Recordings'):
+                       os.makedirs('Recordings')
+        now = datetime.now()
+        date_time = now.strftime("%Y_%m_%d_%H_%M_%S")
+        with open(f'Recordings/rec_{date_time}.pkl', 'wb') as f:
+            pickle.dump(recorder, f)
+    else:
+        with open('Recordings/rec_2023_04_13_10_21_23.pkl', 'rb') as f:
+            recorder = pickle.load(f)
+    kwargs = recorder['meta_data']
+    
+    hpp_list_vars = [   'clearance [m]', 
+        'sp [m2/W]', 
+        'p_rated [MW]', 
+        'Nwt', 
+        'wind_MW_per_km2 [MW/km2]', 
+        'solar_MW [MW]', 
+        'surface_tilt [deg]', 
+        'surface_azimuth [deg]', 
+        'DC_AC_ratio', 
+        'b_P [MW]', 
+        'b_E_h [h]',
+        'cost_of_battery_P_fluct_in_peak_price_ratio'
+        ]   
+    init_state = np.asarray([[i, l, u] for i, l, u in zip([15, 292, 2, 145, 7, 3, 25, 178, 1.6, 29, 2, 4], kwargs['xlimits'][:,0], kwargs['xlimits'][:,1])])
+
+    dic = {k: v for k, v in zip(hpp_list_vars, init_state)}
+
+    def get_rotor_area(d): return np.pi*(d/2)**2
+    def get_rotor_d(area): return 2*(area/np.pi)**0.5
+
+
+    p_rated = dic['p_rated [MW]']
+    sp = dic['sp [m2/W]']
+    clearance = dic['clearance [m]']
+    Nwt = dic['Nwt']
+    wind_MW_per_km2 = dic['wind_MW_per_km2 [MW/km2]']
+    b_E_h = dic['b_E_h [h]']
+    b_P = dic['b_P [MW]']
+    
+    d = get_rotor_d(p_rated*1e6/sp)
+    hh = (d/2)+clearance
+    wind_MW = Nwt * p_rated
+    Awpp = wind_MW / wind_MW_per_km2 
+    #Awpp = Awpp + 1e-10*(Awpp==0)
+    b_E = b_E_h * b_P
+
+    state = {
+        'hh': hh,
+        'd': d,
+        'p_rated': p_rated,
+        'Nwt': Nwt,
+        'Awpp': Awpp,
+        'surface_tilt': dic['surface_tilt [deg]'],
+        'surface_azimuth': dic['surface_azimuth [deg]'],
+        'DC_AC_ratio': dic['DC_AC_ratio'], 
+        'solar_MW': dic['solar_MW [MW]'],
+        'b_P': dic['b_P [MW]'],
+        'b_E': b_E,
+        'cost_of_battery_P_fluct_in_peak_price_ratio': dic['cost_of_battery_P_fluct_in_peak_price_ratio']}
+    REFINE = refine(hpp_model, desvars=state, **kwargs)
+    REFINE.optimize({k: v[0] for k, v in state.items()})
+    
