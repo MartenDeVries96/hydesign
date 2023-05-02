@@ -443,6 +443,14 @@ class hpp_model:
             'LCOE [Euro/MWh]',
             'CAPEX [MEuro]',
             'OPEX [MEuro]',
+            'Wind CAPEX [MEuro]',
+            'Wind OPEX [MEuro]',
+            'PV CAPEX [MEuro]',
+            'PV OPEX [MEuro]',
+            'Batt CAPEX [MEuro]',
+            'Batt OPEX [MEuro]',
+            'Shared CAPEX [MEuro]',
+            'Shared Opex [MEuro]',
             'penalty lifetime [MEuro]',
             'AEP [GWh]',
             'GUF',
@@ -560,6 +568,14 @@ class hpp_model:
             prob['LCOE'],
             prob['CAPEX']/1e6,
             prob['OPEX']/1e6,
+            prob.get_val('finance.CAPEX_w')/1e6,
+            prob.get_val('finance.OPEX_w')/1e6,
+            prob.get_val('finance.CAPEX_s')/1e6,
+            prob.get_val('finance.OPEX_s')/1e6,
+            prob.get_val('finance.CAPEX_b')/1e6,
+            prob.get_val('finance.OPEX_b')/1e6,
+            prob.get_val('finance.CAPEX_el')/1e6,
+            prob.get_val('finance.OPEX_el')/1e6,
             prob['penalty_lifetime']/1e6,
             prob['mean_AEP']/1e3, #[GWh]
             # Grid Utilization factor
@@ -588,6 +604,55 @@ class hpp_model:
         for i_v, var in enumerate(self.list_out_vars):
             print(f'{var}: {outs[i_v]:.3f}')
         print()
+
+
+    def evaluation_in_csv(self, name_file ,longitude, latitude, altitude, x_opt, outs ):
+        design_df = pd.DataFrame(columns = ['longitude',
+                                            'latitude',
+                                            'altitude',
+                                            'clearance [m]',
+                                            'sp [m2/W]',
+                                            'p_rated [MW]',
+                                            'Nwt',
+                                            'wind_MW_per_km2 [MW/km2]',
+                                            'solar_MW [MW]',
+                                            'surface_tilt [deg]',
+                                            'surface_azimuth [deg]',
+                                            'DC_AC_ratio',
+                                            'b_P [MW]',
+                                            'b_E_h [h]',
+                                            'cost_of_battery_P_fluct_in_peak_price_ratio',
+                                            'NPV_over_CAPEX',
+                                            'NPV [MEuro]',
+                                            'IRR',
+                                            'LCOE [Euro/MWh]',
+                                            'CAPEX [MEuro]',
+                                            'OPEX [MEuro]',
+                                            'Wind CAPEX [MEuro]',
+                                            'Wind OPEX [MEuro]',
+                                            'PV CAPEX [MEuro]',
+                                            'PV OPEX [MEuro]',
+                                            'Batt CAPEX [MEuro]',
+                                            'Batt OPEX [MEuro]',
+                                            'Shared CAPEX [MEuro]',
+                                            'Shared OPEX [MEuro]',
+                                            'penalty lifetime [MEuro]',
+                                            'AEP [GWh]',
+                                            'GUF',
+                                            'grid [MW]',
+                                            'wind [MW]',
+                                            'solar [MW]',
+                                            'Battery Energy [MWh]',
+                                            'Battery Power [MW]',
+                                            'Total curtailment [GWh]',
+                                            'Awpp [km2]',
+                                            'Rotor diam [m]',
+                                            'Hub height [m]',
+                                            'Number_of_batteries'
+                                            ]  , index=range(1))
+        design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
+        design_df.to_csv(f'{name_file}.csv')
+        
     
 # -----------------------------------------------------------------------
 # Auxiliar functions for ems modelling
@@ -606,5 +671,3 @@ def mkdir(dir_):
             pass
     return dir_
 
-
-# %%
