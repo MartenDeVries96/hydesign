@@ -285,7 +285,8 @@ if __name__ == "__main__":
     #npred = 1e4
     npred = 3e4
     tol = 1e-6
-    min_conv_iter = max_iter
+    # min_conv_iter = max_iter
+    min_conv_iter = 3
     
     start_total = time.time()
     
@@ -332,11 +333,11 @@ if __name__ == "__main__":
         #clearance: min distance tip to ground
         [10, 60],
         #Specific Power
-        [200, 400],
+        [200, 360],
         #p_rated
         [1, 10],
         #Nwt
-        [0, 500],
+        [0, 400],
         #wind_MW_per_km2
         [5, 9],
         #solar_MW
@@ -354,7 +355,7 @@ if __name__ == "__main__":
         #cost_of_battery_P_fluct_in_peak_price_ratio
         [0, 20],
         #ptg_MW
-        [0, 50],
+        [1, 50],
         ])    
     
     # Scale design variables

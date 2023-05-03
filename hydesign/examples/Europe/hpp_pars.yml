@@ -63,18 +63,18 @@ n_full_power_hours_expected_per_day_at_peak_price: 0
 # --------------------------------------------------------------------------------------------
 # Battery
 # --------------------------------------------------------------------------------------------
-price_H2: 4.5 #[Euro/kg]
-storage_eff: 0.8 #Compressor efficiency
-ptg_deg: 0.999519230769 #Weekly degradation for 20 years of lifetime
+price_H2: 5 #[Euro/kg]
+storage_eff: 1 #Compressor efficiency
+ptg_deg: 0.99 #Weekly degradation for 20 years of lifetime
 hhv: 39.3 #[kWh/kg]
 water_consumption : 9.4 #l/kg
-electrolyzer_capex_cost : 480000  #[EUR/MW]
+electrolyzer_capex_cost : 480_000  #[EUR/MW]
 electrolyzer_opex_cost : 9600  #Electrolyzer_capex_cost * 0.02 #[EUR/MW]
-electrolyzer_power_electronics_cost : 21520  #[EUR/MW]
-water_cost : 9.32 #[EUR/m3]
+electrolyzer_power_electronics_cost : 0  #[EUR/MW]
+water_cost : 4 #[EUR/m3]
 water_treatment_cost : 2  #[EUR/m3]
-compressor_capex_cost : 13000 #[EUR/MW]
-compressor_opex_cost : 391  #[EUR/MW]
+compressor_capex_cost : 0 #[EUR/MW]
+compressor_opex_cost : 0  #[EUR/MW]
 
 
 # --------------------------------------------------------------------------------------------

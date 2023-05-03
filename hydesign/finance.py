@@ -248,8 +248,7 @@ class finance_P2X(om.ExplicitComponent):
                        units = 'kg',
                        shape=[self.life_h])
         self.add_input('price_H2',
-                       desc = "H2 price",
-                       )
+                       desc = "H2 price")
         
         self.add_input('CAPEX_w',
                        desc="CAPEX wpp")
@@ -522,7 +521,7 @@ def calculate_WACC_P2X(
     battery_WACC,
     ptg_WACC,
     ):
-    """ This function returns the weighted average cost of capital after tax, using solar, wind, and battery
+    """ This function returns the weighted average cost of capital after tax, using solar, wind, electrolyzer and battery
     WACC. First the shared costs WACC is computed by taking the mean of the WACCs across all technologies.
     Then the WACC after tax is calculated by taking the weighted sum by the corresponding CAPEX.
 
@@ -535,6 +534,7 @@ def calculate_WACC_P2X(
     wind_WACC : After tax WACC for onshore WT
     solar_WACC : After tax WACC for solar PV
     battery_WACC : After tax WACC for stationary storge li-ion batteries
+    ptg_WACC : After tax WACC for power to gas plant
 
     Returns
     -------

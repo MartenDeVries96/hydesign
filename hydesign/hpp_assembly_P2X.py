@@ -14,6 +14,7 @@ import yaml
 import scipy as sp
 from scipy import stats
 import xarray as xr
+import matplotlib.pyplot as plt
 
 from hydesign.weather import extract_weather_for_HPP, ABL
 from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_area, get_rotor_d
@@ -83,10 +84,10 @@ class hpp_model_P2X:
                                 longitude=longitude,
                                 kwargs={"fill_value": 0.0}
                             ).values
-        
-        print('longitude =',longitude)
-        print('latitude =',latitude)
-        print('altitude =',altitude)
+        if verbose:
+            print('longitude =',longitude)
+            print('latitude =',latitude)
+            print('altitude =',altitude)
         
         # Parameters of the simulation
         year_start = sim_pars['year']
@@ -339,7 +340,8 @@ class hpp_model_P2X:
             finance_P2X(
                 N_time = N_time, 
                 life_h = life_h),
-            promotes_inputs=['wind_WACC',
+            promotes_inputs=['price_H2',
+                             'wind_WACC',
                              'solar_WACC', 
                              'battery_WACC',
                              'ptg_WACC',
@@ -618,6 +620,7 @@ class hpp_model_P2X:
         for i_v, var in enumerate(self.list_out_vars):
             print(f'{var}: {outs[i_v]:.3f}')
         print()
+        
     
 # -----------------------------------------------------------------------
 # Auxiliar functions for ems modelling

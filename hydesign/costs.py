@@ -494,7 +494,6 @@ class ptg_cost(om.ExplicitComponent):
      and compressor for storing Hydrogen (data extracted from the danish energy agency data catalogue and IRENA reports).
     """
     def __init__(self,
-                 #stack_replacement_cost,
                  electrolyzer_capex_cost,
                  electrolyzer_opex_cost,
                  electrolyzer_power_electronics_cost,
@@ -507,7 +506,6 @@ class ptg_cost(om.ExplicitComponent):
                  life_h = 25*365*24,):
 
         super().__init__()
-        #self.stack_replacement_cost = stack_replacement_cost
         self.electrolyzer_capex_cost = electrolyzer_capex_cost
         self.electrolyzer_opex_cost = electrolyzer_opex_cost
         self.electrolyzer_power_electronics_cost = electrolyzer_power_electronics_cost
@@ -543,10 +541,6 @@ class ptg_cost(om.ExplicitComponent):
        
         ptg_MW = inputs['ptg_MW']
         m_H2_t = inputs['m_H2_t']
-        
-        # print('ptg_cost: ')
-        # print(ptg_MW)
-        # print(m_H2_t)
 
         electrolyzer_capex_cost = self.electrolyzer_capex_cost
         electrolyzer_opex_cost = self.electrolyzer_opex_cost 
@@ -560,11 +554,5 @@ class ptg_cost(om.ExplicitComponent):
         outputs['CAPEX_ptg'] = ptg_MW * (electrolyzer_capex_cost + electrolyzer_power_electronics_cost + compressor_capex_cost)
         outputs['OPEX_ptg'] = ptg_MW * (electrolyzer_opex_cost + compressor_opex_cost)
         outputs['water_consumption_cost'] = np.sum(m_H2_t * water_consumption * (water_cost + water_treatment_cost)/1000)
-        
-        # print('CAPEX_ptg:')
-        # print(outputs['CAPEX_ptg'])
-        # print('OPEX_ptg: ')
-        # print(outputs['OPEX_ptg'])
-        # print('Water_ptg: ')
-        # print(outputs['water_consumption_cost'])
+
        
