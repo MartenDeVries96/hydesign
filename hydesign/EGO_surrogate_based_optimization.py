@@ -45,7 +45,7 @@ def LCB(sm, point):
 
 def EI(sm, point, fmin=1e3):
     """
-    Expected improvement
+    Negative Expected improvement
     """
     pred = sm.predict_values(point)
     sig = np.sqrt(sm.predict_variances(point))
@@ -78,8 +78,10 @@ def get_sm(xdoe, ydoe, mixint=None):
     sm = KPLSK(
         corr="squar_exp",
         poly='linear',
-        theta0=[1e-3],
-        theta_bounds=[1e-6, 1e4],
+        theta0=[1e-2],
+        #theta_bounds=[1e-3, 1e2],
+        #noise_bounds=[1e-12, 1e2],
+        n_comp=4,
         print_global=False)
     sm.set_training_values(xdoe, ydoe)
     sm.train()
@@ -91,40 +93,82 @@ def eval_sm(sm, mixint, scaler=None, seed=0, npred=1e3, fmin=1e10):
     '''
     Function that predicts the xepected improvement (EI) of the surrogate model based on random input points
     '''
-    # ndims = mixint.get_unfolded_dimension()
-    npred = int(npred)
-    
-    np.random.seed(int(seed))
-    sampling = mixint.build_sampling_method(Random)
-    xpred = sampling(npred)
-    
+    sampling = mixint.build_sampling_method(
+        LHS, criterion="c", random_state=int(seed))
+    xpred = sampling(int(npred))
+
     if scaler == None:
         pass
     else:
-        xpred = scaler.transform(xpred)
-        
-    #ypred_LB = LCB(sm=sm, point=xpred)
+        xpred = scaler.transform(xpred)    
+
     ypred_LB = EI(sm=sm, point=xpred, fmin=fmin)
 
     return xpred, ypred_LB
+
+def opt_sm_EI(sm, mixint, x0, fmin=1e10, n_seed=0):
+    '''
+    Function that optimizes the surrogate's expected improvement
+    '''
+    ndims = mixint.get_unfolded_dimension()
+    
+    func = lambda x: EI(sm, x[np.newaxis,:], fmin=fmin)
+   
+    minimizer_kwargs = {
+        "method": "SLSQP",
+        "bounds" : [(0,1)]*ndims,
+        "options" : {
+                "maxiter": 20,
+                'eps':1e-3,
+                'disp':False
+            },
+    }
+
+    res = optimize.basinhopping(
+        func, 
+        x0 = x0, 
+        niter=100, 
+        stepsize=10,
+        minimizer_kwargs=minimizer_kwargs,
+        seed=n_seed, 
+        target_accept_rate=0.5, 
+        stepwise_factor=0.9)
+
+    # res = optimize.minimize(
+    #     fun = func,
+    #     x0 = x0, 
+    #     method="SLSQP",
+    #     bounds=[(0,1)]*ndims,
+    #     options={
+    #         "maxiter": 100,
+    #         'eps':1e-3,
+    #         'disp':False
+    #     },
+    # )    
+    
+    return res.x.reshape([1,-1]) 
 
 def opt_sm(sm, mixint, x0, fmin=1e10):
     '''
     Function that optimizes the surrogate based on lower confidence bound predictions
     '''
+
     ndims = mixint.get_unfolded_dimension()
     res = optimize.minimize(
-        fun = lambda x:  EI(sm, x.reshape([1,ndims]), fmin=fmin)[0,0],
+        fun = lambda x:  KB(sm, x.reshape([1,ndims])),
+        jac = lambda x: np.stack([sm.predict_derivatives(
+           x.reshape([1,ndims]), kx=i) 
+           for i in range(ndims)] ).reshape([1,ndims]),
         x0 = x0.reshape([1,ndims]),
         method="SLSQP",
         bounds=[(0,1)]*ndims,
         options={
-            "maxiter": 200,
+            "maxiter": 20,
             'eps':1e-4,
             'disp':False
         },
     )
-    return res.x.reshape([1,-1]) 
+    return res.x.reshape([1,-1])
 
 def get_candiate_points(
     x, y, quantile=0.25, n_clusters=32 ): 
@@ -148,6 +192,55 @@ def get_candiate_points(
         xup[np.where( yup== np.min(yup[np.where(clust_id==i)[0]]) )[0],:] 
         for i in range(n_clusters)])
     return xbest_per_clst
+
+def extreme_around_point(x):
+    ndims = x.shape[1]
+    xcand = np.tile(x.T,ndims*2).T
+    for i in range(ndims):
+        xcand[i,i] = 0.0
+    for i in range(ndims):
+        xcand[i+ndims,i] = 1.0
+    return xcand
+
+def perturbe_around_point(x, step=0.1):
+    ndims = x.shape[1]
+    xcand = np.tile(x.T,ndims*2).T
+    for i in range(ndims):
+        xcand[i,i] += step
+    for i in range(ndims):
+        xcand[i+ndims,i] -= step
+    
+    xcand = np.maximum(xcand,0)
+    xcand = np.minimum(xcand,1.0)
+    return xcand 
+
+def get_design_vars(variables):
+    return [var_ for var_ in variables.keys() 
+            if variables[var_]['var_type']=='design'
+           ], [var_ for var_ in variables.keys() 
+               if variables[var_]['var_type']=='fixed']
+
+def get_limits(variables, design_var=[]):
+    if len(design_var)==0:
+        design_var, fixed_var = get_design_vars(variables)
+    return np.array([variables[var_]['limits'] for var_ in design_var])
+
+def get_resolution(variables, design_var=[]):
+    if len(design_var)==0:
+        design_var, fixed_var = get_design_vars(variables)
+    return np.array([variables[var_]['resolution'] for var_ in design_var])
+
+def round_to_resolution(x, resolution):
+    xround = np.zeros_like(x)
+    for ii, res in enumerate(resolution):
+        xround[:,ii] = np.round(x[:,ii]/res, decimals=0)*res
+    return xround
+
+def inverse_transformed_with_resolution(u, scaler, resolution):
+    x = scaler.inverse_transform(u)
+    xround = round_to_resolution(x, resolution)
+    return scaler.transform(xround)
+    
 
 def drop_duplicates(x,y, decimals=3):
     
@@ -284,8 +377,9 @@ if __name__ == "__main__":
     # n_doe = n_procs*2
     # n_clusters = int(n_procs/2)
     npred = 3e4
-    tol = 1e-6
+    tol = 1e-2
     min_conv_iter = max_iter
+    #min_conv_iter = 3
     
     start_total = time.time()
     
@@ -323,12 +417,14 @@ if __name__ == "__main__":
     
     # Stablish types for design variables
     xtypes = [
+        #FLOAT]*12
         #clearance, sp, p_rated, Nwt, wind_MW_per_km2, 
         INT, INT, INT, INT, FLOAT, 
         #solar_MW, surface_tilt, surface_azimuth, DC_AC_ratio
         INT,FLOAT,FLOAT,FLOAT,
         #b_P, b_E_h , cost_of_battery_P_fluct_in_peak_price_ratio
         INT,INT,FLOAT]
+        
 
     xlimits = np.array([
         #clearance: min distance tip to ground
@@ -342,7 +438,7 @@ if __name__ == "__main__":
         #wind_MW_per_km2
         [5, 9],
         #solar_MW
-        [0, 400],
+        [1, 400],
         #surface_tilt
         [0, 50],
         #surface_azimuth
@@ -400,73 +496,141 @@ if __name__ == "__main__":
     # LHS intial doe
     mixint = MixedIntegerContext(xtypes, xlimits)
     sampling = mixint.build_sampling_method(
-      LHS, criterion="maximin", random_state=n_seed)
+      LHS, criterion="ese", random_state=n_seed)
     xdoe = sampling(n_doe)
     xdoe = scaler.transform(xdoe)
+    
+    #     # Full factorial doe to test all vertices
+    #     mixint = MixedIntegerContext(xtypes, xlimits)
+    #     sampling = FullFactorial(xlimits=np.array([[0,1]]*12) )
+    #     xdoe = sampling(int(n_doe*0.75))
+
+    #     # LHS doe
+    #     ndoe_add = n_doe - int(n_doe*0.75)
+    #     sampling = mixint.build_sampling_method(
+    #         LHS, criterion="ese", random_state=n_seed)
+    #     xdoe_add = sampling(ndoe_add)
+    #     xdoe_add = scaler.transform(xdoe_add)
+
+    #     xdoe = np.vstack([xdoe,xdoe_add])
+
 
     # Evaluate model at initial doe
     start = time.time()
     ydoe = ParallelEvaluator(
         n_procs = n_procs).run(fun=fun,x=xdoe)
-    
+        
     lapse = np.round((time.time() - start)/60, 2)
-    print(f'Initial {xdoe.shape[0]} simulations took {lapse} minutes\n')
+    print(f'Initial {xdoe.shape[0]} simulations took {lapse} minutes')
     
     # Initialize iterative optimization
     itr = 0
     error = 1e10
     conv_iter = 0
+    xopt = xdoe[[np.argmin(ydoe)],:]
     yopt = ydoe[[np.argmin(ydoe)],:]
     yold = np.copy(yopt)
     xold = None
+    print(f'  Current solution {opt_sign}*{opt_var} = {float(yopt):.3E}\n'.replace('1*',''))
+    
     while itr < max_iter:
         # Iteration
         start_iter = time.time()
 
+        # -------------------
         # Train surrogate model
+        # -------------------
         np.random.seed(n_seed)
         sm = get_sm(xdoe, ydoe, mixint)
         
-        # Evaluate surrogate model in a large number of design points
-        # in parallel
+        # --------------------------------
+        # Get good candidates based on EI
+        # --------------------------------
+        
+        # Option A
+        # Evaluate EI of surrogate model in a large number of points in parallel 
         start = time.time()
         def fun_par(seed): return eval_sm(
             sm, mixint, 
             scaler=scaler,
-            seed=seed*100+itr, #different seed on each iteration
+            seed=seed, #different seed on each iteration
             npred=npred,
             fmin=yopt[0,0],
         )
         with Pool(n_procs) as p:
-            both = ( p.map(fun_par, np.arange(n_procs)+itr*100 ) )
+            both = ( p.map(fun_par, (np.arange(n_procs)+n_procs*itr)* 100 + n_seed ) )
         xpred = np.vstack([both[ii][0] for ii in range(len(both))])
         ypred_LB = np.vstack([both[ii][1] for ii in range(len(both))])
-        
+
         # Get candidate points from clustering all sm evalautions
         xnew = get_candiate_points(
-            xpred, ypred_LB, 
-            n_clusters = n_clusters, 
-            quantile = 0.01) 
-            # request candidate points based on global evaluation of current surrogate 
-            # returns best designs in n_cluster of points with outputs bellow a quantile
+           xpred, ypred_LB, 
+           n_clusters = n_clusters, 
+           quantile = 1e-2) 
+
+        # # Option B
+        # # request candidate points based on global optimization of surrogate's EI 
+        # sampling = mixint.build_sampling_method(
+        #       LHS, criterion="c", random_state=n_seed)
+        # xnew_0 = sampling(n_clusters)
+        # xnew_0 = scaler.transform(xnew_0)
+        # def fun_opt(x): 
+        #     return opt_sm_EI(sm, mixint, x, fmin=yopt[0,0], n_seed=n_seed)
+        # with Pool(n_procs) as p:
+        #     xnew = np.vstack(
+        #             p.map(fun_opt, [xnew_0[ii,:] 
+        #             for ii in range(xnew_0.shape[0])] )  
+        #         )
+            
         lapse = np.round( ( time.time() - start )/60, 2)
         print(f'Update sm and extract candidate points took {lapse} minutes')
         
+        # -------------------
+        # Refinement
+        # -------------------
+        
+        # 2A) based on SM. Surrogate believer.
         # # optimize the sm starting on the cluster based candidates 
-        def fun_opt(x): 
-            return opt_sm(sm, mixint, x, fmin=yopt[0,0])
-        with Pool(n_procs) as p:
-            xopt_iter = np.vstack(
-                    p.map(fun_opt, [xnew[[ii],:] 
-                    for ii in range(xnew.shape[0])] ) 
-                )
+        # xnew, _ = concat_to_existing(xnew, np.zeros_like(xnew), xopt, np.zeros_like(xopt))
+        # def fun_opt(x): 
+        #     return opt_sm(sm, mixint, x, fmin=yopt[0,0])
+        # with Pool(n_procs) as p:
+        #     xopt_iter = np.vstack(
+        #             p.map(fun_opt, [xnew[[ii],:] 
+        #             for ii in range(xnew.shape[0])] ) 
+        #         )
+        
+        # 2B) based on EI
+        # # optimize the sm starting on the cluster based candidates 
+        # xnew, _ = concat_to_existing(xnew, np.zeros_like(xnew), xopt, np.zeros_like(xopt))
+        # def fun_opt(x): 
+        #     return opt_sm_EI(sm, mixint, x, fmin=yopt[0,0])
+        # with Pool(n_procs) as p:
+        #     xopt_iter = np.vstack(
+        #             p.map(fun_opt, [xnew[[ii],:] 
+        #             for ii in range(xnew.shape[0])] ) 
+        #         )
+
+        # 2C) add refinement around the opt
+        if (np.abs(error) < tol):
+            xopt_iter = perturbe_around_point(xopt, step=0.1)
+        else: #add extremes around the opt
+            xopt_iter = extreme_around_point(xopt)
+        
+        # Doen't help
+        #xopt_iter_B = perturbe_around_point(xopt, step=0.1)
+        #xopt_iter, _ = concat_to_existing(xopt_iter, np.zeros_like(xopt_iter), xopt_iter_B, np.zeros_like(xopt_iter_B))
+        
         
         xopt_iter = scaler.inverse_transform(xopt_iter)
         xopt_iter = np.array([mixint.cast_to_mixed_integer( xopt_iter[i,:]) 
-                        for i in range(xopt_iter.shape[0])]).reshape(xopt_iter.shape)
+                       for i in range(xopt_iter.shape[0])]).reshape(xopt_iter.shape)
         xopt_iter = scaler.transform(xopt_iter)
         xopt_iter, _ = drop_duplicates(xopt_iter,np.zeros_like(xopt_iter))
         xopt_iter, _ = concat_to_existing(xnew,np.zeros_like(xnew), xopt_iter, np.zeros_like(xopt_iter))
+        
+        # 2D) No refinement
+        # xopt_iter, _ = drop_duplicates(xnew,np.zeros_like(xnew))
 
         # run model at all candidate points
         start = time.time()
@@ -485,8 +649,9 @@ if __name__ == "__main__":
         yopt = ydoe_upd[[np.argmin(ydoe_upd)],:]
         
         #if itr > 0:
-        error = float(1 - yopt/yold)
-        print(f'  rel_yopt_change = {error:.2E}')
+        error = opt_sign * float(1 - (yold/yopt) ) 
+        print(f'  Current solution {opt_sign}*{opt_var} = {float(yopt):.3E}')
+        print(f'  rel_yopt_change = {error:.2E}'.replace('1*',''))
 
         xdoe = np.copy(xdoe_upd)
         ydoe = np.copy(ydoe_upd)
