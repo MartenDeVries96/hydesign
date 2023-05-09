@@ -321,7 +321,8 @@ function handleError(evt) {
     min-width: 200px;
     border-collapse: separate;
     border-spacing: 0;
-    width: fit-content;
+    /* width: fit-content; */
+    width: 100%;
     height: fit-content;
 }
 
@@ -1137,6 +1138,11 @@ p.help-text > span {
 
 
 /* ^^^^^^^^^^ End Child Select Window theme ^^^^^^^^^^ */
+
+.scrollable {
+    overflow-y: scroll;
+    overflow-x: hidden;
+}
 
 </style>
 <style type="text/css">
@@ -2949,7 +2955,7 @@ return _;
 
 </head>
 <body>
-<div id="all-diagram-content" class="non-embedded-diagram" data-openmdao-version='3.23.0'>
+<div id="all-diagram-content" class="non-embedded-diagram" data-openmdao-version='3.25.0'>
     <div id="diagram-content">
         <!-- Toolbar -->
         <div id="toolbarLoc">
@@ -3249,7 +3255,7 @@ return _;
 </div>
 
 <script type="text/javascript">
-    var compressedModel = "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";
+    var compressedModel = "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";
 </script>
 
 <script type="text/javascript">
@@ -3894,6 +3900,10 @@ class TreeNode {
 
         this.parent = parent;
 
+        // All nodes connected to this one as either a source or target
+        this.connSources = new Set();
+        this.connTargets = new Set();
+
         this.sourceParentSet = new Set();
         this.targetParentSet = new Set();
 
@@ -3987,11 +3997,16 @@ class TreeNode {
         return !(this.draw.hidden || this.draw.filtered);
     }
 
+    /** Return true if there are no children */
+    isLeaf() {
+        return (!this.hasChildren());
+    }
+
     /** True if node is not hidden and has no visible children */
     isVisibleLeaf() {
         if (this.draw.hidden || this.draw.filtered) return false; // Any explicitly hidden node
         if (this.isInputOrOutput()) return !this.draw.filtered; // Variable
-        if (!this.hasChildren()) return true; // Group w/out children
+        if (this.isLeaf()) return true; // Group w/out children
         return this.draw.minimized; // Collapsed non-variable
     }
 
@@ -4002,9 +4017,12 @@ class TreeNode {
 
     /**
      * Look for the supplied node in the set of child names.
+     * @param {TreeNode} compareNode The node to look for.
+     * @param {Boolean} includeSelf If true, return true if compareNode is us.
      * @returns {Boolean} True if a match is found, otherwise false.
      */
-    hasNodeInChildren(compareNode) {
+    hasNodeInChildren(compareNode, includeSelf = false) {
+        if (includeSelf && compareNode === this) return true;
         return this.childNames.has(compareNode.path);
     }
 
@@ -4013,7 +4031,8 @@ class TreeNode {
      * @param {TreeNode} [parentLimit = null] Stop searching at this common parent.
      * @returns {Boolean} True if the node is found, otherwise false.
      */
-    hasParent(compareNode, parentLimit = null) {
+    hasParent(compareNode, parentLimit = null, includeSelf = false) {
+        if (includeSelf && compareNode === this) return true;
         for (let obj = this.parent; obj != null && obj !== parentLimit; obj = obj.parent) {
             if (obj === compareNode) {
                 return true;
@@ -4084,13 +4103,14 @@ class TreeNode {
      * @returns {String} The HTML-safe id.
      */
     static pathToId(path) {
-        return path.replace(/[\.<> :]/g, function (c) {
+        return path.replace(/[\.<> :|]/g, function (c) {
             return {
                 ' ': '__',
                 '<': '_LT',
                 '>': '_GT',
                 '.': '_',
-                ':': '-'
+                ':': '-',
+                '|': '--'
             }[c];
         })
     }
@@ -4367,6 +4387,7 @@ class NodeConnection {
         this.conn = conn;
 
         this.srcObj = nodes[conn.src];
+        this.srcObj.connTargets.add(conn.tgt);
         const srcObjParents = [];
         if (!this.srcObj) {
             console.warn(`Cannot find connection source ${conn.src}.`);
@@ -4380,6 +4401,7 @@ class NodeConnection {
         }
 
         this.tgtObj = nodes[conn.tgt];
+        this.tgtObj.connSources.add(conn.src);
         const tgtObjParents = [];
         if (!this.tgtObj) {
             console.warn(`Cannot find connection target ${conn.tgt}.`);
@@ -6427,11 +6449,13 @@ class Window {
      * MutationObserver.
      * @returns {Window} Reference to this.
      */
-    sizeToContent(extraWidth = 0, extraHeight = 2) {
-        let contentWidth = this.body.node().scrollWidth + extraWidth,
-            contentHeight = this.body.node().scrollHeight,
-            headerHeight = this.header.node().offsetHeight,
-            footerHeight = this.hasFooter() ? this.footer.node().offsetHeight : 0;
+    sizeToContent(extraWidth = 0, extraHeight = 2, considerTitle = false) {
+        const bodyWidth = this.body.node().scrollWidth;
+        const titleWidth = this._title.node().scrollWidth + 60;
+        const contentWidth = ((!considerTitle || bodyWidth > titleWidth)? bodyWidth : titleWidth) + extraWidth;
+        const contentHeight = this.body.node().scrollHeight;
+        const headerHeight = this.header.node().offsetHeight
+        const footerHeight = this.hasFooter() ? this.footer.node().offsetHeight : 0;
 
         const totalHeight = contentHeight + headerHeight + footerHeight + extraHeight;
 
@@ -7800,6 +7824,45 @@ class InfoPropArray extends InfoPropDefault {
     canShow(node) { return node.propExists(this.key); }
 }
 
+/** Display connections associated with a node */
+class InfoPropConns extends InfoPropDefault {
+    constructor(key, desc) {
+        super(key, desc, false);
+    }
+
+    addRow(tbody, node) {
+        tbody.append('tr').append('th').attr('colspan', '3')
+            .attr('class', 'options-header')
+            .text(this.desc);
+
+            /*
+        // TODO: Add children
+        for (const conn of node.connTargets) {
+            const newRow = tbody.append('tr');
+
+            newRow.append('td')
+                .attr('scope', 'row')
+                .text(node.path);
+
+            newRow.append('td').text(' --> ');
+    
+            newRow.append('td').text(conn);
+        }
+
+        for (const conn of node.connSources) {
+            const newRow = tbody.append('tr');
+    
+            newRow.append('td').text(conn);
+
+            newRow.append('td').text(' --> ');
+
+            newRow.append('td')
+                .attr('scope', 'row')
+                .text(node.path);
+        } */
+    }
+}
+
 InfoPropDefault.floatFormatter = d3.format('g');
 
 
@@ -8108,8 +8171,8 @@ class NodeInfo extends Window {
  * Make a persistent copy of the NodeInfo panel and handle its drag/close events
  * @typedef PersistentNodeInfo
  */
-class PersistentNodeInfo extends WindowDraggable {
-    constructor(nodeInfo) {
+class PersistentNodeInfo extends WindowResizable {
+    constructor(nodeInfo, startHeight = 0) {
         super('persistentNodeInfo-' + uuidv4(), '#' + nodeInfo.window.attr('id'));
 
         // Avoid just copying the reference because nodeInfo.values will be wiped:
@@ -8126,6 +8189,21 @@ class PersistentNodeInfo extends WindowDraggable {
             .on("mouseover", this.mouseOver.bind(this))
             .on("mouseleave", this.mouseLeave.bind(this))
             .on("mousemove", this.mouseMove.bind(this));
+
+        if (startHeight > 0) {
+            const pos = this._getPos();
+            if (pos.height > startHeight) {
+                pos.height = startHeight;
+                this._setPos(pos)
+                this.body.classed('scrollable', true);
+                const tableHeight = parseInt(this.body.select('table.node-info-table').style('height'));
+                const extraHeight = pos.height - parseInt(this.body.style('height'));
+                this.maxHeight = tableHeight + extraHeight;
+            }
+            else {
+                this.maxHeight = pos.height;
+            }
+        }
     }
 
     /** When the mouse enters the element, show the tool tip */
@@ -8202,6 +8280,108 @@ class PersistentNodeInfo extends WindowDraggable {
                 .on("mousemove", null);
             super.close(e);
         }
+    }
+}
+
+/**
+ * Display all connections represented by the current off-diagonal cell.
+ * @typedef NodeConnectionInfo
+ */
+class NodeConnectionInfo extends NodeInfo {
+    /**
+     * Build a list of the properties we care about and set up
+     * references to the HTML elements.
+     */
+    constructor(ui) {
+        super(ui, false);
+        this.propList = [];
+    }
+
+    /**
+     * Find the best label for a connected node.
+     * @param {TreeNode} node The node to determine a name for.
+     * @returns The promoted name if it has one, otherwise the absolute path.
+     */
+    nodeName(node) {
+        let name = node.path;
+        if (node.path != node.promotedName) name += `<br><i>(${node.promotedName}</i>)`;
+        return name;
+    }
+
+    /**
+     * Gather all connections between the two cells that this one represents.
+     * @param {Array} connList The connections discovered so far.
+     * @param {TreeNode} srcNode The source node to search.
+     * @param {TreeNode} tgtNode The target node to search.
+     */
+    _getConnections(connList, srcNode, tgtNode) {
+        if (srcNode.hasChildren()) {
+            for (const child of srcNode.children) {
+                this._getConnections(connList, child, tgtNode)
+            }
+        }
+        else {
+            if (srcNode.parent === tgtNode.parent) {
+                const newConn = { 'src': this.nodeName(srcNode), 'tgt': this.nodeName(tgtNode) };
+                connList.push(newConn);
+            }
+            for (const tgt of srcNode.targetParentSet) {
+                if (tgt.isLeaf() && tgt.hasParent(tgtNode, null, true)) {
+                    const newConn = { 'src': this.nodeName(srcNode), 'tgt': this.nodeName(tgt) };
+                    connList.push(newConn);
+                }
+            }
+        }
+    }
+
+    /**
+     * Create a new persistent window by copying our contents. Set the
+     * max initial height of the window at 300px.
+     */
+    pin() {
+        if (this.tbody.html() == '') return; // Was already pinned so is empty
+
+        new PersistentNodeInfo(this, 300);
+        this.hidden = true;
+        this.clear();
+        return this;
+    }
+
+    /**
+     * Load the NodeInfo window with connection information for an off-diagonal cell.
+     * @param {Object} event Reference to the event that triggered the function.
+     * @param {MatrixCell} cell Reference to the cell that was hovered.
+     * @param {String} color The color of the title bar.
+     */
+    update(event, cell, color) {
+        if (!this.active) return;
+        this.clear();
+
+        this.name = cell.id;
+        this.ribbonColor(color);
+
+        const connList = [];
+        this._getConnections(connList, cell.srcObj, cell.tgtObj);
+        for (const conn of connList) {
+            const newRow = this.tbody.append('tr');
+
+            newRow.append('td')
+                .attr('scope', 'row')
+                .html(conn.src);
+
+            newRow.append('td').html(' &#x2501;&#x2501;&#x2501;&#x25ba; ');
+            newRow.append('td').html(conn.tgt);
+        }
+
+        let title = 'Connections';
+        if ( ! (cell.srcObj.isLeaf() || cell.tgtObj.isLeaf()) ) {
+            title += ` from ${cell.srcObj.path} to ${cell.tgtObj.path}`;
+        }
+
+        this.title(title)
+            .sizeToContent(0, 2, true)
+            .moveNearMouse(event)
+            .show();
     }
 }
 
@@ -8418,20 +8598,45 @@ class UserInterface {
     }
 
     /**
+     * Create a new node connection info window.
+     * @param {Selection} svgNodeGroup Placeholder for subclasses.
+     */
+    _newConnInfoBox(svgNodeGroup) { 
+        this.nodeInfoBox = new NodeConnectionInfo(this);
+    }
+
+    /**
      * If node info mode is active, create a new node info window, populate, and display it.
      * @param {Event} event The Event object created by the trigger.
      * @param {TreeNode} node The node associated with the HTML object.
      * @param {String} [color = null] The color of the titlebard. Autoselected if null.
+     * @param {Boolean} [isConnection = false] If true, make a connection info window.
      */
-    showInfoBox(event, node, color = null) {
+    showInfoBox(event, node, color = null, isConnection = false) {
         if (this.click.isNodeInfo) {
             const svgNodeGroup = d3.select(event.currentTarget);
             if (!color) color = svgNodeGroup.select('rect').style('fill');
 
-            this._newInfoBox(svgNodeGroup);
+            if (isConnection) {
+                this._newConnInfoBox(svgNodeGroup)
+            }
+            else this._newInfoBox(svgNodeGroup);
+
             this.nodeInfoBox.activate();
             this.click.update(this.nodeInfoBox);
             this.nodeInfoBox.update(event, node, color);
+        }
+    }
+
+    showCellInfoBox(event, cell, color = null) {
+        if (this.click.isNodeInfo) {
+            const svgNodeGroup = d3.select(event.currentTarget);
+            if (!color) color = svgNodeGroup.select('rect').style('fill');
+
+            this._newConnInfoBox(svgNodeGroup);
+            this.nodeInfoBox.activate();
+            this.click.update(this.nodeInfoBox);
+            this.nodeInfoBox.update(event, cell, color);
         }
     }
 
@@ -11090,16 +11295,15 @@ class MatrixCell {
      * Select the mouseover callback depending on whether we're on the diagonal.
      * TODO: Remove these globals
      */
-    mouseover() {
-        return (this.onDiagonal() ? n2MouseFuncs.overOnDiag :
-            n2MouseFuncs.overOffDiag);
+    getMouseoverFunc() {
+        return (this.onDiagonal() ? n2MouseFuncs.overOnDiag : n2MouseFuncs.overOffDiag);
     }
 
     /**
     * Select the mousemove callback depending on whether we're on the diagonal.
     * TODO: Remove these globals
     */
-    mousemove() {
+    getMousemoveFunc() {
         return (this.onDiagonal() ? n2MouseFuncs.moveOnDiag : null);
     }
 
@@ -11600,11 +11804,11 @@ class Matrix {
 
                 return `translate(${transX},${transY})`;
             })
-            .each(function (d) {
+            .each(function(d) {
                 // "this" refers to the element here, so leave it alone:
                 d.renderer.renderCurrent(this)
-                    .on('mouseover', d.mouseover())
-                    .on('mousemove', d.mousemove())
+                    .on('mouseover', d.getMouseoverFunc())
+                    .on('mousemove', d.getMousemoveFunc())
                     .on('mouseleave', n2MouseFuncs.out)
                     .on('click', (e,d) => n2MouseFuncs.click(d))
             });
@@ -11827,7 +12031,7 @@ class Matrix {
                             'tgtId': cell.tgtObj.id
                         },
                         'matrixSize': this.diagNodes.length,
-                        'label': offscreenNode.absPathName,
+                        'label': offscreenNode.path,
                         'offscreenId': offscreenNode.id
                     });
                 }
@@ -12646,7 +12850,7 @@ class Diagram {
     mouseOverOnDiagonal(e, cell) {
         if (this.matrix.cellExists(cell)) {
             this.matrix.mouseOverOnDiagonal(cell);
-            this.ui.showInfoBox(e, cell.obj, cell.color());
+            this.ui.showInfoBox(e, cell.obj, cell.color(), false);
         }
     }
 
@@ -12667,6 +12871,7 @@ class Diagram {
     mouseOverOffDiagonal(e, cell) {
         if (this.matrix.cellExists(cell)) {
             this.matrix.mouseOverOffDiagonal(cell);
+            this.ui.showCellInfoBox(e, cell, cell.color(), true);
         }
     }
 
@@ -14198,6 +14403,7 @@ class OmMatrix extends Matrix {
         if (cell.row > cell.col) {
             const src = this.diagNodes[cell.row],
                 tgt = this.diagNodes[cell.col];
+
             // Get an array of all the parents and children of the target with cycle arrows
             const relativesWithCycleArrows = tgt.getNodesWithCycleArrows();
 
