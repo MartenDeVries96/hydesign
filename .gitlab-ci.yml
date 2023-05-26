@@ -5,7 +5,7 @@ test_hydesign:
   stage: 
     test
   script:
-  - pip install -e .[test]
+  - pip install .[test]
   - python -m pytest
   tags:
   - linux
