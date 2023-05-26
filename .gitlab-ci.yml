@@ -29,7 +29,7 @@ pages:
   stage:  
     deploy
   script:  
-  - pip install -e .[docs] --upgrade
+  - pip install .[docs] --upgrade
   - cd docs; make html
   - cd ../; mv docs/build/html public/
   artifacts:
