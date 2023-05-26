@@ -4,9 +4,6 @@ Setup file for hydesign
 """
 import os
 from setuptools import setup, find_packages
-import pkg_resources
-from setuptools.command.install import install
-from subprocess import call
 
 repo = os.path.dirname(__file__)
 try:
@@ -25,15 +22,6 @@ except ImportError:
 
     def read_md(f): return open(f, 'r').read()
 
-class CustomInstallCommand(install):
-    def run(self):
-        install.run(self)
-        import importlib
-        if not importlib.util.find_spec("wisdem"):
-            call(['pip', 'install', 'wisdem', '--no-deps'])  # install wisdem without dependencies as we only need CSM
-            with open(importlib.util.find_spec('wisdem').origin, 'w') as f:
-                f.write('')  # stop wisdem from running un-compiled fortran code when CSM is imported
-
 
 setup(name='hydesign',
       version=version,
@@ -49,8 +37,6 @@ setup(name='hydesign',
       author_email='jumu@dtu.dk',
       license='MIT',
       packages=find_packages(),
-      cmdclass={
-        'install': CustomInstallCommand},
       package_data={
           'hydesign': [
             'tests/test_files/sm.pkl',
