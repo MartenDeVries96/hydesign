@@ -28,15 +28,16 @@ except ImportError:
 class CustomInstallCommand(install):
     def run(self):
         install.run(self)
-        call(['pip', 'install', 'wisdem', '--no-deps'])  # install wisdem without dependencies as we only need CSM
         import importlib
-        with open(importlib.util.find_spec('wisdem').origin, 'w') as f:
-            f.write('')  # stop wisdem from running un-compiled fortran code when CSM is imported
+        if not importlib.util.find_spec("wisdem"):
+            call(['pip', 'install', 'wisdem', '--no-deps'])  # install wisdem without dependencies as we only need CSM
+            with open(importlib.util.find_spec('wisdem').origin, 'w') as f:
+                f.write('')  # stop wisdem from running un-compiled fortran code when CSM is imported
 
 
 setup(name='hydesign',
       version=version,
-      description='A tool for design and control of utility scale wind-solar-storage based hybrid power plant.',
+      description='A tool for design and scontrol of utility scale wind-solar-storage based hybrid power plant.',
       long_description=read_md('README.md'),
       url='https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign',
       project_urls={
