@@ -1,4 +1,4 @@
-from wisdem.nrelcsm.nrel_csm_mass_2015 import nrel_csm_2015
+from hydesign.nrelcsm.nrel_csm_mass_2015 import nrel_csm_2015
 import openmdao.api as om
 
 def wt_cost(machine_rating, rotor_diameter, turbine_class, hub_height, blade_number,

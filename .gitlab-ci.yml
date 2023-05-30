@@ -5,7 +5,7 @@ test_hydesign:
   stage: 
     test
   script:
-  - pip install -e .[test]
+  - pip install .[test]
   - python -m pytest
   tags:
   - linux
@@ -29,7 +29,7 @@ pages:
   stage:  
     deploy
   script:  
-  - pip install -e .[docs] --upgrade
+  - pip install .[docs] --upgrade
   - cd docs; make html
   - cd ../; mv docs/build/html public/
   artifacts:
@@ -53,7 +53,7 @@ pypi:
     - apt-get install -y pandoc
     - pip install --upgrade pip
     - pip install pypandoc
-    - pip install -e . --upgrade
+    - pip install . --upgrade
     - python -c 'from git_utils import get_tag; get_tag(verbose=True)'
     - python -m pip install -U setuptools wheel
     - python setup.py sdist bdist_wheel

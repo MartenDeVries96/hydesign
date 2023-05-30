@@ -4,7 +4,6 @@ Setup file for hydesign
 """
 import os
 from setuptools import setup, find_packages
-import pkg_resources
 
 repo = os.path.dirname(__file__)
 try:
@@ -26,7 +25,7 @@ except ImportError:
 
 setup(name='hydesign',
       version=version,
-      description='A tool for design and control of utility scale wind-solar-storage based hybrid power plant.',
+      description='A tool for design and scontrol of utility scale wind-solar-storage based hybrid power plant.',
       long_description=read_md('README.md'),
       url='https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign',
       project_urls={
@@ -69,7 +68,6 @@ setup(name='hydesign',
           'statsmodels',
           'rainflow',
           'pyyaml',
-          'wisdem @ git+https://github.com/DTUWindEnergy/WISDEM.git@csm_only',
           'matplotlib',
           'zarr',
           ],

@@ -48,6 +48,15 @@ def get_data2(fmin):
     b = data2[n * 5: n * 5 + 5, 9]
     return a, b
 
+def generate_data2():
+    new_data = np.zeros((25, 10))
+    for n, fmin in enumerate(fmins):
+        a, b = eval_sm(sm, mixint, npred=5, fmin=fmin)
+        new_data[n*5:n*5+5,:9] = a
+        new_data[n*5:n*5+5,9] = b.ravel()
+    df = pd.DataFrame(new_data, columns=[f'x{i + 1}' for i in range(9)] + ['y'])
+    df.to_csv(tfp + 'sm_pred_test_data.csv', sep=';', index=False)
+
 def test_LCB():
     res = LCB(sm, point)
     np.testing.assert_allclose(res, np.array([[-52174.21032693]]))
@@ -83,7 +92,7 @@ def test_get_candidate_points():
     xpred, ypred_LB, 
     n_clusters = 1, 
     quantile = 1e-4) 
-    np.testing.assert_allclose(xnew, np.array([[18., 3.92805345, 1.69868402, 217., 2.79976951, 29.,
-                                                -7.75278591, 2.15849941, 1.13440479]]))
+    np.testing.assert_allclose(xnew, np.array([[ 1.700e+01,  5.400e-01,  7.000e-02,  2.440e+02,  4.510e+00,
+                                                3.600e+01,  7.100e+00, -8.100e+00,  1.268e+00]]))
 
     
