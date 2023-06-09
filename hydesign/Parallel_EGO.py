@@ -426,7 +426,7 @@ if __name__ == '__main__':
              'limits':[10, 60],
              'types':INT
              },
-         'sp [m2/W]':
+         'sp [W/m2]':
             {'var_type':'design',
              'limits':[200, 400],
              'types':INT

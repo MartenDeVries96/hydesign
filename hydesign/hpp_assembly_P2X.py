@@ -477,7 +477,7 @@ class hpp_model_P2X:
 
         self.list_vars = [
             'clearance [m]', 
-            'sp [m2/W]', 
+            'sp [W/m2]', 
             'p_rated [MW]', 
             'Nwt', 
             'wind_MW_per_km2 [MW/km2]', 

@@ -25,6 +25,7 @@ Explanations of hydesign's core objects can be found in the following tutorials:
 	:caption: Contents
     
         installation
+        notebooks/ChangeLog
                
     .. toctree::
         :maxdepth: 1

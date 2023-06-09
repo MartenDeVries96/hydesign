@@ -469,7 +469,7 @@ class hpp_model:
 
         self.list_vars = [
             'clearance [m]', 
-            'sp [m2/W]', 
+            'sp [W/m2]', 
             'p_rated [MW]', 
             'Nwt', 
             'wind_MW_per_km2 [MW/km2]', 
@@ -497,7 +497,7 @@ class hpp_model:
         Parameters
         ----------
         clearance : Distance from the ground to the tip of the blade [m]
-        sp : Specific power of the turbine [MW/m2] 
+        sp : Specific power of the turbine [W/m2] 
         p_rated : Rated powe of the turbine [MW] 
         Nwt : Number of wind turbines
         wind_MW_per_km2 : Wind power installation density [MW/km2]
@@ -611,7 +611,7 @@ class hpp_model:
                                             'latitude',
                                             'altitude',
                                             'clearance [m]',
-                                            'sp [m2/W]',
+                                            'sp [W/m2]',
                                             'p_rated [MW]',
                                             'Nwt',
                                             'wind_MW_per_km2 [MW/km2]',
