@@ -86,3 +86,20 @@ era5_zarr: '/groups/reanalyses/era5/app/era5.zarr' # location of wind speed rena
 ratio_gwa_era5: '/groups/INP/era5/ratio_gwa3_era5.nc' # location of mean wind speed correction factor
 era5_ghi_zarr: '/groups/INP/era5/ghi.zarr' # location of GHI renalysis
 elevation_fn: '/groups/INP/era5/SRTMv3_plus_ViewFinder_coarsen.nc' # Altitude map for extracting altitude
+
+# --------------------------------------------------------------------------------------------
+# P2X data
+# --------------------------------------------------------------------------------------------
+
+price_H2: 5 #[Euro/kg]
+storage_eff: 1 #Compressor efficiency
+ptg_deg: 0.99 #Weekly degradation for 20 years of lifetime
+hhv: 39.3 #[kWh/kg]
+water_consumption: 9.4 #l/kg
+electrolyzer_capex_cost: 480_000  #[EUR/MW]
+electrolyzer_opex_cost: 9600  #Electrolyzer_capex_cost * 0.02 #[EUR/MW]
+electrolyzer_power_electronics_cost: 0  #[EUR/MW]
+water_cost: 4 #[EUR/m3]
+water_treatment_cost: 2  #[EUR/m3]
+compressor_capex_cost: 0 #[EUR/MW]
+compressor_opex_cost: 0 #[EUR/MW]
