@@ -103,3 +103,4 @@ water_cost: 4 #[EUR/m3]
 water_treatment_cost: 2  #[EUR/m3]
 compressor_capex_cost: 0 #[EUR/MW]
 compressor_opex_cost: 0 #[EUR/MW]
+ptg_WACC: 0.07      # After tax WACC for P2H plant
