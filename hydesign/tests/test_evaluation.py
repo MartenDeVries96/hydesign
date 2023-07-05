@@ -10,7 +10,7 @@ from hydesign.examples import examples_filepath
 # ------------------------------------------------------------------------------------------------
 # design 1
 
-def run_evaluation():
+def run_evaluation_design_1():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -52,7 +52,7 @@ def run_evaluation():
     
     return outs
 
-def load_evaluation():
+def load_evaluation_design_1():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -61,16 +61,16 @@ def load_evaluation():
     
     return load_file
 
-def test_evaluation():
-    evaluation_metrics = run_evaluation()
-    loaded_metrics = load_evaluation()
+def test_evaluation_design_1():
+    evaluation_metrics = run_evaluation_design_1()
+    loaded_metrics = load_evaluation_design_1()
     for i in range(len(loaded_metrics)):
         np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
         
 # ------------------------------------------------------------------------------------------------
 # design 2
 
-def run_evaluation():
+def run_evaluation_design_2():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -112,7 +112,7 @@ def run_evaluation():
     
     return outs
 
-def load_evaluation():
+def load_evaluation_design_2():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -121,9 +121,9 @@ def load_evaluation():
     
     return load_file
 
-def test_evaluation():
-    evaluation_metrics = run_evaluation()
-    loaded_metrics = load_evaluation()
+def test_evaluation_design_2():
+    evaluation_metrics = run_evaluation_design_2()
+    loaded_metrics = load_evaluation_design_2()
     for i in range(len(loaded_metrics)):
         np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
         
@@ -131,7 +131,7 @@ def test_evaluation():
 
 # # # design 3
 
-def run_evaluation():
+def run_evaluation_design_3():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -173,7 +173,7 @@ def run_evaluation():
     
     return outs
 
-def load_evaluation():
+def load_evaluation_design_3():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -184,9 +184,9 @@ def load_evaluation():
 
 
 
-def test_evaluation():
-    evaluation_metrics = run_evaluation()
-    loaded_metrics = load_evaluation()
+def test_evaluation_design_3():
+    evaluation_metrics = run_evaluation_design_3()
+    loaded_metrics = load_evaluation_design_3()
     for i in range(len(loaded_metrics)):
         np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
         

@@ -133,6 +133,7 @@ class hpp_model:
                 era5_ghi_zarr = era5_ghi_zarr,
                 year_start = year_start,
                 year_end = year_end)
+                
             if type(price_fn) is str:
                 price = pd.read_csv(price_fn, index_col=0, parse_dates=True)
             else:
@@ -143,7 +144,7 @@ class hpp_model:
                 raise('Price timeseries does not match the weather')
             
             input_ts_fn = f'{work_dir}input_ts.csv'
-            print(f'input_ts_fn extracted and stored in {input_ts_fn}')
+            print(f'\ninput_ts_fn extracted and stored in {input_ts_fn}')
             weather.to_csv(input_ts_fn)
             N_time = len(weather)
             

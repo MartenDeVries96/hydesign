@@ -69,7 +69,7 @@ def load_solar_time_series(tracking):
 @pytest.mark.parametrize('tracking', ['no', 'single_axis'])
 def test_solar_time_series(tracking):
     pv_ts = run_solar_time_series(tracking).values
-    pv_ts_data = load_solar_time_series(tracking).values
+    pv_ts_data = np.squeeze(load_solar_time_series(tracking).values)
     np.testing.assert_allclose(pv_ts, pv_ts_data)
     #print(np.allclose(pv_ts, pv_ts_data))
 

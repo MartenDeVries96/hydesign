@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-from hydesign.hpp_assembly_simplified import hpp_model_simple
+from hydesign.hpp_assembly import hpp_model
 from hydesign.examples import examples_filepath
 
 import argparse
@@ -39,25 +39,17 @@ if __name__ == "__main__":
 
         sim_pars_fn = examples_filepath+ex_site['sim_pars_fn'].values[0]
         price_fn = examples_filepath+ex_site['price_fn'].values[0]
-        price = pd.read_csv(price_fn,index_col=0, parse_dates=True)[ex_site.price_col.values[0]]
+        price = pd.read_csv(price_fn, index_col=0, parse_dates=True)[ex_site.price_col.values[0]]
 
         print()
         print()
-        print(iloc, case, name)
+        print(case, name)
         print()
 
-        hpp = hpp_model_simple(
-                latitude,
-                longitude,
-                altitude,
-                # Dummy data
-                rotor_diameter_m = 100,
-                hub_height_m = 100,
-                wt_rated_power_MW = 1,
-                surface_tilt_deg = 30,
-                surface_azimuth_deg = 180,
-                DC_AC_ratio = 1.5,
-                num_batteries = 1,
+        hpp = hpp_model(
+                latitude=latitude,
+                longitude=longitude,
+                altitude=altitude,
                 work_dir = './',
                 sim_pars_fn = sim_pars_fn,
                 input_ts_fn=None,
@@ -70,3 +62,5 @@ if __name__ == "__main__":
         inputs.to_csv(input_ts_fn)
 
         os.remove('input_ts.csv') 
+        
+        print(f'input_ts_fn extracted and stored in {input_ts_fn}')

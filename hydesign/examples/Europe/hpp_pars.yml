@@ -100,6 +100,6 @@ ptg_WACC: 0.07      # After tax WACC for P2H plant
 # Not required if the user provides input_ts_fn.csv to hpp_model
 # --------------------------------------------------------------------------------------------
 era5_zarr: '/groups/reanalyses/era5/app/era5.zarr' # location of wind speed renalysis
-ratio_gwa_era5: '/groups/INP/era5/ratio_gwa3_era5.nc' # location of mean wind speed correction factor
+ratio_gwa_era5: '/groups/INP/era5/ratio_gwa2_era5.nc' # location of mean wind speed correction factor
 era5_ghi_zarr: '/groups/INP/era5/ghi.zarr' # location of GHI renalysis
 elevation_fn: '/groups/INP/era5/SRTMv3_plus_ViewFinder_coarsen.nc' # Altitude map for extracting altitude

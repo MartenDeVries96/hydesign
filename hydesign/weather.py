@@ -51,7 +51,7 @@ class ABL(om.ExplicitComponent):
     def precompute(self, hh):
 
         weather = pd.read_csv(self.weather_fn, index_col=0, parse_dates=True)
-        ds_interpolated = interpolate_WS_loglog(weather, hh=101.)
+        ds_interpolated = interpolate_WS_loglog(weather, hh=hh)
         return ds_interpolated
 
     def compute(self, inputs, outputs):

@@ -311,18 +311,24 @@ def get_wake_affected_pc(
     -------
     wl : Wind plant wake losses curve
     """
-    genWake_sm = xr.open_dataset(genWake_fn).interp(
+    ds = xr.open_dataset(genWake_fn)
+    ds_sel = ds.sel(Nwt=2)
+    ds_sel['wl'] = 0*ds_sel['wl']
+    ds_sel['Nwt'] = 1
+    ds = xr.concat([ds_sel, ds], dim='Nwt')
+    
+    genWake_sm = ds.interp(
         ws=ws, 
-        sp=specific_power, 
-        Nwt=Nwt, 
-        wind_MW_per_km2=wind_MW_per_km2,
+        sp=float(specific_power), 
+        Nwt=float(Nwt), 
+        wind_MW_per_km2=float(wind_MW_per_km2),
         kwargs={"fill_value": 1}
         )
     wl = genWake_sm.wl.values
     
     genWake_sm.close()
     
-    pcw = pc * (1 - wl)        
+    pcw = pc * (1 - wl)
     return pcw * Nwt * p_rated
 
 def get_wind_ts(

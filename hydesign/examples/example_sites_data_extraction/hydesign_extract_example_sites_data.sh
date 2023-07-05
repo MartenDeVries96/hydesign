@@ -3,9 +3,9 @@
 #SBATCH --output=output_hydesign_simple_%J.log
 #SBATCH --error=output_hydesign_simple_%J.log
 
-# #SBATCH --partition=rome
+#SBATCH --partition=rome
 # #SBATCH --partition=workq 
-#SBATCH --partition=windq 
+# #SBATCH --partition=windq 
 # #SBATCH --partition=windfatq
 
 #SBATCH --ntasks-per-core 1 
@@ -29,7 +29,7 @@ echo Sophia job identifier: $SLURM_JOBID
 echo -----------------------------------------------------------------
 
 # Set environment
-source /home/gupta/miniconda3/bin/activate
+source ~/miniconda3/bin/activate
 conda activate hydesign
 
 # to extract data for a specific example site, requires an integer index 
