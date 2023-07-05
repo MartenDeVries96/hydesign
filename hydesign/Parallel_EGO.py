@@ -16,14 +16,13 @@ from smt.applications.mixed_integer import (
     FLOAT,
     INT,)
 from smt.sampling_methods import LHS
-from hydesign.hpp_assembly import hpp_model
 from hydesign.examples import examples_filepath
 from hydesign.EGO_surrogate_based_optimization import (
     get_sm, 
     eval_sm,
     get_candiate_points, 
     opt_sm, 
-    opt_sm_EI, 
+    # opt_sm_EI, 
     perturbe_around_point,
     extreme_around_point,
     drop_duplicates,
@@ -84,7 +83,7 @@ def expand_x_for_model_eval(x, kwargs):
 
 def model_evaluation(inputs): # Evaluates the model
     x, kwargs = inputs
-    hpp_m = hpp_model(
+    hpp_m = kwargs['hpp_model'](
             **kwargs,
             verbose=False)
 
@@ -173,16 +172,18 @@ def get_kwargs(kwargs):
     return kwargs
 
 class EfficientGlobalOptimizationDriver(Driver):
-    def __init__(self, model, **kwargs):
-        self.hpp_model = model
+
+    def __init__(self, **kwargs):
         self.kwargs = kwargs
         super().__init__(**kwargs)
+
     def _declare_options(self):
         """
         Declare options before kwargs are processed in the init method.
         """
         for k, v in self.kwargs.items():
             self.options.declare(k, v)
+
     def run(self):
         kwargs = self.kwargs
 
@@ -241,7 +242,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         kwargs['xtypes'] = xtypes
         kwargs['xlimits'] = xlimits
     
-        hpp_m = self.hpp_model(**kwargs)
+        hpp_m = kwargs['hpp_model'](**kwargs)
         
         print('\n\n')
         
@@ -396,6 +397,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         self.result = design_df
 
 if __name__ == '__main__':
+    from hydesign.hpp_assembly import hpp_model
     inputs = {
         'example': 4,
         'name': None,
@@ -406,17 +408,18 @@ if __name__ == '__main__':
         'sim_pars_fn': None,
 
         'opt_var': "NPV_over_CAPEX",
-        'num_batteries': 2,
-        'n_procs': 32,
-        'n_doe': 160,
-        'n_clusters': 8, # total number of evals per iteration = n_clusters + 2*n_dims
-        'n_seed': 1,
-        'max_iter': 10,
+        'num_batteries': 1,
+        'n_procs': 7,
+        'n_doe': 16,
+        'n_clusters': 4, # total number of evals per iteration = n_clusters + 2*n_dims
+        'n_seed': 0,
+        'max_iter': 4,
         'final_design_fn': 'hydesign_design_0.csv',
         'npred': 3e4,
-        'tol': 1e-3,
+        'tol': 1e-6,
         'min_conv_iter': 3,
         'work_dir': './',
+        'hpp_model': hpp_model,
         }
 
     kwargs = get_kwargs(inputs)
@@ -428,7 +431,7 @@ if __name__ == '__main__':
              },
          'sp [W/m2]':
             {'var_type':'design',
-             'limits':[200, 400],
+             'limits':[200, 360],
              'types':INT
              },
         'p_rated [MW]':
@@ -436,57 +439,84 @@ if __name__ == '__main__':
              'limits':[1, 10],
              'types':INT
              },
+            # {'var_type':'fixed',
+            #  'value': 6
+             # },
         'Nwt':
             {'var_type':'design',
              'limits':[0, 400],
              'types':INT
              },
+            # {'var_type':'fixed',
+            #  'value': 200
+            #  },
         'wind_MW_per_km2 [MW/km2]':
             {'var_type':'design',
              'limits':[5, 9],
              'types':FLOAT
              },
+            # {'var_type':'fixed',
+            #  'value': 7
+            #  },
         'solar_MW [MW]':
             {'var_type':'design',
              'limits':[0, 400],
              'types':INT
              },
+            # {'var_type':'fixed',
+            #  'value': 200
+            #  },
         'surface_tilt [deg]':
             {'var_type':'design',
              'limits':[0, 50],
              'types':FLOAT
              },
+            # {'var_type':'fixed',
+            #  'value': 25
+            #  },
         'surface_azimuth [deg]':
             {'var_type':'design',
              'limits':[150, 210],
              'types':FLOAT
              },
-    #     'DC_AC_ratio':
-    #         {'var_type':'design',
-    #          'limits':[1, 2.0],
-    #          'types':FLOAT
+            # {'var_type':'fixed',
+            #  'value': 180
     #          },
         'DC_AC_ratio':
-            {'var_type':'fixed',
-             'value':1.0,
+            {'var_type':'design',
+              'limits':[1, 2.0],
+              'types':FLOAT
              },
+        # 'DC_AC_ratio':
+        #     {'var_type':'fixed',
+        #      'value':1.0,
+        #      },
         'b_P [MW]':
             {'var_type':'design',
              'limits':[0, 100],
              'types':INT
              },
+            # {'var_type':'fixed',
+            #  'value': 50
+            #  },
         'b_E_h [h]':
             {'var_type':'design',
              'limits':[1, 10],
              'types':INT
              },
+            # {'var_type':'fixed',
+            #  'value': 6
+            #  },
         'cost_of_battery_P_fluct_in_peak_price_ratio':
             {'var_type':'design',
              'limits':[0, 20],
              'types':FLOAT
              },
+            # {'var_type':'fixed',
+            #  'value': 10
     }    
-        
-    EGOD = EfficientGlobalOptimizationDriver(model=hpp_model, **kwargs)
+    EGOD = EfficientGlobalOptimizationDriver(**kwargs)
     EGOD.run()
     result = EGOD.result
+
+
