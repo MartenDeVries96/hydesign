@@ -2,7 +2,7 @@
 """
 Created on Fri Feb 17 12:44:06 2023
 
-@author: mikf
+@author: mikf & jumu
 """
 import time
 import numpy as np
@@ -129,12 +129,7 @@ def derive_example_info(kwargs):
     example = kwargs['example']
     
     if example == None:
-        kwargs['name'] = str(kwargs['name'])
-        for x in ['longitude', 'latitude', 'altitude']:
-            kwargs[x] = int(kwargs[x])
-        kwargs['input_ts_fn'] = examples_filepath+str(kwargs['input_ts_fn'])
-        kwargs['sim_pars_fn'] = examples_filepath+str(kwargs['sim_pars_fn'])
-        
+        pass
     else:
         examples_sites = pd.read_csv(f'{examples_filepath}examples_sites.csv', index_col=0)
         
@@ -383,6 +378,8 @@ class EfficientGlobalOptimizationDriver(Driver):
         # Store results
         # -----------------
         design_df = pd.DataFrame(columns = list_vars, index=[name])
+        for var_ in ['name', 'longitude','latitude','altitude']:
+            design_df[var] = kwargs[var]
         for iv, var in enumerate(list_vars):
             design_df[var] = xopt[0,iv]
         for iv, var in enumerate(list_out_vars):
