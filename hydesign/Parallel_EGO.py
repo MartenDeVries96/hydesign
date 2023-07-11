@@ -238,6 +238,8 @@ class EfficientGlobalOptimizationDriver(Driver):
     
         hpp_m = self.hpp_model(**kwargs)
         
+        #self.weather = hpp_m.weather
+        
         print('\n\n')
         
         # Lists of all possible outputs, inputs to the hpp model

@@ -52,16 +52,17 @@ if __name__ == '__main__':
     # To store the input_ts (waether and prices)
     input_ts_fn_out = f'input_ts_{name}.csv'
     
-    ds = xr.open_dataset(
-        '/groups/INP/REALISE/surrogate/parsed_simulations.nc')
-
+    ds = xr.open_zarr(
+        '/groups/INP/REALISE/parsed_simulations.zarr')
 
     prices = ds.sel(
         year=year,
         region=region, 
         realize_nr=realize_nr
         )['Price_electricity'].to_dataframe()['Price_electricity']
-
+    
+    ds.close()
+    
     prices = prices.reindex(
         pd.date_range('2012-01-01 00:00','2012-12-31 23:00', freq='1h'),
         fill_value=np.NaN)  
@@ -187,8 +188,5 @@ if __name__ == '__main__':
     EGOD.run()
     result = EGOD.result
 
-
-    inputs = pd.read_csv('input_ts.csv', index_col=0, parse_dates=True)
-    inputs.to_csv(input_ts_fn_out)
-    os.remove('input_ts.csv') 
+    EGOD.weather.to_csv(input_ts_fn_out)
 

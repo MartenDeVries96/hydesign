@@ -44,6 +44,7 @@ class hpp_model:
         genWT_fn = lut_filepath+'genWT_v3.nc',
         genWake_fn = lut_filepath+'genWake_v3.nc',
         verbose = True,
+        name = '',
         **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
@@ -142,7 +143,7 @@ class hpp_model:
             except:
                 raise('Price timeseries does not match the weather')
             
-            input_ts_fn = f'{work_dir}input_ts.csv'
+            input_ts_fn = f'{work_dir}input_ts{name}.csv'
             print(f'input_ts_fn extracted and stored in {input_ts_fn}')
             weather.to_csv(input_ts_fn)
             N_time = len(weather)
@@ -435,6 +436,7 @@ class hpp_model:
         self.sim_pars = sim_pars
         self.prob = prob
         self.num_batteries = num_batteries
+        #self.weather = weather
     
         self.list_out_vars = [
             'NPV_over_CAPEX',
