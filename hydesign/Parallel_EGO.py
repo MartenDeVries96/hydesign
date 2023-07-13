@@ -127,6 +127,7 @@ class ParallelEvaluator(Evaluator):
     
 def derive_example_info(kwargs):
     example = kwargs['example']
+    sim_pars_fn = kwargs['sim_pars_fn']
     
     if example == None:
         pass
@@ -145,7 +146,8 @@ def derive_example_info(kwargs):
             kwargs['latitude'] = ex_site['latitude']
             kwargs['altitude'] = ex_site['altitude']
             kwargs['input_ts_fn'] = examples_filepath+ex_site['input_ts_fn']
-            kwargs['sim_pars_fn'] = examples_filepath+ex_site['sim_pars_fn']
+            if sim_pars_fn == None:
+                kwargs['sim_pars_fn'] = examples_filepath+ex_site['sim_pars_fn']
             
         except:
             raise(f'Not a valid example: {int(example)}')
@@ -381,7 +383,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         # -----------------
         design_df = pd.DataFrame(columns = list_vars, index=[name])
         for var_ in ['name', 'longitude','latitude','altitude']:
-            design_df[var] = kwargs[var]
+            design_df[var_] = kwargs[var_]
         for iv, var in enumerate(list_vars):
             design_df[var] = xopt[0,iv]
         for iv, var in enumerate(list_out_vars):
