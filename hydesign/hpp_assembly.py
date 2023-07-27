@@ -471,7 +471,7 @@ class hpp_model:
 
         self.list_vars = [
             'clearance [m]', 
-            'sp [m2/W]', 
+            'sp [W/m2]', 
             'p_rated [MW]', 
             'Nwt', 
             'wind_MW_per_km2 [MW/km2]', 
@@ -613,7 +613,7 @@ class hpp_model:
                                             'latitude',
                                             'altitude',
                                             'clearance [m]',
-                                            'sp [m2/W]',
+                                            'sp [W/m2]',
                                             'p_rated [MW]',
                                             'Nwt',
                                             'wind_MW_per_km2 [MW/km2]',

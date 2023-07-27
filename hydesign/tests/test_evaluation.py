@@ -10,7 +10,7 @@ from hydesign.examples import examples_filepath
 # ------------------------------------------------------------------------------------------------
 # design 1
 
-def run_evaluation():
+def run_evaluation_design_1():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -32,7 +32,7 @@ def run_evaluation():
         sim_pars_fn = sim_pars_fn,
         input_ts_fn = input_ts_fn)
     clearance = output_df.loc['clearance [m]','Design 1']
-    sp = output_df.loc['sp [m2/W]','Design 1']
+    sp = output_df.loc['sp [W/m2]','Design 1']
     p_rated = output_df.loc['p_rated [MW]','Design 1']
     Nwt = output_df.loc['Nwt','Design 1']
     wind_MW_per_km2 = output_df.loc['wind_MW_per_km2 [MW/km2]','Design 1']
@@ -52,7 +52,7 @@ def run_evaluation():
     
     return outs
 
-def load_evaluation():
+def load_evaluation_design_1():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -61,16 +61,16 @@ def load_evaluation():
     
     return load_file
 
-def test_evaluation():
-    evaluation_metrics = run_evaluation()
-    loaded_metrics = load_evaluation()
+def test_evaluation_design_1():
+    evaluation_metrics = run_evaluation_design_1()
+    loaded_metrics = load_evaluation_design_1()
     for i in range(len(loaded_metrics)):
         np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
         
 # ------------------------------------------------------------------------------------------------
 # design 2
 
-def run_evaluation():
+def run_evaluation_design_2():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -92,7 +92,7 @@ def run_evaluation():
         sim_pars_fn = sim_pars_fn,
         input_ts_fn = input_ts_fn)
     clearance = output_df.loc['clearance [m]','Design 2']
-    sp = output_df.loc['sp [m2/W]','Design 2']
+    sp = output_df.loc['sp [W/m2]','Design 2']
     p_rated = output_df.loc['p_rated [MW]','Design 2']
     Nwt = output_df.loc['Nwt','Design 2']
     wind_MW_per_km2 = output_df.loc['wind_MW_per_km2 [MW/km2]','Design 2']
@@ -112,7 +112,7 @@ def run_evaluation():
     
     return outs
 
-def load_evaluation():
+def load_evaluation_design_2():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -121,9 +121,9 @@ def load_evaluation():
     
     return load_file
 
-def test_evaluation():
-    evaluation_metrics = run_evaluation()
-    loaded_metrics = load_evaluation()
+def test_evaluation_design_2():
+    evaluation_metrics = run_evaluation_design_2()
+    loaded_metrics = load_evaluation_design_2()
     for i in range(len(loaded_metrics)):
         np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
         
@@ -131,7 +131,7 @@ def test_evaluation():
 
 # # # design 3
 
-def run_evaluation():
+def run_evaluation_design_3():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -153,7 +153,7 @@ def run_evaluation():
         sim_pars_fn = sim_pars_fn,
         input_ts_fn = input_ts_fn)
     clearance = output_df.loc['clearance [m]','Design 3']
-    sp = output_df.loc['sp [m2/W]','Design 3']
+    sp = output_df.loc['sp [W/m2]','Design 3']
     p_rated = output_df.loc['p_rated [MW]','Design 3']
     Nwt = output_df.loc['Nwt','Design 3']
     wind_MW_per_km2 = output_df.loc['wind_MW_per_km2 [MW/km2]','Design 3']
@@ -173,7 +173,7 @@ def run_evaluation():
     
     return outs
 
-def load_evaluation():
+def load_evaluation_design_3():
     output_df = pd.read_csv(
         tfp+'France_good_wind_design.csv',
         index_col=0, 
@@ -184,9 +184,9 @@ def load_evaluation():
 
 
 
-def test_evaluation():
-    evaluation_metrics = run_evaluation()
-    loaded_metrics = load_evaluation()
+def test_evaluation_design_3():
+    evaluation_metrics = run_evaluation_design_3()
+    loaded_metrics = load_evaluation_design_3()
     for i in range(len(loaded_metrics)):
         np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
         
