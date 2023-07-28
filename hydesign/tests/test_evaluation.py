@@ -32,7 +32,7 @@ def run_evaluation_design_1():
         sim_pars_fn = sim_pars_fn,
         input_ts_fn = input_ts_fn)
     clearance = output_df.loc['clearance [m]','Design 1']
-    sp = output_df.loc['sp [m2/W]','Design 1']
+    sp = output_df.loc['sp [W/m2]','Design 1']
     p_rated = output_df.loc['p_rated [MW]','Design 1']
     Nwt = output_df.loc['Nwt','Design 1']
     wind_MW_per_km2 = output_df.loc['wind_MW_per_km2 [MW/km2]','Design 1']
@@ -92,7 +92,7 @@ def run_evaluation_design_2():
         sim_pars_fn = sim_pars_fn,
         input_ts_fn = input_ts_fn)
     clearance = output_df.loc['clearance [m]','Design 2']
-    sp = output_df.loc['sp [m2/W]','Design 2']
+    sp = output_df.loc['sp [W/m2]','Design 2']
     p_rated = output_df.loc['p_rated [MW]','Design 2']
     Nwt = output_df.loc['Nwt','Design 2']
     wind_MW_per_km2 = output_df.loc['wind_MW_per_km2 [MW/km2]','Design 2']
@@ -153,7 +153,7 @@ def run_evaluation_design_3():
         sim_pars_fn = sim_pars_fn,
         input_ts_fn = input_ts_fn)
     clearance = output_df.loc['clearance [m]','Design 3']
-    sp = output_df.loc['sp [m2/W]','Design 3']
+    sp = output_df.loc['sp [W/m2]','Design 3']
     p_rated = output_df.loc['p_rated [MW]','Design 3']
     Nwt = output_df.loc['Nwt','Design 3']
     wind_MW_per_km2 = output_df.loc['wind_MW_per_km2 [MW/km2]','Design 3']

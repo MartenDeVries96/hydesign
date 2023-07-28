@@ -81,7 +81,7 @@ compressor_opex_cost : 0  #[EUR/MW]
 # Shared costs
 # --------------------------------------------------------------------------------------------
 hpp_BOS_soft_cost: 119_940       # [Euro/MW]
-hpp_grid_connection_cost: 37_074 # [Euro/MW]
+hpp_grid_connection_cost: 50_000 # [Euro/MW]
 #land cost not same format in excel it's per MW
 land_cost: 300_000  #  [Euro/km**2] from Hybridize imputs 6-12k Euro/acre. 1km2 = 247.105acre
 
