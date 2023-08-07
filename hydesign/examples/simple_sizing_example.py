@@ -40,7 +40,7 @@ def main():
                 # {'var_type':'fixed',
                 #   'value': 35
                 #   },
-             'sp [m2/W]':
+             'sp [W/m2]':
                 {'var_type':'design',
                  'limits':[200, 360],
                  'types':INT
