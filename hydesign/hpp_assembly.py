@@ -437,6 +437,7 @@ class hpp_model:
         self.prob = prob
         self.num_batteries = num_batteries
         self.input_ts_fn = input_ts_fn
+        self.altitude = altitude
     
         self.list_out_vars = [
             'NPV_over_CAPEX',

@@ -483,6 +483,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         hpp_m = self.hpp_model(**kwargs)
         # Update kwargs to use input file generated when extracting weather
         kwargs['input_ts_fn'] = hpp_m.input_ts_fn
+        kwargs['altitude'] = hpp_m.altitude
         kwargs['price_fn'] = None
         
         print('\n\n')
@@ -559,8 +560,9 @@ class EfficientGlobalOptimizationDriver(Driver):
             # 2C) 
             if (np.abs(error) < kwargs['tol']): 
                 #add refinement around the opt
+                np.random.seed(kwargs['n_seed']*100+itr) # to have a different refinement per iteration
                 step = np.random.uniform(low=0.05,high=0.25,size=1)
-                xopt_iter = perturbe_around_point(xopt, step=0.1)
+                xopt_iter = perturbe_around_point(xopt, step=step)
             else: 
                 #add extremes on each opt_var (one at a time) around the opt
                 xopt_iter = extreme_around_point(xopt)

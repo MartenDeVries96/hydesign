@@ -72,8 +72,7 @@ if __name__ == '__main__':
         'longitude': longitude,
         'latitude': latitude,
         'altitude': None,
-        'input_ts_fn': './input_ts0.csv',
-        #'input_ts_fn': None,
+        'input_ts_fn': None,
         'sim_pars_fn': examples_filepath+'Europe/hpp_pars.yml',
         'price_fn': prices,
         'opt_var': "NPV_over_CAPEX",
@@ -83,7 +82,7 @@ if __name__ == '__main__':
         'n_clusters': 8, # total number of evals per iteration = n_clusters + 2*n_dims
         'n_seed': 1,
         'max_iter': 15,
-        'final_design_fn': f'design_coordinate_{name}.csv',
+        'final_design_fn': f'final_design_{name}.csv',
         'npred': 3e4,
         'tol': 1e-6,
         'min_conv_iter': 3,
