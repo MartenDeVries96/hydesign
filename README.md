@@ -3,7 +3,7 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7573040.svg)](https://doi.org/10.5281/zenodo.7573040)
 [![PyPi](https://img.shields.io/pypi/v/hydesign)](https://pypi.org/project/hydesign/)
 [![License](https://img.shields.io/pypi/l/hydesign)](https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/blob/main/LICENSE)
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/git/https%3A%2F%2Fgitlab.windenergy.dtu.dk%2FTOPFARM%2Fhydesign/HEAD)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/DTUWindEnergy/HyDesignExamples/HEAD)
 
 ## Welcome to Hydesign
 - A tool for design and control of utility scale wind-solar-storage based hybrid power plant (HPP).
