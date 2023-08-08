@@ -164,11 +164,7 @@ class ems(om.ExplicitComponent):
         elif self.ems_type == 'pyomo':
             ems_WSB = ems_Wind_Solar_Battery_Pyomo
         else:
-            ems_WSB = ems_rule_based
-        
-        # Avoid running an expensive optimization based ems if there is no battery
-        if ( b_P <= 1e-2 ) or (b_E == 0):
-            ems_WSB = ems_rule_based
+            ems_WSB = ems_cplex
     
         battery_depth_of_discharge = inputs['battery_depth_of_discharge']
         battery_charge_efficiency = inputs['battery_charge_efficiency']

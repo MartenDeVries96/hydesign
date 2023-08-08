@@ -9,37 +9,248 @@ import numpy as np
 from numpy import newaxis as na
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from sklearn.cluster import KMeans
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from scipy import optimize
+from scipy.stats import norm
 from multiprocessing import Pool
+
+# SMT imports
+from smt.utils.design_space import (
+    DesignSpace,
+    FloatVariable,
+    IntegerVariable,
+    OrdinalVariable,
+)
+from smt.applications.mixed_integer import MixedIntegerContext
+from smt.sampling_methods import LHS, Random, FullFactorial
+from smt.surrogate_models import KRG, KPLS, KPLSK, GEKPLS
+from smt.applications.mixed_integer import MixedIntegerSurrogateModel
 from smt.applications.ego import Evaluator
-from smt.applications.mixed_integer import (
-    MixedIntegerContext,
-    FLOAT,
-    INT,)
-from smt.sampling_methods import LHS
+
+# HyDesign imports
 from hydesign.hpp_assembly import hpp_model
 from hydesign.examples import examples_filepath
-from hydesign.EGO_surrogate_based_optimization import (
-    get_sm, 
-    eval_sm,
-    get_candiate_points, 
-    opt_sm, 
-    opt_sm_EI, 
-    perturbe_around_point,
-    extreme_around_point,
-    drop_duplicates,
-    concat_to_existing)
+
 from sys import version_info
 from openmdao.core.driver import Driver
+
+def LCB(sm, point):
+    """
+    Lower confidence bound optimization: minimize by using mu - 3*sigma
+    """
+    pred = sm.predict_values(point)
+    var = sm.predict_variances(point)
+    res = pred - 3.0 * np.sqrt(var)
+    
+    return res
+
+def EI(sm, point, fmin=1e3):
+    """
+    Negative Expected improvement
+    """
+    pred = sm.predict_values(point)
+    sig = np.sqrt(sm.predict_variances(point))
+    
+    args0 = (fmin - pred) / sig
+    args1 = (fmin - pred) * norm.cdf(args0)
+    args2 = sig * norm.pdf(args0)
+    ei = args1 + args2
+    return -ei
+
+
+def KStd(sm, point):
+    """
+    Lower confidence bound optimization: minimize by using mu - 3*sigma
+    """
+    res = np.sqrt( sm.predict_variances(point) )
+    return res
+
+def KB(sm, point):
+    """
+    Mean GP process
+    """
+    res = sm.predict_values(point)
+    return res
+
+def get_sm(xdoe, ydoe, mixint=None):
+    '''
+    Function that trains the surrogate and uses it to predict on random input points
+    '''    
+    sm = KPLSK(
+        corr="squar_exp",
+        poly='linear',
+        theta0=[1e-2],
+        #theta_bounds=[1e-3, 1e2],
+        #noise_bounds=[1e-12, 1e2],
+        n_comp=4,
+        print_global=False)
+    sm.set_training_values(xdoe, ydoe)
+    sm.train()
+    
+    return sm
+
+
+def eval_sm(sm, mixint, scaler=None, seed=0, npred=1e3, fmin=1e10):
+    '''
+    Function that predicts the xepected improvement (EI) of the surrogate model based on random input points
+    '''
+    sampling = mixint.build_sampling_method(
+        LHS, criterion="c", random_state=int(seed))
+    xpred = sampling(int(npred))
+    xpred = np.array(mixint.design_space.decode_values(xpred))
+
+    if scaler == None:
+        pass
+    else:
+        xpred = scaler.transform(xpred)    
+
+    ypred_LB = EI(sm=sm, point=xpred, fmin=fmin)
+
+    return xpred, ypred_LB
+
+def opt_sm_EI(sm, mixint, x0, fmin=1e10, n_seed=0):
+    '''
+    Function that optimizes the surrogate's expected improvement
+    '''
+    ndims = mixint.get_unfolded_dimension()
+    
+    func = lambda x: EI(sm, x[np.newaxis,:], fmin=fmin)
+   
+    minimizer_kwargs = {
+        "method": "SLSQP",
+        "bounds" : [(0,1)]*ndims,
+        "options" : {
+                "maxiter": 20,
+                'eps':1e-3,
+                'disp':False
+            },
+    }
+
+    res = optimize.basinhopping(
+        func, 
+        x0 = x0, 
+        niter=100, 
+        stepsize=10,
+        minimizer_kwargs=minimizer_kwargs,
+        seed=n_seed, 
+        target_accept_rate=0.5, 
+        stepwise_factor=0.9)
+
+    # res = optimize.minimize(
+    #     fun = func,
+    #     x0 = x0, 
+    #     method="SLSQP",
+    #     bounds=[(0,1)]*ndims,
+    #     options={
+    #         "maxiter": 100,
+    #         'eps':1e-3,
+    #         'disp':False
+    #     },
+    # )    
+    
+    return res.x.reshape([1,-1]) 
+
+def opt_sm(sm, mixint, x0, fmin=1e10):
+    '''
+    Function that optimizes the surrogate based on lower confidence bound predictions
+    '''
+
+    ndims = mixint.get_unfolded_dimension()
+    res = optimize.minimize(
+        fun = lambda x:  KB(sm, x.reshape([1,ndims])),
+        jac = lambda x: np.stack([sm.predict_derivatives(
+           x.reshape([1,ndims]), kx=i) 
+           for i in range(ndims)] ).reshape([1,ndims]),
+        x0 = x0.reshape([1,ndims]),
+        method="SLSQP",
+        bounds=[(0,1)]*ndims,
+        options={
+            "maxiter": 20,
+            'eps':1e-4,
+            'disp':False
+        },
+    )
+    return res.x.reshape([1,-1])
+
+def get_candiate_points(
+    x, y, quantile=0.25, n_clusters=32 ): 
+    '''
+    Function that groups the surrogate evaluations bellow a quantile level (quantile) and
+    clusters them in n clusters (n_clusters) and returns the best input location (x) per
+    cluster for acutal model evaluation
+    '''
+
+    yq = np.quantile(y,quantile)
+    ind_up = np.where(y<yq)[0]
+    xup = x[ind_up]
+    yup = y[ind_up]
+    kmeans = KMeans(
+        n_clusters=n_clusters, 
+        random_state=0,
+        n_init=10,
+        ).fit(xup)    
+    clust_id = kmeans.predict(xup)
+    xbest_per_clst = np.vstack([
+        xup[np.where( yup== np.min(yup[np.where(clust_id==i)[0]]) )[0],:] 
+        for i in range(n_clusters)])
+    return xbest_per_clst
+
+def extreme_around_point(x):
+    ndims = x.shape[1]
+    xcand = np.tile(x.T,ndims*2).T
+    for i in range(ndims):
+        xcand[i,i] = 0.0
+    for i in range(ndims):
+        xcand[i+ndims,i] = 1.0
+    return xcand
+
+def perturbe_around_point(x, step=0.1):
+    ndims = x.shape[1]
+    xcand = np.tile(x.T,ndims*2).T
+    for i in range(ndims):
+        xcand[i,i] += step
+    for i in range(ndims):
+        xcand[i+ndims,i] -= step
+    
+    xcand = np.maximum(xcand,0)
+    xcand = np.minimum(xcand,1.0)
+    return xcand 
+
+def get_design_vars(variables):
+    return [var_ for var_ in variables.keys() 
+            if variables[var_]['var_type']=='design'
+           ], [var_ for var_ in variables.keys() 
+               if variables[var_]['var_type']=='fixed']
+
+def get_limits(variables, design_var=[]):
+    if len(design_var)==0:
+        design_var, fixed_var = get_design_vars(variables)
+    return np.array([variables[var_]['limits'] for var_ in design_var])    
+
+def drop_duplicates(x,y, decimals=3):
+    x_rounded = np.around(x, decimals=decimals)
+    _, indices = np.unique(x_rounded, axis=0, return_index=True)
+    x_unique = x[indices,:]
+    y_unique = y[indices,:]
+    return x_unique, y_unique
+
+def concat_to_existing(x,y,xnew,ynew):
+    x_concat, y_concat = drop_duplicates(
+        np.vstack([x,xnew]),
+        np.vstack([y,ynew])
+        )
+    return x_concat, y_concat
 
 
 def surrogate_optimization(inputs): # Calling the optimization of the surrogate model
     x, kwargs = inputs
-    mixint = MixedIntegerContext(kwargs['xtypes'], kwargs['xlimits'])
+    mixint = get_mixint_context(kwargs['variables'])
     return opt_sm(kwargs['sm'], mixint, x, fmin=kwargs['yopt'][0,0])
 
 def surrogate_evaluation(inputs): # Evaluates the surrogate model
     seed, kwargs = inputs
-    mixint = MixedIntegerContext(kwargs['xtypes'], kwargs['xlimits'])
+    mixint = get_mixint_context(kwargs['variables'])
     return eval_sm(
         kwargs['sm'], mixint, 
         scaler=kwargs['scaler'],
@@ -64,6 +275,32 @@ def get_xtypes(variables, design_var=[]):
         design_var, fixed_var = get_design_vars(variables)
     return [variables[var_]['types'] for var_ in design_var]
 
+def cast_to_mixint(x,variables):
+    types_ = get_xtypes(variables)
+    for i,ty in enumerate(types_):
+        if ty == 'int':
+            x[:,i] = np.round(x[:,i])
+        elif ty == 'resolution':
+            res = variables[list(variables.keys())[i]]['resolution']
+            x[:,i] = np.round(x[:,i]/res, decimals=0)*res
+    return x
+
+def get_mixint_context(variables):
+    design_var, fixed_var = get_design_vars(variables)    
+    list_vars_doe = []
+    for var_ in design_var:
+        if variables[var_]['types']=='int':
+            list_vars_doe += [IntegerVariable(*variables[var_]['limits'])]
+        elif variables[var_]['types']=='float':
+            list_vars_doe += [FloatVariable(*variables[var_]['limits'])]
+        else:
+            dtype = type(variables[var_]['resolution'])
+            val_list = list(np.arange(variables[var_]['limits'][0],
+              variables[var_]['limits'][1]+variables[var_]['resolution'],
+              variables[var_]['resolution'], dtype=dtype))
+            list_vars_doe += [OrdinalVariable(val_list)]
+    mixint = MixedIntegerContext(DesignSpace(list_vars_doe))
+    return mixint
 
 def expand_x_for_model_eval(x, kwargs):
     
@@ -90,8 +327,12 @@ def model_evaluation(inputs): # Evaluates the model
 
     x = kwargs['scaler'].inverse_transform(x)
     x_eval = expand_x_for_model_eval(x, kwargs)
-    return np.array(
+    try: 
+        return np.array(
         kwargs['opt_sign']*hpp_m.evaluate(*x_eval[0,:])[kwargs['op_var_index']])
+    except:
+        print('x=['+', '.join(map(str, x_eval[0,:]))+']')
+    
 
 
 class ParallelEvaluator(Evaluator):
@@ -212,10 +453,11 @@ class EfficientGlobalOptimizationDriver(Driver):
         # -------------------------------------------------------        
         
         # LHS intial doe
-        mixint = MixedIntegerContext(xtypes, xlimits)
+        mixint = get_mixint_context(kwargs['variables'])
         sampling = mixint.build_sampling_method(
           LHS, criterion="maximin", random_state=kwargs['n_seed'])
         xdoe = sampling(kwargs['n_doe'])
+        xdoe = np.array(mixint.design_space.decode_values(xdoe))
         xdoe = scaler.transform(xdoe)
         # -----------------
         # HPP model
@@ -239,8 +481,9 @@ class EfficientGlobalOptimizationDriver(Driver):
         kwargs['xlimits'] = xlimits
     
         hpp_m = self.hpp_model(**kwargs)
-        
-        #self.weather = hpp_m.weather
+        # Update kwargs to use input file generated when extracting weather
+        kwargs['input_ts_fn'] = hpp_m.input_ts_fn
+        kwargs['price_fn'] = None
         
         print('\n\n')
         
@@ -316,14 +559,14 @@ class EfficientGlobalOptimizationDriver(Driver):
             # 2C) 
             if (np.abs(error) < kwargs['tol']): 
                 #add refinement around the opt
+                step = np.random.uniform(low=0.05,high=0.25,size=1)
                 xopt_iter = perturbe_around_point(xopt, step=0.1)
             else: 
                 #add extremes on each opt_var (one at a time) around the opt
                 xopt_iter = extreme_around_point(xopt)
             
             xopt_iter = scaler.inverse_transform(xopt_iter)
-            xopt_iter = np.array([mixint.cast_to_mixed_integer( xopt_iter[i,:]) 
-                            for i in range(xopt_iter.shape[0])]).reshape(xopt_iter.shape)
+            xopt_iter = cast_to_mixint(xopt_iter,kwargs['variables'])
             xopt_iter = scaler.transform(xopt_iter)
             xopt_iter, _ = drop_duplicates(xopt_iter,np.zeros_like(xopt_iter))
             xopt_iter, _ = concat_to_existing(xnew,np.zeros_like(xnew), xopt_iter, np.zeros_like(xopt_iter))
@@ -395,6 +638,8 @@ class EfficientGlobalOptimizationDriver(Driver):
         
         design_df.T.to_csv(kwargs['final_design_fn'])
         self.result = design_df
+        # store final model, to check or extract additional variables
+        self.hpp_m = hpp_m
 
 if __name__ == '__main__':
     inputs = {
@@ -425,47 +670,47 @@ if __name__ == '__main__':
         'clearance [m]':
             {'var_type':'design',
              'limits':[10, 60],
-             'types':INT
+             'types':'int'
              },
-         'sp [m2/W]':
+         'sp [W/m2]':
             {'var_type':'design',
              'limits':[200, 400],
-             'types':INT
+             'types':'int'
              },
         'p_rated [MW]':
             {'var_type':'design',
              'limits':[1, 10],
-             'types':INT
+             'types':'int'
              },
         'Nwt':
             {'var_type':'design',
              'limits':[0, 400],
-             'types':INT
+             'types':'int'
              },
         'wind_MW_per_km2 [MW/km2]':
             {'var_type':'design',
              'limits':[5, 9],
-             'types':FLOAT
+             'types':'float'
              },
         'solar_MW [MW]':
             {'var_type':'design',
              'limits':[0, 400],
-             'types':INT
+             'types':'int'
              },
         'surface_tilt [deg]':
             {'var_type':'design',
              'limits':[0, 50],
-             'types':FLOAT
+             'types':'float'
              },
         'surface_azimuth [deg]':
             {'var_type':'design',
              'limits':[150, 210],
-             'types':FLOAT
+             'types':'float'
              },
     #     'DC_AC_ratio':
     #         {'var_type':'design',
     #          'limits':[1, 2.0],
-    #          'types':FLOAT
+    #          'types':'float'
     #          },
         'DC_AC_ratio':
             {'var_type':'fixed',
@@ -474,17 +719,18 @@ if __name__ == '__main__':
         'b_P [MW]':
             {'var_type':'design',
              'limits':[0, 100],
-             'types':INT
+             'types':'int'
              },
         'b_E_h [h]':
             {'var_type':'design',
              'limits':[1, 10],
-             'types':INT
+             'types':'int'
              },
         'cost_of_battery_P_fluct_in_peak_price_ratio':
             {'var_type':'design',
              'limits':[0, 20],
-             'types':FLOAT
+             'types':'resolution',
+             'resolution':0.5,
              },
     }    
         

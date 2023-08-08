@@ -436,7 +436,7 @@ class hpp_model:
         self.sim_pars = sim_pars
         self.prob = prob
         self.num_batteries = num_batteries
-        #self.weather = weather
+        self.input_ts_fn = input_ts_fn
     
         self.list_out_vars = [
             'NPV_over_CAPEX',
@@ -463,7 +463,7 @@ class hpp_model:
             'Battery Power [MW]',
             'Total curtailment [GWh]',
             'Awpp [km2]',
-            #'Apvp [km2]',
+            'Apvp [km2]',
             'Rotor diam [m]',
             'Hub height [m]',
             'Number_of_batteries',
@@ -471,7 +471,7 @@ class hpp_model:
 
         self.list_vars = [
             'clearance [m]', 
-            'sp [m2/W]', 
+            'sp [W/m2]', 
             'p_rated [MW]', 
             'Nwt', 
             'wind_MW_per_km2 [MW/km2]', 
@@ -547,8 +547,6 @@ class hpp_model:
         prob.set_val('p_rated', p_rated)
         prob.set_val('Nwt', Nwt)
         prob.set_val('Awpp', Awpp)
-        #Apvp = solar_MW * self.sim_pars['land_use_per_solar_MW']
-        #prob.set_val('Apvp', Apvp)
 
         prob.set_val('surface_tilt', surface_tilt)
         prob.set_val('surface_azimuth', surface_azimuth)
@@ -589,9 +587,10 @@ class hpp_model:
             b_P,
             prob['total_curtailment']/1e3, #[GWh]
             Awpp,
+            prob.get_val('shared_cost.Apvp'),
             d,
             hh,
-            self.num_batteries
+            prob.get_val('battery_degradation.n_batteries') * (b_P>0)
             ])
     
     def print_design(self, x_opt, outs):

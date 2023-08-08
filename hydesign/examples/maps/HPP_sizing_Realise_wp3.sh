@@ -17,6 +17,7 @@
 #      run sites 0 to 546
 #      maximum of 10 sites running in parallel
 #SBATCH --array=0-546%10
+# #SBATCH --array=547-2201%10
 
 #NODE_ID=$(head -1 $SLURM_JOB_NODELIST)
 NODE_ID=$(scontrol show hostnames $SLURM_JOB_NODELIST)
