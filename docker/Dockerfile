@@ -14,6 +14,7 @@ RUN apt-get -y update
 RUN apt-get -y install make pandoc graphviz
 
 RUN /opt/conda/bin/conda create -y -n hydesign_env python=3.10
+SHELL ["conda", "run", "-n", "hydesign_env", "/bin/bash", "-c"]
 ENV PATH=/opt/conda/envs/hydesign_env/bin:$PATH   
 
 RUN conda install -y -c conda-forge -n hydesign_env smt

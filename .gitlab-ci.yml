@@ -1,4 +1,4 @@
-image: dtuwindenergy/hydesign:0.0.9
+image: dtuwindenergy/hydesign:0.0.10
 
 # ===== TEST hydesign linux=====
 test_hydesign:
