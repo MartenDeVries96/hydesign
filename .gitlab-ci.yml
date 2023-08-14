@@ -5,6 +5,7 @@ test_hydesign:
   stage: 
     test
   script:
+  - conda activate hydesign_env
   - pip install .[test]
   - python -m pytest
   tags:
@@ -29,6 +30,14 @@ pages:
   stage:  
     deploy
   script:  
+  - conda activate hydesign_env
+  - pip install --upgrade pip ipython ipykernel
+  - pip install pypandoc
+  - pip install sphinx --upgrade
+  - pip install nbsphinx --upgrade
+  - pip install nbconvert --upgrade
+  - pip install sphinx_rtd_theme
+  - ipython kernel install --name "python3" --user
   - pip install .[docs] --upgrade
   - cd docs; make html
   - cd ../; mv docs/build/html public/
@@ -49,6 +58,7 @@ pypi:
     - tags
     - test_pypi
   script:
+    - conda activate hydesign_env
     - apt-get update
     - apt-get install -y pandoc
     - pip install --upgrade pip
