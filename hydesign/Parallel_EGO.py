@@ -259,12 +259,6 @@ def surrogate_evaluation(inputs): # Evaluates the surrogate model
         fmin=kwargs['yopt'][0,0],)
 
 
-def get_design_vars(variables):
-    return [var_ for var_ in variables.keys() 
-            if variables[var_]['var_type']=='design'
-           ], [var_ for var_ in variables.keys() 
-               if variables[var_]['var_type']=='fixed']
-
 def get_xlimits(variables, design_var=[]):
     if len(design_var)==0:
         design_var, fixed_var = get_design_vars(variables)
@@ -285,7 +279,7 @@ def cast_to_mixint(x,variables):
             x[:,i] = np.round(x[:,i]/res, decimals=0)*res
     return x
 
-def get_mixint_context(variables):
+def get_mixint_context(variables, seed=None):
     design_var, fixed_var = get_design_vars(variables)    
     list_vars_doe = []
     for var_ in design_var:
@@ -299,7 +293,7 @@ def get_mixint_context(variables):
               variables[var_]['limits'][1]+variables[var_]['resolution'],
               variables[var_]['resolution'], dtype=dtype))
             list_vars_doe += [OrdinalVariable(val_list)]
-    mixint = MixedIntegerContext(DesignSpace(list_vars_doe))
+    mixint = MixedIntegerContext(DesignSpace(list_vars_doe, seed=seed))
     return mixint
 
 def expand_x_for_model_eval(x, kwargs):

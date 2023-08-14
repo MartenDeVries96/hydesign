@@ -38,6 +38,8 @@ Battery Energy [MWh],0.0,0.0,180.0
 Battery Power [MW],0.0,0.0,60.0
 Total curtailment [GWh],0.0,0.0,0.0278582473359522
 Awpp [km2],42.85714285714285,0.0,21.428571428571427
+Apvp [km2],0.0,3.678,1.839
 Rotor diam [m],134.86710626894708,134.86710626894708,134.86710626894708
 Hub height [m],77.43355313447354,77.43355313447354,77.43355313447354
-Number_of_batteries,1.0,1.0,1.0
+Total number of batteries,0.0,0.0,1.0
+Number of battery replacements,0.0,0.0,0.0
