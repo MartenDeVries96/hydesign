@@ -5,6 +5,7 @@ test_hydesign:
   stage: 
     test
   script:
+  - conda init bash
   - conda activate hydesign_env
   - pip install .[test]
   - python -m pytest
@@ -30,6 +31,7 @@ pages:
   stage:  
     deploy
   script:  
+  - conda init bash
   - conda activate hydesign_env
   - pip install --upgrade pip ipython ipykernel
   - pip install pypandoc
@@ -58,6 +60,7 @@ pypi:
     - tags
     - test_pypi
   script:
+    - conda init bash
     - conda activate hydesign_env
     - apt-get update
     - apt-get install -y pandoc
