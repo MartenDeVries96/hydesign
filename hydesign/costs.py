@@ -388,8 +388,8 @@ class battery_cost(om.ExplicitComponent):
         battery_control_system_cost = self.battery_control_system_cost
         battery_energy_onm_cost = self.battery_energy_onm_cost
         
-        ii_battery_change = ii_time[np.where(SoH>=0.999)[0]]
-        
+        ind_replace = np.append(0, np.where(np.diff(SoH)>0.15 )[0]+1 )
+        ii_battery_change = ii_time[ind_replace]
         
         factor = 1.0 - battery_price_reduction_per_year[0]
         N_b_equi = np.sum([factor**(N_life*ii/life_h) for ii in ii_battery_change])

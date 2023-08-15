@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import pickle
+import os
 
 from hydesign.tests.test_files import tfp
 from hydesign.hpp_assembly import hpp_model
@@ -49,8 +50,19 @@ def run_evaluation_design_1():
     b_P, b_E_h , cost_of_batt_degr]
 
     outs = hpp.evaluate(*x)
-    
+    hpp.evaluation_in_csv(os.path.join(tfp + 'tmp', 'test_eval_design_1'), longitude, latitude, altitude, x, outs)
     return outs
+
+def update_test_design_1():
+    output_df = pd.read_csv(
+        tfp+'France_good_wind_design.csv',
+        index_col=0, 
+        parse_dates = True)
+    run_evaluation_design_1()
+    eval_df = pd.read_csv(os.path.join(tfp + 'tmp', 'test_eval_design_1.csv'))
+    output_df['Design 1'] = eval_df.T[0]
+    output_df.to_csv(tfp+'France_good_wind_design.csv')
+    
 
 def load_evaluation_design_1():
     output_df = pd.read_csv(
@@ -109,8 +121,19 @@ def run_evaluation_design_2():
     b_P, b_E_h , cost_of_batt_degr]
 
     outs = hpp.evaluate(*x)
+    hpp.evaluation_in_csv(os.path.join(tfp + 'tmp', 'test_eval_design_2'), longitude, latitude, altitude, x, outs)
     
     return outs
+
+def update_test_design_2():
+    output_df = pd.read_csv(
+        tfp+'France_good_wind_design.csv',
+        index_col=0, 
+        parse_dates = True)
+    run_evaluation_design_2()
+    eval_df = pd.read_csv(os.path.join(tfp + 'tmp', 'test_eval_design_2.csv'))
+    output_df['Design 2'] = eval_df.T[0]
+    output_df.to_csv(tfp+'France_good_wind_design.csv')
 
 def load_evaluation_design_2():
     output_df = pd.read_csv(
@@ -170,8 +193,21 @@ def run_evaluation_design_3():
     b_P, b_E_h , cost_of_batt_degr]
 
     outs = hpp.evaluate(*x)
+    hpp.evaluation_in_csv(os.path.join(tfp + 'tmp', 'test_eval_design_3'), longitude, latitude, altitude, x, outs)
     
     return outs
+
+
+def update_test_design_3():
+    output_df = pd.read_csv(
+        tfp+'France_good_wind_design.csv',
+        index_col=0, 
+        parse_dates = True)
+    run_evaluation_design_3()
+    eval_df = pd.read_csv(os.path.join(tfp + 'tmp', 'test_eval_design_3.csv'))
+    output_df['Design 3'] = eval_df.T[0]
+    output_df.to_csv(tfp+'France_good_wind_design.csv')
+
 
 def load_evaluation_design_3():
     output_df = pd.read_csv(
@@ -191,3 +227,6 @@ def test_evaluation_design_3():
         np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
         
 # ------------------------------------------------------------------------------------------------
+# update_test_design_1()
+# update_test_design_2()
+# update_test_design_3()
