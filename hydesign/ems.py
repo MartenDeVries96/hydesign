@@ -164,11 +164,7 @@ class ems(om.ExplicitComponent):
         elif self.ems_type == 'pyomo':
             ems_WSB = ems_Wind_Solar_Battery_Pyomo
         else:
-            ems_WSB = ems_rule_based
-        
-        # Avoid running an expensive optimization based ems if there is no battery
-        if ( b_P <= 1e-2 ) or (b_E == 0):
-            ems_WSB = ems_rule_based
+            ems_WSB = ems_cplex
     
         battery_depth_of_discharge = inputs['battery_depth_of_discharge']
         battery_charge_efficiency = inputs['battery_charge_efficiency']
@@ -445,7 +441,7 @@ class ems_long_term_operation(om.ExplicitComponent):
             penalty_t_with_deg_all[times_op] = penalty_t_with_deg
             
         b_E_SOC_t_sat[-1] = b_E_SOC_t_sat[0]
-            
+        
         outputs['hpp_t_with_deg'] = Hpp_deg
         outputs['hpp_curt_t_with_deg'] = P_curt_deg
         outputs['b_t_with_deg'] = b_t_sat
@@ -1981,21 +1977,48 @@ def operation_solar_batt_deg(
     P_curt_deg = np.maximum( wind_t + solar_t * pv_degradation + b_t_sat - G_MW, 0)
     
     # Penalty
-    N_t = len(price_ts) 
-    N_days = N_t/24
+    #     N_t = len(price_ts) 
+    #     N_days = N_t/24
+    #     e_peak_day_expected = n_full_power_hours_expected_per_day_at_peak_price*G_MW 
+    #     e_peak_period_expected = e_peak_day_expected*N_days
+    #     price_peak = np.quantile(price_ts, peak_hr_quantile)
+    #     peak_hours_index = np.where(price_ts>=price_peak)[0]
+
+    #     # print('len(Hpp_deg):', len(Hpp_deg))
+    #     # print('peak_hours_index[0]:', peak_hours_index[0])
+    #     # print('peak_hours_index[-1]:', peak_hours_index[-1])
+    #     # print('N_t',N_t)
+
+    #     e_penalty = e_peak_period_expected - np.sum([Hpp_deg[i] for i in peak_hours_index]) 
+    #     penalty = price_peak*np.maximum(0, e_penalty)
+    #     penalty_ts = np.ones_like(N_t) * (penalty/N_t)
+    
+    # Compute penalty per week
+    H_df = pd.DataFrame(
+        np.copy(Hpp_deg),
+        columns=['hpp_t_with_deg'],
+        index=pd.date_range(
+        start='01-01-1991 00:00',
+        periods=len(Hpp_deg),
+        freq='1h')
+    )
+    H_df['price_t_ext'] = price_ts
+    price_peak = np.quantile(H_df['price_t_ext'],peak_hr_quantile)
+    H_df['peak'] = H_df['price_t_ext']>=price_peak
+    H_df.loc[~H_df['peak'],'hpp_t_with_deg']=0
+
+    N_days = 7
+    H_df_week = H_df.resample(f'{N_days}d').sum()
+
     e_peak_day_expected = n_full_power_hours_expected_per_day_at_peak_price*G_MW 
     e_peak_period_expected = e_peak_day_expected*N_days
-    price_peak = np.quantile(price_ts, peak_hr_quantile)
-    peak_hours_index = np.where(price_ts>=price_peak)[0]
-    
-    # print('len(Hpp_deg):', len(Hpp_deg))
-    # print('peak_hours_index[0]:', peak_hours_index[0])
-    # print('peak_hours_index[-1]:', peak_hours_index[-1])
-    # print('N_t',N_t)
-    
-    e_penalty = e_peak_period_expected - np.sum([Hpp_deg[i] for i in peak_hours_index]) 
-    penalty = price_peak*np.maximum(0, e_penalty)
-    penalty_ts = np.ones_like(N_t) * (penalty/N_t)
+
+    H_df_week['e_peak_period_expected'] = e_peak_period_expected
+    H_df_week['e_penalty'] = H_df_week['e_peak_period_expected'] - H_df_week['hpp_t_with_deg']
+    H_df_week['penalty'] = price_peak*np.maximum(0, H_df_week['e_penalty'])
+
+    penalty_df = H_df_week['penalty'].reindex_like(H_df).fillna(0.0)
+    penalty_ts = penalty_df.values.flatten()
     
     return Hpp_deg, P_curt_deg, b_t_sat, b_E_SOC_t_sat, penalty_ts
 

@@ -43,6 +43,7 @@ class hpp_model_P2X:
         genWT_fn = lut_filepath+'genWT_v3.nc',
         genWake_fn = lut_filepath+'genWake_v3.nc',
         verbose = True,
+        name = '',
         **kwargs
 
         ):
@@ -129,7 +130,7 @@ class hpp_model_P2X:
             except:
                 raise('Price timeseries does not match the weather')
             
-            input_ts_fn = f'{work_dir}input_ts.csv'
+            input_ts_fn = f'{work_dir}input_ts{name}.csv'
             weather.to_csv(input_ts_fn)
             N_time = len(weather)
             
@@ -449,7 +450,9 @@ class hpp_model_P2X:
         self.sim_pars = sim_pars
         self.prob = prob
         self.num_batteries = num_batteries
-    
+        self.input_ts_fn = input_ts_fn
+        self.altitude = altitude
+
         self.list_out_vars = [
             'NPV_over_CAPEX',
             'NPV [MEuro]',
@@ -469,10 +472,11 @@ class hpp_model_P2X:
             'Battery Power [MW]',
             'Total curtailment [GWh]',
             'Awpp [km2]',
-            #'Apvp [km2]',
+            'Apvp [km2]',
             'Rotor diam [m]',
             'Hub height [m]',
-            'Number_of_batteries',
+            'Total number of batteries',
+            'Number of battery replacements',
             ]
 
         self.list_vars = [
@@ -603,9 +607,11 @@ class hpp_model_P2X:
             b_P,
             prob['total_curtailment']/1e3, #[GWh]
             Awpp,
+            prob.get_val('shared_cost.Apvp'),
             d,
             hh,
-            self.num_batteries,
+            (b_P>0) + prob.get_val('battery_degradation.n_batteries') * (b_P>0),
+            prob.get_val('battery_degradation.n_batteries') * (b_P>0),
             ])
     
     def print_design(self, x_opt, outs):

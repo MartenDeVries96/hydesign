@@ -44,6 +44,7 @@ class hpp_model:
         genWT_fn = lut_filepath+'genWT_v3.nc',
         genWake_fn = lut_filepath+'genWake_v3.nc',
         verbose = True,
+        name = '',
         **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
@@ -143,7 +144,7 @@ class hpp_model:
             except:
                 raise('Price timeseries does not match the weather')
             
-            input_ts_fn = f'{work_dir}input_ts.csv'
+            input_ts_fn = f'{work_dir}input_ts{name}.csv'
             print(f'\ninput_ts_fn extracted and stored in {input_ts_fn}')
             weather.to_csv(input_ts_fn)
             N_time = len(weather)
@@ -436,6 +437,8 @@ class hpp_model:
         self.sim_pars = sim_pars
         self.prob = prob
         self.num_batteries = num_batteries
+        self.input_ts_fn = input_ts_fn
+        self.altitude = altitude
     
         self.list_out_vars = [
             'NPV_over_CAPEX',
@@ -462,10 +465,11 @@ class hpp_model:
             'Battery Power [MW]',
             'Total curtailment [GWh]',
             'Awpp [km2]',
-            #'Apvp [km2]',
+            'Apvp [km2]',
             'Rotor diam [m]',
             'Hub height [m]',
-            'Number_of_batteries',
+            'Total number of batteries',
+            'Number of battery replacements',
             ]
 
         self.list_vars = [
@@ -546,8 +550,6 @@ class hpp_model:
         prob.set_val('p_rated', p_rated)
         prob.set_val('Nwt', Nwt)
         prob.set_val('Awpp', Awpp)
-        #Apvp = solar_MW * self.sim_pars['land_use_per_solar_MW']
-        #prob.set_val('Apvp', Apvp)
 
         prob.set_val('surface_tilt', surface_tilt)
         prob.set_val('surface_azimuth', surface_azimuth)
@@ -588,9 +590,11 @@ class hpp_model:
             b_P,
             prob['total_curtailment']/1e3, #[GWh]
             Awpp,
+            prob.get_val('shared_cost.Apvp'),
             d,
             hh,
-            self.num_batteries
+            (b_P>0) + prob.get_val('battery_degradation.n_batteries') * (b_P>0),
+            prob.get_val('battery_degradation.n_batteries') * (b_P>0),
             ])
     
     def print_design(self, x_opt, outs):
@@ -647,9 +651,11 @@ class hpp_model:
                                             'Battery Power [MW]',
                                             'Total curtailment [GWh]',
                                             'Awpp [km2]',
+                                            'Apvp [km2]',
                                             'Rotor diam [m]',
                                             'Hub height [m]',
-                                            'Number_of_batteries'
+                                            'Total number of batteries',
+                                            'Number of battery replacements',
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
         design_df.to_csv(f'{name_file}.csv')
