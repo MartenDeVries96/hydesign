@@ -1,26 +1,26 @@
 # %%
-import glob
+# import glob
 import os
-import time
+# import time
 
 # basic libraries
 import numpy as np
-from numpy import newaxis as na
-import numpy_financial as npf
+# from numpy import newaxis as na
+# import numpy_financial as npf
 import pandas as pd
 # import seaborn as sns
 import openmdao.api as om
 import yaml
-import scipy as sp
-from scipy import stats
+# import scipy as sp
+# from scipy import stats
 import xarray as xr
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from hydesign.weather import extract_weather_for_HPP, ABL
-from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_area, get_rotor_d
-from hydesign.pv import pvp, pvp_degradation_linear
-from hydesign.ems import ems_P2X, ems_long_term_operation
-from hydesign.battery_degradation import battery_degradation
+from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_d # , get_rotor_area
+from hydesign.pv import pvp #, pvp_degradation_linear
+from hydesign.ems import ems_P2X #, ems_long_term_operation
+# from hydesign.battery_degradation import battery_degradation
 from hydesign.costs import wpp_cost, pvp_cost, battery_cost, shared_cost, ptg_cost
 from hydesign.finance import finance_P2X
 from hydesign.look_up_tables import lut_filepath
@@ -96,13 +96,13 @@ class hpp_model_P2X:
         N_life = sim_pars['N_life']
         life_h = N_life*365*24
         n_steps_in_LoH = sim_pars['n_steps_in_LoH']
-        G_MW = sim_pars['G_MW']
-        battery_depth_of_discharge = sim_pars['battery_depth_of_discharge']
-        battery_charge_efficiency = sim_pars['battery_charge_efficiency']
-        min_LoH = sim_pars['min_LoH']
-        pv_deg_per_year = sim_pars['pv_deg_per_year']
+        # G_MW = sim_pars['G_MW']
+        # battery_depth_of_discharge = sim_pars['battery_depth_of_discharge']
+        # battery_charge_efficiency = sim_pars['battery_charge_efficiency']
+        # min_LoH = sim_pars['min_LoH']
+        # pv_deg_per_year = sim_pars['pv_deg_per_year']
         wpp_efficiency = sim_pars['wpp_efficiency']
-        land_use_per_solar_MW = sim_pars['land_use_per_solar_MW']
+        # land_use_per_solar_MW = sim_pars['land_use_per_solar_MW']
         
         # Extract weather timeseries
         if input_ts_fn == None:
@@ -475,8 +475,7 @@ class hpp_model_P2X:
             'Apvp [km2]',
             'Rotor diam [m]',
             'Hub height [m]',
-            'Total number of batteries',
-            'Number of battery replacements',
+            'Number of batteries used in lifetime',
             ]
 
         self.list_vars = [
@@ -610,8 +609,7 @@ class hpp_model_P2X:
             prob.get_val('shared_cost.Apvp'),
             d,
             hh,
-            (b_P>0) + prob.get_val('battery_degradation.n_batteries') * (b_P>0),
-            prob.get_val('battery_degradation.n_batteries') * (b_P>0),
+            self.num_batteries * (b_P>0),
             ])
     
     def print_design(self, x_opt, outs):

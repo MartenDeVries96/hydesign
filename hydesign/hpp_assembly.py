@@ -468,8 +468,7 @@ class hpp_model:
             'Apvp [km2]',
             'Rotor diam [m]',
             'Hub height [m]',
-            'Total number of batteries',
-            'Number of battery replacements',
+            'Number of batteries used in lifetime',
             ]
 
         self.list_vars = [
@@ -593,7 +592,6 @@ class hpp_model:
             prob.get_val('shared_cost.Apvp'),
             d,
             hh,
-            (b_P>0) + prob.get_val('battery_degradation.n_batteries') * (b_P>0),
             prob.get_val('battery_degradation.n_batteries') * (b_P>0),
             ])
     
@@ -654,8 +652,7 @@ class hpp_model:
                                             'Apvp [km2]',
                                             'Rotor diam [m]',
                                             'Hub height [m]',
-                                            'Total number of batteries',
-                                            'Number of battery replacements',
+                                            'Number of batteries used in lifetime',
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
         design_df.to_csv(f'{name_file}.csv')
