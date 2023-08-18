@@ -138,7 +138,8 @@ nbsphinx_prolog = r"""
 
 
         :raw-html:`<a href="https://colab.research.google.com/github/DTUWindEnergy/hydesign/blob/main/{{ docname }}"><img alt="Open and run in Colab (interactive)" src="https://colab.research.google.com/assets/colab-badge.svg" style="vertical-align:text-bottom"></a>
-        <a href="https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/-/tree/main/{{ docname }}"><img alt="Edit on Gitlab" src="https://img.shields.io/badge/Edit%20on-Gitlab-blue?style=flat&logo=gitlab" style="vertical-align:text-bottom"></a>`
+        <a href="https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign/-/tree/main/{{ docname }}"><img alt="Edit on Gitlab" src="https://img.shields.io/badge/Edit%20on-Gitlab-blue?style=flat&logo=gitlab" style="vertical-align:text-bottom"></a>
+        <a href="https://kaggle.com/kernels/welcome?src=https://github.com/DTUWindEnergy/hydesign/blob/main/{{ docname }}"><img alt="Open and run in Kaggle (interactive)" src="https://kaggle.com/static/images/open-in-kaggle.svg" style="vertical-align:text-bottom"></a>`
 
 """
 

@@ -78,7 +78,7 @@ class battery_degradation(om.ExplicitComponent):
         b_E_SOC_t = inputs['b_E_SOC_t']
         min_LoH = inputs['min_LoH'][0]
 
-        if np.max(b_E_SOC_t) == 0:
+        if np.max(b_E_SOC_t) == 0 or num_batteries==0:
             nn = self.n_steps_in_LoH*self.num_batteries + 1
             outputs['ii_time'] = np.linspace(0,self.life_h, nn, dtype=int, endpoint=False)
             outputs['SoH'] = 0*np.ones(nn)
@@ -91,7 +91,7 @@ class battery_degradation(om.ExplicitComponent):
             avr_tem = 20
 
             # loop to determine the maximum number of replacements
-            for n_batteries in range(num_batteries):
+            for n_batteries in np.arange(num_batteries, dtype=int) + 1:
                 LoC, ind_q, _ = battery_replacement(
                     rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, 
                     min_LoH, n_steps_in_LoH, n_batteries)
