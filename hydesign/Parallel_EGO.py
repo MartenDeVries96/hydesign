@@ -728,7 +728,7 @@ if __name__ == '__main__':
         'DC_AC_ratio':
             {'var_type':'design',
               'limits':[1, 2.0],
-              'types':FLOAT
+              'types':'float'
              },
         # 'DC_AC_ratio':
         #     {'var_type':'fixed',
