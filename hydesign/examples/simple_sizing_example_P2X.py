@@ -1,7 +1,6 @@
 if __name__ == '__main__':
     from hydesign.hpp_assembly_P2X import hpp_model_P2X as hpp_model
     from hydesign.Parallel_EGO import get_kwargs, EfficientGlobalOptimizationDriver
-    from smt.applications.mixed_integer import FLOAT, INT
 
     # Simple example to size wind and electrolyzer only with a single core to run test machines and colab
     
@@ -34,7 +33,7 @@ if __name__ == '__main__':
         'clearance [m]':
             {'var_type':'design',
               'limits':[10, 60],
-              'types':INT
+              'types':'int'
               },
             # {'var_type':'fixed',
             #   'value': 35
@@ -42,12 +41,12 @@ if __name__ == '__main__':
          'sp [W/m2]':
             {'var_type':'design',
              'limits':[200, 360],
-             'types':INT
+             'types':'int'
              },
         'p_rated [MW]':
             {'var_type':'design',
               'limits':[1, 10],
-              'types':INT
+              'types':'int'
               },
             # {'var_type':'fixed',
             #  'value': 6
@@ -55,7 +54,7 @@ if __name__ == '__main__':
         'Nwt':
             {'var_type':'design',
               'limits':[0, 400],
-              'types':INT
+              'types':'int'
               },
             # {'var_type':'fixed',
             #   'value': 200
@@ -63,7 +62,7 @@ if __name__ == '__main__':
         'wind_MW_per_km2 [MW/km2]':
             # {'var_type':'design',
             #   'limits':[5, 9],
-            #   'types':FLOAT
+            #   'types':'float'
             #   },
             {'var_type':'fixed',
               'value': 7
@@ -71,7 +70,7 @@ if __name__ == '__main__':
         'solar_MW [MW]':
             # {'var_type':'design',
             #   'limits':[0, 400],
-            #   'types':INT
+            #   'types':'int'
             #   },
             {'var_type':'fixed',
               'value': 200
@@ -79,7 +78,7 @@ if __name__ == '__main__':
         'surface_tilt [deg]':
             # {'var_type':'design',
             #   'limits':[0, 50],
-            #   'types':FLOAT
+            #   'types':'float'
             #   },
             {'var_type':'fixed',
               'value': 25
@@ -87,7 +86,7 @@ if __name__ == '__main__':
         'surface_azimuth [deg]':
             # {'var_type':'design',
             #   'limits':[150, 210],
-            #   'types':FLOAT
+            #   'types':'float'
             #   },
             {'var_type':'fixed',
               'value': 180
@@ -95,7 +94,7 @@ if __name__ == '__main__':
         'DC_AC_ratio':
             # {'var_type':'design',
             #   'limits':[1, 2.0],
-            #   'types':FLOAT
+            #   'types':'float'
             #   },
             {'var_type':'fixed',
               'value':1.0,
@@ -103,7 +102,7 @@ if __name__ == '__main__':
         'b_P [MW]':
             # {'var_type':'design',
             #   'limits':[0, 100],
-            #   'types':INT
+            #   'types':'int'
             #   },
             {'var_type':'fixed',
               'value': 50
@@ -111,7 +110,7 @@ if __name__ == '__main__':
         'b_E_h [h]':
             # {'var_type':'design',
             #   'limits':[1, 10],
-            #   'types':INT
+            #   'types':'int'
             #   },
             {'var_type':'fixed',
               'value': 6
@@ -119,14 +118,14 @@ if __name__ == '__main__':
         'cost_of_battery_P_fluct_in_peak_price_ratio':
             # {'var_type':'design',
             #   'limits':[0, 20],
-            #   'types':FLOAT
+            #   'types':'float'
             #   },
             {'var_type':'fixed',
               'value': 10},
         'ptg_MW [MW]':
             {'var_type':'design',
               'limits':[1, 50],
-              'types':INT
+              'types':'int'
               },
 
         }
