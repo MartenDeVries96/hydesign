@@ -1,0 +1,38 @@
+,France_good_wind
+clearance [m],28.000000000000004
+sp [m2/W],212.00000000000003
+p_rated [MW],3.0
+Nwt,94.0
+wind_MW_per_km2 [MW/km2],7.663768274022346
+solar_MW [MW],107.0
+surface_tilt [deg],48.31134062100937
+surface_azimuth [deg],172.14827697388085
+DC_AC_ratio,1.264963874273492
+b_P [MW],51.0
+b_E_h [h],9.0
+cost_of_battery_P_fluct_in_peak_price_ratio,12.308987528084314
+ptg_MW [MW],48.0
+NPV_over_CAPEX,0.44321033479214333
+NPV [MEuro],194.18425272819553
+IRR,0.09598600362693888
+LCOE [Euro/MWh],40.10957167314006
+CAPEX [MEuro],438.13114786518685
+OPEX [MEuro],16.330972054131426
+penalty lifetime [MEuro],0.0
+AEP [GWh],1214.1153327984316
+GUF,0.46199213576804854
+annual H2 [kg],5958832.919810556
+grid [MW],300.0
+wind [MW],282.0
+solar [MW],107.0
+PtG [MW],48.0
+Battery Energy [MWh],459.0
+Battery Power [MW],51.0
+Total curtailment [GWh],5.269414358611286
+Awpp [km2],36.796519664599884
+Rotor diam [m],134.22943316346223
+Hub height [m],95.11471658173112
+Number_of_batteries,1.0
+design obj,NPV_over_CAPEX
+opt time [min],2.74
+n_model_evals,40

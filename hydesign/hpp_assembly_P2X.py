@@ -351,11 +351,16 @@ class hpp_model_P2X:
                               'IRR',
                               'NPV_over_CAPEX',
                               'LCOE',
+                              'LCOH',
+                              'Revenue',
                               'mean_AEP',
+                              'mean_Power2Grid',
                               'annual_H2',
+                              'annual_P_ptg',
                               'penalty_lifetime',
                               'CAPEX',
-                              'OPEX'
+                              'OPEX',
+                              'oppurtunity_cost',
                               ],
         )
                   
@@ -414,7 +419,9 @@ class hpp_model_P2X:
         model.connect('ems_P2X.price_t_ext', 'finance_P2X.price_t_ext')
         model.connect('ems_P2X.hpp_t', 'finance_P2X.hpp_t')
         model.connect('ems_P2X.penalty_t', 'finance_P2X.penalty_t')
+        model.connect('ems_P2X.hpp_curt_t', 'finance_P2X.hpp_curt_t')
         model.connect('ems_P2X.m_H2_t', 'finance_P2X.m_H2_t')
+        model.connect('ems_P2X.P_ptg_t', 'finance_P2X.P_ptg_t')
         model.connect('ems_P2X.m_H2_t', 'ptg_cost.m_H2_t' )
         
         prob = om.Problem(
@@ -455,12 +462,17 @@ class hpp_model_P2X:
             'NPV [MEuro]',
             'IRR',
             'LCOE [Euro/MWh]',
+            'LCOH [Euro/kg]',
+            'Revenue [MEuro]',
             'CAPEX [MEuro]',
             'OPEX [MEuro]',
             'penalty lifetime [MEuro]',
             'AEP [GWh]',
+            'mean_Power2Grid [GWh]',
             'GUF',
-            'annual H2 [kg]',
+            'annual H2 [tonnes]',
+            'annual_P_ptg [GWh]',
+            'oppurtunity_cost [MEuro]',
             'grid [MW]',
             'wind [MW]',
             'solar [MW]',
@@ -527,9 +539,12 @@ class hpp_model_P2X:
         prob['NPV'] : Net present value
         prob['IRR'] : Internal rate of return
         prob['LCOE'] : Levelized cost of energy
+        prob['LCOH'] : Levelized cost of hydrogen
         prob['CAPEX'] : Total capital expenditure costs of the HPP
         prob['OPEX'] : Operational and maintenance costs of the HPP
         prob['penalty_lifetime'] : Lifetime penalty
+        prob['AEP']: Annual energy production
+        prob['mean_Power2Grid']: Power to grid
         prob['mean_AEP']/(self.sim_pars['G_MW']*365*24) : Grid utilization factor
         prob['annual_H2']: Annual H2 production
         self.sim_pars['G_MW'] : Grid connection [MW]
@@ -588,13 +603,18 @@ class hpp_model_P2X:
             prob['NPV']/1e6,
             prob['IRR'],
             prob['LCOE'],
+            prob['LCOH'],
+            prob['Revenue']/1e6,
             prob['CAPEX']/1e6,
             prob['OPEX']/1e6,
             prob['penalty_lifetime']/1e6,
             prob['mean_AEP']/1e3, #[GWh]
+            prob['mean_Power2Grid']/1e3, #GWh
             # Grid Utilization factor
-            prob['mean_AEP']/(self.sim_pars['G_MW']*365*24),
-            prob['annual_H2'],
+            prob['mean_Power2Grid']/(self.sim_pars['G_MW']*365*24),
+            prob['annual_H2']/1e3, # in tonnes
+            prob['annual_P_ptg']/1e3, # in GWh
+            prob['oppurtunity_cost']/1e6, # MEuro
             self.sim_pars['G_MW'],
             wind_MW,
             solar_MW,

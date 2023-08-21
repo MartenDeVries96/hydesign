@@ -1,0 +1,43 @@
+,Denmark_good_wind
+clearance [m],10.0
+sp [m2/W],358.99999999999994
+p_rated [MW],3.0
+Nwt,103.0
+wind_MW_per_km2 [MW/km2],5.000000000000007
+solar_MW [MW],0.0
+surface_tilt [deg],49.99999999999899
+surface_azimuth [deg],164.6733798581136
+DC_AC_ratio,1.0000000000000007
+b_P [MW],0.0
+b_E_h [h],6.000000000000001
+cost_of_battery_P_fluct_in_peak_price_ratio,1.6209535423480179e-13
+NPV_over_CAPEX,0.44715465374241126
+NPV [MEuro],127.5261056785583
+IRR,0.09589536894528194
+LCOE [Euro/MWh],22.025956254853
+CAPEX [MEuro],285.1946292211044
+OPEX [MEuro],6.749789277807251
+Wind CAPEX [MEuro],219.55042922110445
+Wind OPEX [MEuro],6.749789277807251
+PV CAPEX [MEuro],0.0
+PV OPEX [MEuro],0.0
+Batt CAPEX [MEuro],0.0
+Batt OPEX [MEuro],0.0
+Shared CAPEX [MEuro],65.64419999999997
+Shared Opex [MEuro],0.0
+penalty lifetime [MEuro],0.0
+AEP [GWh],1260.3035428205542
+GUF,0.4795675581508958
+grid [MW],300.0
+wind [MW],309.0
+solar [MW],0.0
+Battery Energy [MWh],0.0
+Battery Power [MW],0.0
+Total curtailment [GWh],203.07896961980904
+Awpp [km2],61.79999999999991
+Rotor diam [m],103.1498171348144
+Hub height [m],61.5749085674072
+Number_of_batteries,1.0
+design obj,NPV_over_CAPEX
+opt time [min],5.16
+n_model_evals,141

@@ -18,16 +18,13 @@ from smt.applications.mixed_integer import (
 from smt.sampling_methods import LHS
 from hydesign.hpp_assembly import hpp_model
 from hydesign.examples import examples_filepath
-from hydesign.EGO_surrogate_based_optimization import (
-    get_sm, 
-    eval_sm,
-    get_candiate_points, 
-    opt_sm, 
-    opt_sm_EI, 
-    perturbe_around_point,
-    extreme_around_point,
-    drop_duplicates,
-    concat_to_existing)
+
+import os
+EGO_path = os.path.dirname(__file__).replace("\\", "/") + '/'
+
+from hydesign.EGO_surrogate_based_optimization import (get_sm, eval_sm,
+                                                       get_candiate_points, opt_sm, drop_duplicates,
+                                                       concat_to_existing)
 from sys import version_info
 from openmdao.core.driver import Driver
 
@@ -41,46 +38,11 @@ def surrogate_evaluation(inputs): # Evaluates the surrogate model
     seed, kwargs = inputs
     mixint = MixedIntegerContext(kwargs['xtypes'], kwargs['xlimits'])
     return eval_sm(
-        kwargs['sm'], mixint, 
-        scaler=kwargs['scaler'],
-        seed=seed, #different seed on each iteration
-        npred=kwargs['npred'],
-        fmin=kwargs['yopt'][0,0],)
-
-
-def get_design_vars(variables):
-    return [var_ for var_ in variables.keys() 
-            if variables[var_]['var_type']=='design'
-           ], [var_ for var_ in variables.keys() 
-               if variables[var_]['var_type']=='fixed']
-
-def get_xlimits(variables, design_var=[]):
-    if len(design_var)==0:
-        design_var, fixed_var = get_design_vars(variables)
-    return np.array([variables[var_]['limits'] for var_ in design_var])
-
-def get_xtypes(variables, design_var=[]):
-    if len(design_var)==0:
-        design_var, fixed_var = get_design_vars(variables)
-    return [variables[var_]['types'] for var_ in design_var]
-
-
-def expand_x_for_model_eval(x, kwargs):
-    
-    list_vars = kwargs['list_vars']
-    variables = kwargs['variables']
-    design_vars = kwargs['design_vars']
-    fixed_vars = kwargs['fixed_vars']
-        
-    x_eval = np.zeros([x.shape[0], len(list_vars)])
-
-    for ii,var in enumerate(list_vars):
-        if var in design_vars:
-            x_eval[:,ii] = x[:,design_vars.index(var)]
-        elif var in fixed_vars:
-            x_eval[:,ii] = variables[var]['value']
-
-    return x_eval
+    kwargs['sm'], mixint, 
+    scaler=kwargs['scaler'],
+    seed=seed, #different seed on each iteration
+    npred=kwargs['npred'],
+    fmin=kwargs['yopt'][0,0],)
 
 def model_evaluation(inputs): # Evaluates the model
     x, kwargs = inputs
@@ -89,9 +51,8 @@ def model_evaluation(inputs): # Evaluates the model
             verbose=False)
 
     x = kwargs['scaler'].inverse_transform(x)
-    x_eval = expand_x_for_model_eval(x, kwargs)
     return np.array(
-        kwargs['opt_sign']*hpp_m.evaluate(*x_eval[0,:])[kwargs['op_var_index']])
+        kwargs['opt_sign']*hpp_m.evaluate(*x[0,:])[kwargs['op_var_index']])
 
 
 class ParallelEvaluator(Evaluator):
@@ -115,7 +76,7 @@ class ParallelEvaluator(Evaluator):
             raise('version_info.major==2')
             
         with Pool(n_procs) as p:
-            return (p.map(fun, [((n + i * n_procs) * 100 + kwargs['n_seed'], kwargs) for n in np.arange(n_procs)]))
+            return (p.map(fun, [((n + i * 100) * 100 + kwargs['n_seed'], kwargs) for n in np.arange(n_procs)]))
         
     def run_xopt_iter(self, fun, x, **kwargs):
         n_procs = self.n_procs
@@ -201,11 +162,9 @@ class EfficientGlobalOptimizationDriver(Driver):
         
         start_total = time.time()
         
-        variables = kwargs['variables']
-        design_vars, fixed_vars = get_design_vars(variables)
-        xlimits = get_xlimits(variables, design_vars)
-        xtypes = get_xtypes(variables, design_vars)
-                
+        xtypes = kwargs['xtypes']
+        xlimits = kwargs['xlimits']
+        
         # Scale design variables
         scaler = MinMaxScaler()
         scaler.fit(xlimits.T)
@@ -253,10 +212,6 @@ class EfficientGlobalOptimizationDriver(Driver):
         kwargs.update({'op_var_index': op_var_index})
         # Stablish types for design variables
         
-        kwargs['list_vars'] = list_vars
-        kwargs['design_vars'] = design_vars
-        kwargs['fixed_vars'] = fixed_vars
-        
         # Evaluate model at initial doe
         start = time.time()
         n_procs = kwargs['n_procs']
@@ -264,19 +219,16 @@ class EfficientGlobalOptimizationDriver(Driver):
         ydoe = PE.run_ydoe(fun=model_evaluation,x=xdoe, **kwargs)
         
         lapse = np.round((time.time() - start)/60, 2)
-        print(f'Initial {xdoe.shape[0]} simulations took {lapse} minutes')
+        print(f'Initial {xdoe.shape[0]} simulations took {lapse} minutes\n')
         
         # Initialize iterative optimization
         itr = 0
         error = 1e10
         conv_iter = 0
-        xopt = xdoe[[np.argmin(ydoe)],:]
         yopt = ydoe[[np.argmin(ydoe)],:]
         kwargs['yopt'] = yopt
         yold = np.copy(yopt)
         # xold = None
-        print(f'  Current solution {opt_sign}*{opt_var} = {float(yopt):.3E}\n'.replace('1*',''))
-    
         while itr < kwargs['max_iter']:
             # Iteration
             start_iter = time.time()
@@ -299,29 +251,15 @@ class EfficientGlobalOptimizationDriver(Driver):
             n_clusters = kwargs['n_clusters']
             xnew = get_candiate_points(
                 xpred, ypred_LB, 
-                n_clusters = n_clusters, #n_clusters - 1, 
-                quantile = 1e-2) #1/(kwargs['npred']/n_clusters) ) 
+                n_clusters = n_clusters, 
+                quantile = 1/(kwargs['npred']/n_clusters) ) 
                 # request candidate points based on global evaluation of current surrogate 
                 # returns best designs in n_cluster of points with outputs bellow a quantile
             lapse = np.round( ( time.time() - start )/60, 2)
             print(f'Update sm and extract candidate points took {lapse} minutes')
             
-            
-            # -------------------
-            # Refinement
-            # -------------------
-            # # optimize the sm starting on the cluster based candidates and the best design
-            #xnew, _ = concat_to_existing(xnew, _, xopt, _)
-            #xopt_iter = PE.run_xopt_iter(surrogate_optimization, xnew, **kwargs)
-            
-            # 2C) 
-            if (np.abs(error) < kwargs['tol']): 
-                #add refinement around the opt
-                xopt_iter = perturbe_around_point(xopt, step=0.1)
-            else: 
-                #add extremes on each opt_var (one at a time) around the opt
-                xopt_iter = extreme_around_point(xopt)
-            
+            # # optimize the sm starting on the cluster based candidates 
+            xopt_iter = PE.run_xopt_iter(surrogate_optimization, xnew, **kwargs)
             xopt_iter = scaler.inverse_transform(xopt_iter)
             xopt_iter = np.array([mixint.cast_to_mixed_integer( xopt_iter[i,:]) 
                             for i in range(xopt_iter.shape[0])]).reshape(xopt_iter.shape)
@@ -345,10 +283,8 @@ class EfficientGlobalOptimizationDriver(Driver):
             yopt = ydoe_upd[[np.argmin(ydoe_upd)],:]
             
             #if itr > 0:
-            error = opt_sign * float(1 - (yold/yopt) ) 
-            print(f'  Current solution {opt_sign}*{opt_var} = {float(yopt):.3E}'.replace('1*',''))
+            error = float(1 - yopt/yold)
             print(f'  rel_yopt_change = {error:.2E}')
-
         
             xdoe = np.copy(xdoe_upd)
             ydoe = np.copy(ydoe_upd)
@@ -368,8 +304,7 @@ class EfficientGlobalOptimizationDriver(Driver):
                 conv_iter = 0
         
         xopt = scaler.inverse_transform(xopt)
-        xopt = expand_x_for_model_eval(xopt, kwargs)
-
+        
         # Re-Evaluate the last design to get all outputs
         outs = hpp_m.evaluate(*xopt[0,:])
         yopt = np.array(opt_sign*outs[[op_var_index]])[:,na]
@@ -397,7 +332,7 @@ class EfficientGlobalOptimizationDriver(Driver):
 
 if __name__ == '__main__':
     inputs = {
-        'example': 4,
+        'example': 9,
         'name': None,
         'longitude': None,
         'latitude': None,
@@ -406,87 +341,60 @@ if __name__ == '__main__':
         'sim_pars_fn': None,
 
         'opt_var': "NPV_over_CAPEX",
-        'num_batteries': 2,
-        'n_procs': 32,
-        'n_doe': 160,
-        'n_clusters': 8, # total number of evals per iteration = n_clusters + 2*n_dims
-        'n_seed': 1,
-        'max_iter': 10,
-        'final_design_fn': 'hydesign_design_0.csv',
-        'npred': 3e4,
-        'tol': 1e-3,
+        'rotor_diameter_m': 100,
+        'hub_height_m': 120,
+        'wt_rated_power_MW': 2,
+        'surface_tilt_deg': 20,
+        'surface_azimuth_deg': 180,
+        'DC_AC_ratio': 1,
+        'num_batteries': 1,
+        'n_procs': 8,
+        'n_doe': 16,
+        'n_clusters': 4,
+        'n_seed': 0,
+        'max_iter': 4,
+        'final_design_fn': 'hydesign_design_9.csv',
+        'npred': 1e5,
+        'tol': 1e-6,
         'min_conv_iter': 3,
         'work_dir': './',
         }
 
     kwargs = get_kwargs(inputs)
-    kwargs['variables'] = {
-        'clearance [m]':
-            {'var_type':'design',
-             'limits':[10, 60],
-             'types':INT
-             },
-         'sp [m2/W]':
-            {'var_type':'design',
-             'limits':[200, 400],
-             'types':INT
-             },
-        'p_rated [MW]':
-            {'var_type':'design',
-             'limits':[1, 10],
-             'types':INT
-             },
-        'Nwt':
-            {'var_type':'design',
-             'limits':[0, 400],
-             'types':INT
-             },
-        'wind_MW_per_km2 [MW/km2]':
-            {'var_type':'design',
-             'limits':[5, 9],
-             'types':FLOAT
-             },
-        'solar_MW [MW]':
-            {'var_type':'design',
-             'limits':[0, 400],
-             'types':INT
-             },
-        'surface_tilt [deg]':
-            {'var_type':'design',
-             'limits':[0, 50],
-             'types':FLOAT
-             },
-        'surface_azimuth [deg]':
-            {'var_type':'design',
-             'limits':[150, 210],
-             'types':FLOAT
-             },
-    #     'DC_AC_ratio':
-    #         {'var_type':'design',
-    #          'limits':[1, 2.0],
-    #          'types':FLOAT
-    #          },
-        'DC_AC_ratio':
-            {'var_type':'fixed',
-             'value':1.0,
-             },
-        'b_P [MW]':
-            {'var_type':'design',
-             'limits':[0, 100],
-             'types':INT
-             },
-        'b_E_h [h]':
-            {'var_type':'design',
-             'limits':[1, 10],
-             'types':INT
-             },
-        'cost_of_battery_P_fluct_in_peak_price_ratio':
-            {'var_type':'design',
-             'limits':[0, 20],
-             'types':FLOAT
-             },
-    }    
-        
-    # EGOD = EfficientGlobalOptimizationDriver(model=hpp_model, **kwargs)
-    # EGOD.run()
-    # result = EGOD.result
+    kwargs['xtypes'] = [
+        #clearance, sp, p_rated, Nwt, wind_MW_per_km2, 
+        INT, INT, INT, INT, FLOAT, 
+        #solar_MW, surface_tilt, surface_azimuth, DC_AC_ratio
+        INT,FLOAT,FLOAT,FLOAT,
+        #b_P, b_E_h , cost_of_battery_P_fluct_in_peak_price_ratio
+        INT,INT,FLOAT]
+
+    kwargs['xlimits'] = np.array([
+        #clearance: min distance tip to ground
+        [10, 60],
+        #Specific Power
+        [200, 360],
+        #p_rated
+        [1, 10],
+        #Nwt
+        [0, 400],
+        #wind_MW_per_km2
+        [5, 9],
+        #solar_MW
+        [0, 400],
+        #surface_tilt
+        [0, 50],
+        #surface_azimuth
+        [150, 210],
+        #DC_AC_ratio
+        [1, 2.0],
+        #b_P in MW
+        [0, 10],
+        #b_E_h in h
+        [1, 10],
+        #cost_of_battery_P_fluct_in_peak_price_ratio
+        [0, 20],
+        ])    
+    EGOD = EfficientGlobalOptimizationDriver(model=hpp_model, **kwargs)
+    EGOD.run()
+    result = EGOD.result

@@ -1,3 +1,4 @@
+# %% finance model with P2X with hydrogen storage and transportation
 import glob
 import os
 import time
@@ -243,13 +244,18 @@ class finance_P2X(om.ExplicitComponent):
                         desc="penalty for not reaching expected energy productin at peak hours",
                         shape=[self.life_h])
         
-        self.add_input('hpp_curt_t',
-                        desc="HPP curtailed power time series",
-                        units='MW',
-                        shape=[self.life_h])
-        
         self.add_input('m_H2_t',
                        desc = "Produced Hydrogen",
+                       units = 'kg',
+                       shape=[self.life_h])
+
+        self.add_input('m_H2_offtake_t',
+                       desc = "Produced Hydrogen",
+                       units = 'kg',
+                       shape=[self.life_h])
+        
+        self.add_input('m_H2_demand_t_ext',
+                       desc = "Hydrogen demand times series",
                        units = 'kg',
                        shape=[self.life_h])
         
@@ -321,30 +327,14 @@ class finance_P2X(om.ExplicitComponent):
         self.add_output('mean_AEP',
                         desc="mean AEP")
         
-        self.add_output('mean_Power2Grid',
-                        desc="Power to grid")
-        
         self.add_output('annual_H2',
                         desc = "Annual H2 production")
         
         self.add_output('LCOE',
                         desc="LCOE")
         
-        self.add_output('LCOH',
-                        desc="LCOH")
-        
-        self.add_output('Revenue',
-                        desc="Revenue")
-        
-        self.add_output('annual_P_ptg',
-                        desc="annual_P_ptg")
-        
         self.add_output('penalty_lifetime',
                         desc="penalty_lifetime")
-        
-        self.add_output('oppurtunity_cost',
-                        desc="oppurtunity_cost")
-        
 
     def setup_partials(self):
         self.declare_partials('*', '*', method='fd')
@@ -357,8 +347,9 @@ class finance_P2X(om.ExplicitComponent):
         price_t_ext : Electricity price time series [Eur]
         hpp_t_with_deg : HPP power time series [MW]
         penalty_t : penalty for not reaching expected energy productin at peak hours [Eur]
-        hpp_curt_t : HPP curtailed power time series
         m_H2_t: Produced Hydrogen
+        m_H2_offtake_t: Hydrogen offtake time series
+        m_H2_demand_t_ext: Hydrogen demand times series
         P_ptg_t: Electrolyzer power consumption time series
         price_H2: H2 price
         CAPEX_w : CAPEX of the wind power plant
@@ -384,13 +375,10 @@ class finance_P2X(om.ExplicitComponent):
         NPV : Net present value
         IRR : Internal rate of return
         NPV_over_CAPEX : NPV over CAPEX
-        Revenue: revenue
         mean_AEP : Mean annual energy production
         annual_H2: Annual H2 production
         LCOE : Levelized cost of energy
         penalty_lifetime : total penalty
-        oppurtunity_cost: revenue lost for not selling power to grid due to curtailment (makes more sense when grid_MW = 0)
-        mean_Power2Grid: annual power to grid
         """
         
         N_time = self.N_time
@@ -400,12 +388,13 @@ class finance_P2X(om.ExplicitComponent):
         
         df['hpp_t'] = inputs['hpp_t']
         df['m_H2_t'] = inputs['m_H2_t']
+        df['m_H2_offtake_t'] = inputs['m_H2_offtake_t']
         df['P_ptg_t'] = inputs['P_ptg_t']
-        df['hpp_curt_t'] = inputs['hpp_curt_t']
         price_H2 = inputs['price_H2']
         df['price_t'] = inputs['price_t_ext']
         df['penalty_t'] = inputs['penalty_t']
-        df['revenue'] = df['hpp_t'] * df['price_t'] + df['m_H2_t'] * price_H2 - df['penalty_t']
+        df['m_H2_demand_t_ext'] = inputs['m_H2_demand_t_ext']
+        df['revenue'] = df['hpp_t'] * df['price_t'] + df['m_H2_offtake_t'] * price_H2 - 0.5 * (df['m_H2_demand_t_ext'] - df['m_H2_offtake_t']) - df['penalty_t']
         
         df['i_year'] = np.hstack([np.array([ii]*N_time) 
                                   for ii in range(int(np.ceil(life_h/N_time)))])[:life_h]
@@ -415,14 +404,6 @@ class finance_P2X(om.ExplicitComponent):
             inputs['CAPEX_b'] + inputs['CAPEX_el'] + inputs['CAPEX_ptg']
         OPEX = inputs['OPEX_w'] + inputs['OPEX_s'] + \
             inputs['OPEX_b'] + inputs['OPEX_el'] + inputs['OPEX_ptg'] + inputs['water_consumption_cost']
-        
-        CAPEX_LCOE = inputs['CAPEX_w'] + inputs['CAPEX_s'] + \
-            inputs['CAPEX_b'] + inputs['CAPEX_el'] 
-        OPEX_LCOE = inputs['OPEX_w'] + inputs['OPEX_s'] + \
-            inputs['OPEX_b'] + inputs['OPEX_el'] 
-        
-        # CAPEX_LCOE_H2 = inputs['CAPEX_w'] + inputs['CAPEX_s'] 
-        # OPEX_LCOE_H2 = inputs['OPEX_w'] + inputs['OPEX_s'] 
         
         outputs['CAPEX'] = CAPEX
         outputs['OPEX'] = OPEX
@@ -442,15 +423,6 @@ class finance_P2X(om.ExplicitComponent):
             inputs['battery_WACC'],
             inputs['ptg_WACC'],
             )
-        WACC_after_tax_LCOE = calculate_WACC(
-            inputs['CAPEX_w'],
-            inputs['CAPEX_s'],
-            inputs['CAPEX_b'],
-            inputs['CAPEX_el'],
-            inputs['wind_WACC'],
-            inputs['solar_WACC'],
-            inputs['battery_WACC'],
-            )
         
         NPV, IRR = calculate_NPV_IRR(
             Net_revenue_t = revenues.values.flatten(),
@@ -458,66 +430,31 @@ class finance_P2X(om.ExplicitComponent):
             maintenance_cost_per_year = OPEX,
             tax_rate = inputs['tax_rate'],
             WACC_after_tax = WACC_after_tax)
+        
+        hpp_discount_factor = WACC_after_tax
 
         outputs['NPV'] = NPV
         outputs['IRR'] = IRR
         outputs['NPV_over_CAPEX'] = NPV / CAPEX
-        
-        # LCOE calculation
-        hpp_discount_factor_LCOE = WACC_after_tax_LCOE
-        level_costs = np.sum(OPEX_LCOE / (1 + hpp_discount_factor_LCOE)**iy) + CAPEX_LCOE
-        AEP_per_year = df.groupby('i_year').hpp_t.mean()*365*24 + df.groupby('i_year').P_ptg_t.mean()*365*24
-        level_AEP = np.sum(AEP_per_year / (1 + hpp_discount_factor_LCOE)**iy)
-        
-        mean_AEP_per_year = np.mean(AEP_per_year)
-        Power2Grid_per_year = df.groupby('i_year').hpp_t.mean()*365*24
-        mean_Power2Grid_per_year = np.mean(Power2Grid_per_year)
-        
-        if level_AEP > 0:
-            LCOE = level_costs / (level_AEP) # in Euro/MWh
-        else:
-            LCOE = 1e6
-        
-        outputs['LCOE'] = LCOE
-        # # LCOE_H2: LCOE calculation for the electricity used by electrolyzer to produce hydrogen
-        # hpp_discount_factor_LCOE_H2 = WACC_after_tax_LCOE_H2
-        # level_costs_H2_el = np.sum(OPEX_LCOE_H2 / (1 + hpp_discount_factor_LCOE_H2)**iy) + CAPEX_LCOE_H2
-         
-        P_ptg_per_year = df.groupby('i_year').P_ptg_t.mean()*365*24
-        #level_P_ptg = np.sum(P_ptg_per_year / (1 + hpp_discount_factor_LCOE_H2)**iy)
-        # LCOE_H2 = level_costs_H2_el / (level_P_ptg) # in Euro/MWh
-        mean_P_ptg_per_year = np.mean(P_ptg_per_year)
 
-        
-        # LCOH calculation using LCOE
-        OPEX_ptg = inputs['OPEX_ptg'] + inputs['water_consumption_cost']
-        CAPEX_ptg = inputs['CAPEX_ptg']
-        hpp_discount_factor_H2 = inputs['ptg_WACC']
-        OPEX_ptg_el = LCOE*np.sum(inputs['P_ptg_t']) #operational cost for the electrilcity consumed to produce hydrogen
-        level_costs_H2 = np.sum(OPEX_ptg / (1 + hpp_discount_factor_H2)**iy) + OPEX_ptg_el + CAPEX_ptg
-        AHP_per_year = df.groupby('i_year').m_H2_t.mean()*365*24
-        level_AHP = np.sum(AHP_per_year / (1 + hpp_discount_factor_H2)**iy)
-        
-        mean_AHP_per_year = np.mean(AHP_per_year)
-        if level_AHP > 0:
-            outputs['LCOH'] = level_costs_H2 / (level_AHP) # in Euro/kg
+        level_costs = np.sum(OPEX / (1 + hpp_discount_factor)**iy) + CAPEX
+        AEP_per_year = df.groupby('i_year').hpp_t.mean()*365*24 + df.groupby('i_year').P_ptg_t.mean()*365*24
+        annual_H2 = df.groupby('i_year').m_H2_t.mean()*365*24
+        level_AEP = np.sum(AEP_per_year / (1 + hpp_discount_factor)**iy)
+
+        mean_AEP_per_year = np.mean(AEP_per_year)
+        annual_H2 = np.mean(annual_H2)
+        if level_AEP > 0:
+            outputs['LCOE'] = level_costs / (level_AEP) # in Euro/MWh
         else:
-            outputs['LCOH'] = 1e6
-            
-        outputs['Revenue'] = np.sum(revenues.values.flatten())
-        outputs['annual_P_ptg'] = mean_P_ptg_per_year
+            outputs['LCOE'] = 1e6
+
         outputs['mean_AEP'] = mean_AEP_per_year
-        outputs['mean_Power2Grid'] = mean_Power2Grid_per_year
-        outputs['annual_H2'] = mean_AHP_per_year
+        outputs['annual_H2'] = annual_H2
         outputs['penalty_lifetime'] = df['penalty_t'].sum()
-        
-        #opputunity cost calculation
-        df['OC'] = df['hpp_curt_t'] * df['price_t'] 
-        OC = df['OC'].sum()
-        outputs['oppurtunity_cost'] = OC
 
 # -----------------------------------------------------------------------
-# Auxiliary functions for financial modelling
+# Auxiliar functions for financial modelling
 # -----------------------------------------------------------------------
 
 
@@ -594,6 +531,7 @@ def calculate_WACC(
           CAPEX_el * (wind_WACC + solar_WACC + battery_WACC)/3 ) / \
         ( CAPEX_w + CAPEX_s + CAPEX_b + CAPEX_el )
     return WACC_after_tax
+
 
 def calculate_WACC_P2X(
     CAPEX_w,

@@ -1,0 +1,22 @@
+,Parameters,output
+0,NPV_over_CAPEX,-0.3446836549454883
+1,NPV [MEuro],-171.76055969312858
+2,IRR,0.0
+3,LCOE [Euro/MWh],3259.6873529456393
+4,CAPEX [MEuro],498.31361954280226
+5,OPEX [MEuro],25.42770724448986
+6,penalty lifetime [MEuro],0.0
+7,AEP [GWh],19.535949075630295
+8,GUF,0.007433770576723856
+9,annual H2 [kg],11718975.211971993
+10,grid [MW],300.0
+11,wind [MW],360.0
+12,solar [MW],80.0
+13,PtG [MW],300.0
+14,Battery Energy [MWh],80.0
+15,Battery Power [MW],20.0
+16,Total curtailment [GWh],0.0
+17,Awpp [km2],72.0
+18,Rotor diam [m],118.94160774351808
+19,Hub height [m],69.47080387175905
+20,Number_of_batteries,1.0

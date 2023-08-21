@@ -1,4 +1,4 @@
-# %%
+# %% cost model with P2X with hydrogen storage and transportation
 import glob
 import os
 import time
@@ -505,6 +505,10 @@ class ptg_cost(om.ExplicitComponent):
                  water_cost,
                  water_treatment_cost,
                  water_consumption,
+                 storage_capex_cost,
+                 storage_opex_cost,
+                 transportation_cost,
+                 transportation_distance,
                  N_time,
                  life_h = 25*365*24,):
 
@@ -517,6 +521,10 @@ class ptg_cost(om.ExplicitComponent):
         self.water_cost = water_cost
         self.water_treatment_cost = water_treatment_cost
         self.water_consumption = water_consumption
+        self.storage_capex_cost = storage_capex_cost
+        self.storage_opex_cost = storage_opex_cost
+        self.transportation_cost = transportation_cost
+        self.transportation_distance = transportation_distance
         self.N_time = N_time
         self.life_h = life_h
 
@@ -527,6 +535,13 @@ class ptg_cost(om.ExplicitComponent):
                         units = 'MW')
         self.add_input('m_H2_t',
                         desc = "Produced hydrogen",
+                        units = "kg",
+                        shape=[self.life_h])
+        self.add_input('HSS_kg',
+                        desc = "Installed capacity of Hydrogen storage",
+                        units = 'kg')
+        self.add_input('m_H2_offtake_t',
+                        desc = "Offtake hydrogen",
                         units = "kg",
                         shape=[self.life_h])
         
@@ -544,6 +559,8 @@ class ptg_cost(om.ExplicitComponent):
        
         ptg_MW = inputs['ptg_MW']
         m_H2_t = inputs['m_H2_t']
+        HSS_kg = inputs['HSS_kg']
+        m_H2_offtake_t = inputs['m_H2_offtake_t']
 
         electrolyzer_capex_cost = self.electrolyzer_capex_cost
         electrolyzer_opex_cost = self.electrolyzer_opex_cost 
@@ -553,9 +570,14 @@ class ptg_cost(om.ExplicitComponent):
         water_cost = self.water_cost
         water_treatment_cost = self.water_treatment_cost
         water_consumption = self.water_consumption
+        storage_capex_cost = self.storage_capex_cost
+        storage_opex_cost = self.storage_opex_cost
+        transportation_cost = self.transportation_cost
+        transportation_distance = self.transportation_distance
 
-        outputs['CAPEX_ptg'] = ptg_MW * (electrolyzer_capex_cost + electrolyzer_power_electronics_cost + compressor_capex_cost)
-        outputs['OPEX_ptg'] = ptg_MW * (electrolyzer_opex_cost + compressor_opex_cost)
+        outputs['CAPEX_ptg'] = ptg_MW * (electrolyzer_capex_cost + electrolyzer_power_electronics_cost + compressor_capex_cost) + storage_capex_cost * HSS_kg + \
+                               np.sum(m_H2_offtake_t * transportation_cost * transportation_distance) 
+        outputs['OPEX_ptg'] = ptg_MW * (electrolyzer_opex_cost + compressor_opex_cost) + storage_opex_cost * HSS_kg
         outputs['water_consumption_cost'] = np.sum(m_H2_t * water_consumption * (water_cost + water_treatment_cost)/1000)
 
        

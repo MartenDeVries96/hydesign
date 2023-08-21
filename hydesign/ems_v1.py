@@ -1,4 +1,4 @@
-# %%
+# %% EMS with P2X with hydrogen offtake time series and no storage
 
 import glob
 import os
@@ -479,7 +479,7 @@ class ems_P2X(om.ExplicitComponent):
     storage_eff: Compressor efficiency for hydrogen storage
     ptg_deg: Electrolyzer rate of degradation annually
     hhv: High heat value
-
+    m_H2_demand_t: Hydrogen demand times series
 
     Returns
     -------
@@ -494,6 +494,7 @@ class ems_P2X(om.ExplicitComponent):
     P_ptg_t: Electrolyzer power consumption time series
     m_H2_t: Hydrogen production time series
     epc_t: Electrolyzer efficiency time series
+    m_H2_demand_t_ext: Hydrogen demand times series
     """
 
     def __init__(
@@ -566,6 +567,11 @@ class ems_P2X(om.ExplicitComponent):
         self.add_input(
             'hhv',
             desc="High heat value.")
+        self.add_input(
+            'm_H2_demand_t',
+            desc="Hydrogen demand times series.",
+            units='kg',
+            shape=[self.N_time])
 
         # ----------------------------------------------------------------------------------------------------------
         self.add_output(
@@ -624,7 +630,11 @@ class ems_P2X(om.ExplicitComponent):
             'total_curtailment',
             desc="total curtailment in the lifetime",
             units='GW*h')
-        
+        self.add_output(
+            'm_H2_demand_t_ext',
+            desc="Hydrogen demand times series.",
+            units='kg',
+            shape=[self.life_h])
     # def setup_partials(self):
     #    self.declare_partials('*', '*',  method='fd')
 
@@ -633,6 +643,7 @@ class ems_P2X(om.ExplicitComponent):
         wind_t = inputs['wind_t']
         solar_t = inputs['solar_t']
         price_t = inputs['price_t']
+        m_H2_demand_t = inputs['m_H2_demand_t']
 
         b_P = inputs['b_P']
         b_E = inputs['b_E']
@@ -671,6 +682,7 @@ class ems_P2X(om.ExplicitComponent):
         WSPr_df['wind_t'] = wind_t
         WSPr_df['solar_t'] = solar_t
         WSPr_df['price_t'] = price_t
+        WSPr_df['m_H2_demand_t'] = m_H2_demand_t    
         WSPr_df['E_batt_MWh_t'] = b_E[0]
         
         
@@ -690,9 +702,10 @@ class ems_P2X(om.ExplicitComponent):
             storage_eff = storage_eff,
             ptg_deg = ptg_deg,
             hhv = hhv,
+            m_H2_demand_ts = WSPr_df.m_H2_demand_t,
             peak_hr_quantile = peak_hr_quantile,
             cost_of_battery_P_fluct_in_peak_price_ratio = cost_of_battery_P_fluct_in_peak_price_ratio,
-            n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price,
+            n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price
         )
 
         # Extend (by repeating them and stacking) all variable to full lifetime 
@@ -719,6 +732,8 @@ class ems_P2X(om.ExplicitComponent):
         outputs['epc_t'] = expand_to_lifetime(
             epc_ts, life_h = self.life_h)
         outputs['total_curtailment'] = outputs['hpp_curt_t'].sum()
+        outputs['m_H2_demand_t_ext'] = expand_to_lifetime(
+            m_H2_demand_t, life_h = self.life_h)
 # -----------------------------------------------------------------------
 # Auxiliar functions for ems modelling
 # -----------------------------------------------------------------------
@@ -1046,9 +1061,10 @@ def ems_cplex_P2X(
     storage_eff,
     ptg_deg,
     hhv,
+    m_H2_demand_ts,
     peak_hr_quantile = 0.9,
     cost_of_battery_P_fluct_in_peak_price_ratio = 0.5, #[0, 0.8]. For higher values might cause errors
-    n_full_power_hours_expected_per_day_at_peak_price = 3,    
+    n_full_power_hours_expected_per_day_at_peak_price = 3,  
     batch_size = 1*24,
 ):
     
@@ -1073,8 +1089,9 @@ def ems_cplex_P2X(
         wind_ts_sel = wind_ts.iloc[batch]
         solar_ts_sel = solar_ts.iloc[batch]
         price_ts_sel = price_ts.iloc[batch]
-        E_batt_MWh_t_sel = E_batt_MWh_t.iloc[batch]
-        
+        E_batt_MWh_t_sel = E_batt_MWh_t.iloc[batch] 
+        m_H2_demand_ts_sel = m_H2_demand_ts.iloc[batch]
+            
         #print(f'batch {ib+1} out of {len(batches)}')
         P_HPP_ts_batch, P_curtailment_ts_batch, P_charge_discharge_ts_batch, P_ptg_ts_batch,\
         E_SOC_ts_batch, m_H2_ts_batch, epc_ts_batch, penalty_batch = ems_cplex_parts_P2X(
@@ -1091,9 +1108,10 @@ def ems_cplex_P2X(
             storage_eff=storage_eff,
             ptg_deg=ptg_deg,
             hhv=hhv,
+            m_H2_demand_ts = m_H2_demand_ts_sel,
             peak_hr_quantile = peak_hr_quantile,
             cost_of_battery_P_fluct_in_peak_price_ratio = cost_of_battery_P_fluct_in_peak_price_ratio,
-            n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price,
+            n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price,      
         )
         
         # print()
@@ -1136,6 +1154,7 @@ def ems_cplex_parts_P2X(
     storage_eff,
     ptg_deg,
     hhv,
+    m_H2_demand_ts,
     peak_hr_quantile = 0.9,
     cost_of_battery_P_fluct_in_peak_price_ratio = 0.5, #[0, 0.8]. For higher values might cause errors
     n_full_power_hours_expected_per_day_at_peak_price = 3,
@@ -1160,6 +1179,7 @@ def ems_cplex_parts_P2X(
     storage_eff: Compressor efficiency for hydrogen storage
     ptg_deg: Electrolyzer rate of degradation annually
     hhv: High heat value
+    m_H2_demand_ts: Hydrogen demand times series 
 
     Returns
     -------
@@ -1236,7 +1256,7 @@ def ems_cplex_parts_P2X(
     epc_t = mdl.continuous_var_dict(time, name = 'Energy efficiency * production curve')
     
     m_H2_t = mdl.continuous_var_dict(time, lb = 0, name = 'Produced hydrogen')
-    
+        
     penalty = mdl.continuous_var(name='penalty', lb=-1e12)
     e_penalty = mdl.continuous_var(name='e_penalty', lb=-1e12)
     
@@ -1246,7 +1266,7 @@ def ems_cplex_parts_P2X(
     mdl.maximize(
         # revenues and OPEX
         mdl.sum(
-            price_ts[t] * P_HPP_t[t] + price_H2  *  m_H2_t[t]
+            price_ts[t] * P_HPP_t[t] + price_H2  *  m_H2_t[t] - 0.5*(m_H2_demand_ts[t]-m_H2_t[t])
             for t in time) - penalty \
         # Add cost for rapid charge-discharge for limiting the battery life use
         - mdl.sum(
@@ -1301,6 +1321,9 @@ def ems_cplex_parts_P2X(
         # Battery charge/discharge within its power rating
         mdl.add_constraint(P_charge_discharge[t] <= P_batt_MW*charge_efficiency)
         mdl.add_constraint(P_charge_discharge[t] >= -P_batt_MW/charge_efficiency)
+        
+        # Hydrogen production as per the demand time series
+        mdl.add_constraint( m_H2_t[t] <= m_H2_demand_ts[t])
         
         # Caclulating electrolyzer efficiency as a function of load (piecewise linear approximation) for Alkaline Electrolyzer
         #AE = mdl.piecewise(0, [(0.05 * ptg_MW, 0), (0.0501 * ptg_MW, 0.785 * 0.0501 * ptg_MW), (1 * ptg_MW, 0.42 * 1 * ptg_MW), (1.001 * ptg_MW , 0)], 0)
