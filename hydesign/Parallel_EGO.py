@@ -79,9 +79,9 @@ def get_sm(xdoe, ydoe, mixint=None):
         corr="squar_exp",
         poly='linear',
         theta0=[1e-2],
-        #theta_bounds=[1e-3, 1e2],
+        theta_bounds=[1e-3, 1e2],
         #noise_bounds=[1e-12, 1e2],
-        n_comp=4,
+        n_comp=1,
         print_global=False)
     sm.set_training_values(xdoe, ydoe)
     sm.train()
@@ -379,6 +379,7 @@ def derive_example_info(kwargs):
             kwargs['latitude'] = ex_site['latitude']
             kwargs['altitude'] = ex_site['altitude']
             kwargs['input_ts_fn'] = examples_filepath+ex_site['input_ts_fn']
+            kwargs['H2_demand_fn'] = examples_filepath+ex_site['H2_demand_col']
             if sim_pars_fn == None:
                 kwargs['sim_pars_fn'] = examples_filepath+ex_site['sim_pars_fn']
             
