@@ -131,11 +131,17 @@ if __name__ == '__main__':
               'limits':[1, 200],
               'types':'int'
               },
+            # {'var_type':'fixed',
+            #   'value': 150
+            # },
         'HSS_kg [kg]':
             {'var_type':'design',
-              'limits':[1, 5000],
+              'limits':[0, 5000],
               'types':'int'
               },
+            # {'var_type':'fixed',
+            #   'value': 3000
+            # },
 
         }
     EGOD = EfficientGlobalOptimizationDriver(**kwargs)
