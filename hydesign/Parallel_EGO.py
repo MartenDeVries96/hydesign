@@ -71,7 +71,7 @@ def KB(sm, point):
     res = sm.predict_values(point)
     return res
 
-def get_sm(xdoe, ydoe, mixint=None):
+def get_sm(xdoe, ydoe, theta_bounds=[1e-06, 2e1], n_comp=4):
     '''
     Function that trains the surrogate and uses it to predict on random input points
     '''    
@@ -79,9 +79,9 @@ def get_sm(xdoe, ydoe, mixint=None):
         corr="squar_exp",
         poly='linear',
         theta0=[1e-2],
-        #theta_bounds=[1e-3, 1e2],
+        theta_bounds=theta_bounds,
         #noise_bounds=[1e-12, 1e2],
-        n_comp=4,
+        n_comp=n_comp,
         print_global=False)
     sm.set_training_values(xdoe, ydoe)
     sm.train()
@@ -379,6 +379,7 @@ def derive_example_info(kwargs):
             kwargs['latitude'] = ex_site['latitude']
             kwargs['altitude'] = ex_site['altitude']
             kwargs['input_ts_fn'] = examples_filepath+ex_site['input_ts_fn']
+            kwargs['H2_demand_fn'] = examples_filepath+ex_site['H2_demand_col']
             if sim_pars_fn == None:
                 kwargs['sim_pars_fn'] = examples_filepath+ex_site['sim_pars_fn']
             
@@ -520,7 +521,8 @@ class EfficientGlobalOptimizationDriver(Driver):
         
             # Train surrogate model
             np.random.seed(kwargs['n_seed'])
-            sm = get_sm(xdoe, ydoe, mixint)
+            sm_args = {k: v for k, v in kwargs.items() if k in ['theta_bounds', 'n_comp']}
+            sm = get_sm(xdoe, ydoe, **sm_args)
             kwargs['sm'] = sm
             
             # Evaluate surrogate model in a large number of design points
@@ -658,6 +660,8 @@ if __name__ == '__main__':
         'final_design_fn': 'hydesign_design_0.csv',
         'npred': 3e4,
         'tol': 1e-6,
+        'theta_bounds': [1e-3, 1e2],
+        'n_comp': 1,
         'min_conv_iter': 3,
         'work_dir': './',
         'hpp_model': hpp_model,

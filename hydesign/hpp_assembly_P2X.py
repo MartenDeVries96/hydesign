@@ -40,6 +40,7 @@ class hpp_model_P2X:
         ems_type='cplex',
         input_ts_fn = None, # If None then it computes the weather
         price_fn = None, # If input_ts_fn is given it should include Price column.
+        H2_demand_fn = None, # If input_ts_fn is given it should include H2_demand column.
         genWT_fn = lut_filepath+'genWT_v3.nc',
         genWake_fn = lut_filepath+'genWake_v3.nc',
         verbose = True,
@@ -133,10 +134,12 @@ class hpp_model_P2X:
             input_ts_fn = f'{work_dir}input_ts{name}.csv'
             weather.to_csv(input_ts_fn)
             N_time = len(weather)
-            
+
         else: # User provided weather timeseries
             weather = pd.read_csv(input_ts_fn, index_col=0, parse_dates=True)
             N_time = len(weather)
+
+        H2_demand_data = pd.read_csv(H2_demand_fn, index_col=0, parse_dates=True)
         
         with xr.open_dataset(genWT_fn) as ds: 
             # number of points in the power curves
@@ -217,9 +220,12 @@ class hpp_model_P2X:
                 'n_full_power_hours_expected_per_day_at_peak_price',
                 'price_H2',
                 'ptg_MW',
+                'HSS_kg',
                 'storage_eff',
                 'ptg_deg',
                 'hhv',
+                'm_H2_demand_t',
+                'penalty_H2',
                 ],
             promotes_outputs=[
                 'total_curtailment'
@@ -325,16 +331,19 @@ class hpp_model_P2X:
                 electrolyzer_capex_cost = sim_pars['electrolyzer_capex_cost'],
                 electrolyzer_opex_cost = sim_pars['electrolyzer_opex_cost'],
                 electrolyzer_power_electronics_cost = sim_pars['electrolyzer_power_electronics_cost'],
-                compressor_capex_cost = sim_pars['compressor_capex_cost'],
-                compressor_opex_cost =  sim_pars['compressor_opex_cost'],
                 water_cost = sim_pars['water_cost'],
                 water_treatment_cost = sim_pars['water_treatment_cost'],
                 water_consumption = sim_pars['water_consumption'],
+                storage_capex_cost = sim_pars['H2_storage_capex_cost'],
+                storage_opex_cost = sim_pars['H2_storage_opex_cost'],
+                transportation_cost = sim_pars['H2_transportation_cost'],
+                transportation_distance = sim_pars['H2_transportation_distance'],
                 N_time = N_time,
                 life_h = life_h,
                 ),
             promotes_inputs=[
-            'ptg_MW'
+            'ptg_MW',
+            'HSS_kg',
             ])
         model.add_subsystem(
             'finance_P2X', 
@@ -346,14 +355,19 @@ class hpp_model_P2X:
                              'solar_WACC', 
                              'battery_WACC',
                              'ptg_WACC',
-                             'tax_rate'
+                             'tax_rate',
+                             'penalty_H2',
                             ],
             promotes_outputs=['NPV',
                               'IRR',
                               'NPV_over_CAPEX',
                               'LCOE',
+                              'LCOH',
+                              'Revenue',
                               'mean_AEP',
+                              'mean_Power2Grid',
                               'annual_H2',
+                              'annual_P_ptg',
                               'penalty_lifetime',
                               'CAPEX',
                               'OPEX'
@@ -415,8 +429,13 @@ class hpp_model_P2X:
         model.connect('ems_P2X.price_t_ext', 'finance_P2X.price_t_ext')
         model.connect('ems_P2X.hpp_t', 'finance_P2X.hpp_t')
         model.connect('ems_P2X.penalty_t', 'finance_P2X.penalty_t')
+        model.connect('ems_P2X.hpp_curt_t', 'finance_P2X.hpp_curt_t')
         model.connect('ems_P2X.m_H2_t', 'finance_P2X.m_H2_t')
         model.connect('ems_P2X.m_H2_t', 'ptg_cost.m_H2_t' )
+        model.connect('ems_P2X.P_ptg_t', 'finance_P2X.P_ptg_t')
+        model.connect('ems_P2X.m_H2_demand_t_ext', 'finance_P2X.m_H2_demand_t_ext')
+        model.connect('ems_P2X.m_H2_offtake_t', 'finance_P2X.m_H2_offtake_t')
+        model.connect('ems_P2X.m_H2_offtake_t', 'ptg_cost.m_H2_offtake_t' )
         
         prob = om.Problem(
             model,
@@ -427,6 +446,7 @@ class hpp_model_P2X:
         
         # Additional parameters
         prob.set_val('price_t', weather['Price'])
+        prob.set_val('m_H2_demand_t', H2_demand_data['H2_demand'])
         prob.set_val('G_MW', sim_pars['G_MW'])
         #prob.set_val('pv_deg_per_year', sim_pars['pv_deg_per_year'])
         prob.set_val('battery_depth_of_discharge', sim_pars['battery_depth_of_discharge'])
@@ -444,6 +464,7 @@ class hpp_model_P2X:
         prob.set_val('hhv', sim_pars['hhv'])
         prob.set_val('ptg_deg', sim_pars['ptg_deg'])
         prob.set_val('price_H2', sim_pars['price_H2'])
+        prob.set_val('penalty_H2', sim_pars['penalty_H2'])
         prob.set_val('storage_eff', sim_pars['storage_eff'])
         
 
@@ -458,16 +479,21 @@ class hpp_model_P2X:
             'NPV [MEuro]',
             'IRR',
             'LCOE [Euro/MWh]',
+            'LCOH [Euro/kg]',
+            'Revenue [MEuro]',
             'CAPEX [MEuro]',
             'OPEX [MEuro]',
             'penalty lifetime [MEuro]',
             'AEP [GWh]',
+            'annual_Power2Grid [GWh]',
             'GUF',
-            'annual H2 [kg]',
+            'annual_H2 [tons]',
+            'annual_P_ptg [GWh]',
             'grid [MW]',
             'wind [MW]',
             'solar [MW]',
             'PtG [MW]',
+            'HSS [kg]',
             'Battery Energy [MWh]',
             'Battery Power [MW]',
             'Total curtailment [GWh]',
@@ -492,6 +518,7 @@ class hpp_model_P2X:
             'b_E_h [h]',
             'cost_of_battery_P_fluct_in_peak_price_ratio',
             'ptg_MW [MW]',
+            'HSS_kg [kg]',
             ]   
     
     
@@ -504,7 +531,9 @@ class hpp_model_P2X:
         # Energy storage & EMS price constrains
         b_P, b_E_h, cost_of_battery_P_fluct_in_peak_price_ratio,
         # PtG plant design
-        ptg_MW
+        ptg_MW,
+        # Hydrogen storage capacity
+        HSS_kg,
         ):
         """Calculating the financial metrics of the hybrid power plant project.
 
@@ -522,7 +551,8 @@ class hpp_model_P2X:
         b_P : Battery power [MW]
         b_E_h : Battery storage duration [h]
         cost_of_battery_P_fluct_in_peak_price_ratio : Cost of battery power fluctuations in peak price ratio [Eur]
-        ptg_MW: Electrolyzer capacity [MW] 
+        ptg_MW: Electrolyzer capacity [MW]
+        HSS_kg: Hydrogen storgae capacity [kg]
 
         Returns
         -------
@@ -530,15 +560,21 @@ class hpp_model_P2X:
         prob['NPV'] : Net present value
         prob['IRR'] : Internal rate of return
         prob['LCOE'] : Levelized cost of energy
+        prob['LCOH'] : Levelized cost of hydrogen
+        prob['Revenue'] : Revenue of HPP
         prob['CAPEX'] : Total capital expenditure costs of the HPP
         prob['OPEX'] : Operational and maintenance costs of the HPP
         prob['penalty_lifetime'] : Lifetime penalty
+        prob['AEP']: Annual energy production
+        prob['mean_Power2Grid']: Power to grid
         prob['mean_AEP']/(self.sim_pars['G_MW']*365*24) : Grid utilization factor
         prob['annual_H2']: Annual H2 production
+        prob['annual_P_ptg']: Annual power converted to hydrogen
         self.sim_pars['G_MW'] : Grid connection [MW]
         wind_MW : Wind power plant installed capacity [MW]
         solar_MW : Solar power plant installed capacity [MW]
         ptg_MW: Electrolyzer capacity [MW]
+        HSS_kg: Hydrogen storgae capacity [kg]
         b_E : Battery power [MW]
         b_P : Battery energy [MW]
         prob['total_curtailment']/1e3 : Total curtailed power [GMW]
@@ -577,6 +613,7 @@ class hpp_model_P2X:
         prob.set_val('DC_AC_ratio', DC_AC_ratio)
         prob.set_val('solar_MW', solar_MW)
         prob.set_val('ptg_MW', ptg_MW)
+        prob.set_val('HSS_kg', HSS_kg)
         
         prob.set_val('b_P', b_P)
         prob.set_val('b_E', b_E)
@@ -591,17 +628,22 @@ class hpp_model_P2X:
             prob['NPV']/1e6,
             prob['IRR'],
             prob['LCOE'],
+            prob['LCOH'],
+            prob['Revenue']/1e6,
             prob['CAPEX']/1e6,
             prob['OPEX']/1e6,
             prob['penalty_lifetime']/1e6,
             prob['mean_AEP']/1e3, #[GWh]
+            prob['mean_Power2Grid']/1e3, #GWh
             # Grid Utilization factor
             prob['mean_AEP']/(self.sim_pars['G_MW']*365*24),
-            prob['annual_H2'],
+            prob['annual_H2']/1e3, # in tons
+            prob['annual_P_ptg']/1e3, # in GWh
             self.sim_pars['G_MW'],
             wind_MW,
             solar_MW,
             ptg_MW,
+            HSS_kg,
             b_E,
             b_P,
             prob['total_curtailment']/1e3, #[GWh]
@@ -625,6 +667,54 @@ class hpp_model_P2X:
             print(f'{var}: {outs[i_v]:.3f}')
         print()
         
+    def evaluation_in_csv(self, name_file ,longitude, latitude, altitude, x_opt, outs ):
+        design_df = pd.DataFrame(columns = ['longitude',
+                                            'latitude',
+                                            'altitude',
+                                            'clearance [m]',
+                                            'sp [W/m2]',
+                                            'p_rated [MW]',
+                                            'Nwt',
+                                            'wind_MW_per_km2 [MW/km2]',
+                                            'solar_MW [MW]',
+                                            'surface_tilt [deg]',
+                                            'surface_azimuth [deg]',
+                                            'DC_AC_ratio',
+                                            'b_P [MW]',
+                                            'b_E_h [h]',
+                                            'cost_of_battery_P_fluct_in_peak_price_ratio',
+                                            'PTG [MW]',
+                                            'HSS [kg]',                                            
+                                            'NPV_over_CAPEX',
+                                            'NPV [MEuro]',
+                                            'IRR',
+                                            'LCOE [Euro/MWh]',
+                                            'LCOH [Euro/MWh]',
+                                            'Revenue',
+                                            'CAPEX [MEuro]',
+                                            'OPEX [MEuro]',
+                                            'penalty lifetime [MEuro]',
+                                            'AEP [GWh]',
+                                            'Power to grid',
+                                            'GUF',
+                                            'annual_H2',
+                                            'annual_P_ptg',
+                                            'grid [MW]',
+                                            'wind [MW]',
+                                            'solar [MW]',
+                                            'ptg_MW',
+                                            'HSS_kg',
+                                            'Battery Energy [MWh]',
+                                            'Battery Power [MW]',
+                                            'Total curtailment [GWh]',
+                                            'Awpp [km2]',
+                                            'Apvp [km2]',
+                                            'Rotor diam [m]',
+                                            'Hub height [m]',
+                                            'Number of batteries used in lifetime',
+                                            ]  , index=range(1))
+        design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
+        design_df.to_csv(f'{name_file}.csv')
     
 # -----------------------------------------------------------------------
 # Auxiliar functions for ems modelling

@@ -42,17 +42,17 @@ Explanations of hydesign's core objects can be found in the following tutorials:
         :maxdepth: 1
 	:caption: API Reference
             
+        api/Parallel_EGO
         api/battery_degradation
         api/costs
-        api/EGO_surrogate_based_optimization
         api/ems
         api/finance
         api/hpp_assembly
+        api/hpp_assembly_P2X
+        api/nrel_csm_wrapper
         api/pv
-        api/wind
         api/weather
-        api/nrel_csm_tcc_2015
-        api/turbine_costsse_2015
+        api/wind
 
 
     

@@ -1,7 +1,8 @@
 [run]
 omit = 
 	hydesign/tests/*
-    hydesign/turbine_costsse_2015.py
-    hydesign/nrel_csm_tcc_2015.py
+	hydesign/examples/*
+	hydesign/look_up_tables/*
+	hydesign/nrelcsm/*
 [report]
-fail_under = 10
+fail_under = 50
