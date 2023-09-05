@@ -76,7 +76,7 @@ def run_get_wind_ts():
     name = 'France_good_wind'
     ex_site = examples_sites.loc[examples_sites.name == name]
 
-    input_ts_fn = examples_filepath+ex_site['input_ts_fn'].values[0]
+    input_ts_fn = examples_filepath+'Europe/GWA2/input_ts_France_good_wind.csv'
     weather = pd.read_csv(
         input_ts_fn, 
         index_col=0,

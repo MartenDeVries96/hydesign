@@ -32,7 +32,7 @@ def run_solar_time_series(tracking):
         altitude=altitude,
         name='Plant')
     
-    input_ts_fn = examples_filepath+ex_site['input_ts_fn'].values[0]
+    input_ts_fn = examples_filepath+'Europe/GWA2/input_ts_France_good_wind.csv'
     weather = pd.read_csv(
         input_ts_fn, 
         index_col=0,

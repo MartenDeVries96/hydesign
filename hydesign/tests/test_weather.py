@@ -16,7 +16,7 @@ from hydesign.weather import interpolate_WS_loglog
 # ------------------------------------------------------------------------------------------------
 def run_interp_ws():
     hh = 100
-    weather = pd.read_csv(examples_filepath+'Europe/input_ts_Denmark_good_solar.csv',index_col=0)
+    weather = pd.read_csv(examples_filepath+'Europe/GWA2/input_ts_Denmark_good_solar.csv',index_col=0)
     interp_ws_out = interpolate_WS_loglog(weather,hh)
     return interp_ws_out.WS.values, interp_ws_out.dWS_dz.values
 
