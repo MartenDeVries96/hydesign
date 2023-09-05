@@ -140,6 +140,13 @@ class hpp_model_P2X:
             N_time = len(weather)
 
         H2_demand_data = pd.read_csv(H2_demand_fn, index_col=0, parse_dates=True)
+        electrolyzer_eff_fn = os.path.join(os.path.dirname(sim_pars_fn), 'Electrolyzer_efficiency_curves.csv')
+        df = pd.read_csv(electrolyzer_eff_fn)
+        electrolyzer_eff_curve_name = sim_pars['electrolyzer_eff_curve_name']
+        col_no = df.columns.get_loc(electrolyzer_eff_curve_name)
+        my_df = df.iloc[:,col_no:col_no+2].dropna()
+        eff_curve = my_df[1:].values.astype(float)
+
         
         with xr.open_dataset(genWT_fn) as ds: 
             # number of points in the power curves
@@ -206,8 +213,10 @@ class hpp_model_P2X:
             'ems_P2X', 
             ems_P2X(
                 N_time = N_time,
+                eff_curve=eff_curve,
                 life_h = life_h, 
-                ems_type=ems_type),
+                ems_type=ems_type,
+                ),
             promotes_inputs=[
                 'price_t',
                 'b_P',

@@ -499,11 +499,13 @@ class ems_P2X(om.ExplicitComponent):
     def __init__(
         self, 
         N_time, 
+        eff_curve,
         life_h = 25*365*24, 
         ems_type='cplex'):
 
         super().__init__()
         self.N_time = int(N_time)
+        self.eff_curve = eff_curve
         self.ems_type = ems_type
         self.life_h = int(life_h)
 
@@ -721,6 +723,7 @@ class ems_P2X(om.ExplicitComponent):
             m_H2_demand_ts = WSPr_df.m_H2_demand_t,
             H2_storage_t = WSPr_df.H2_storage_t,
             penalty_H2 =penalty_H2,
+            eff_curve=self.eff_curve,
             peak_hr_quantile = peak_hr_quantile,
             cost_of_battery_P_fluct_in_peak_price_ratio = cost_of_battery_P_fluct_in_peak_price_ratio,
             n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price
@@ -1085,6 +1088,7 @@ def ems_cplex_P2X(
     m_H2_demand_ts,
     H2_storage_t,
     penalty_H2,
+    eff_curve,
     peak_hr_quantile = 0.9,
     cost_of_battery_P_fluct_in_peak_price_ratio = 0.5, #[0, 0.8]. For higher values might cause errors
     n_full_power_hours_expected_per_day_at_peak_price = 3,  
@@ -1137,6 +1141,7 @@ def ems_cplex_P2X(
             m_H2_demand_ts = m_H2_demand_ts_sel,
             H2_storage_t = H2_storage_t_sel,
             penalty_H2 = penalty_H2,
+            eff_curve = eff_curve,
             peak_hr_quantile = peak_hr_quantile,
             cost_of_battery_P_fluct_in_peak_price_ratio = cost_of_battery_P_fluct_in_peak_price_ratio,
             n_full_power_hours_expected_per_day_at_peak_price = n_full_power_hours_expected_per_day_at_peak_price,      
@@ -1188,6 +1193,7 @@ def ems_cplex_parts_P2X(
     m_H2_demand_ts,
     H2_storage_t,
     penalty_H2,
+    eff_curve,
     peak_hr_quantile = 0.9,
     cost_of_battery_P_fluct_in_peak_price_ratio = 0.5, #[0, 0.8]. For higher values might cause errors
     n_full_power_hours_expected_per_day_at_peak_price = 3,
@@ -1343,6 +1349,10 @@ def ems_cplex_parts_P2X(
     
     # piecewise linear representation of H2 storage vs offtake effciency 
     f3 = mdl.piecewise(1/storage_eff,[(0,0)],storage_eff)
+        
+    # Caclulating electrolyzer efficiency as a function of load (piecewise linear approximation)
+    eff_curve_list = [(load * ptg_MW, load * ptg_MW * efficiency) for load, efficiency in eff_curve]
+    PEM = mdl.piecewise(0, eff_curve_list, 0)
     
     for t in time:
         # Time index for successive time step
@@ -1388,12 +1398,6 @@ def ems_cplex_parts_P2X(
         if H2_storage_t[t] == 0:
             m_H2_offtake_t[t] = m_H2_t[t]
             
-        
-        # Caclulating electrolyzer efficiency as a function of load (piecewise linear approximation) for Alkaline Electrolyzer
-        #AE = mdl.piecewise(0, [(0.05 * ptg_MW, 0), (0.0501 * ptg_MW, 0.785 * 0.0501 * ptg_MW), (1 * ptg_MW, 0.42 * 1 * ptg_MW), (1.001 * ptg_MW , 0)], 0)
-        # Caclulating electrolyzer efficiency as a function of load (piecewise linear approximation) for PEM Electrolyzer
-        PEM = mdl.piecewise(0, [(0.05 * ptg_MW, 0), (0.0501 * ptg_MW, 0.7363 * 0.0501 * ptg_MW), (1 * ptg_MW, 0.6238 * 1 * ptg_MW), (1.001 * ptg_MW , 0)], 0)
-                 
         # Calculating Hydrogen production with electrolyzer efficiency curve
         #mdl.add_constraint(m_H2_t[t] == AE(P_ptg_t[t])* storage_eff / hhv * 1000  * ptg_deg) 
         mdl.add_constraint(m_H2_t[t] == PEM(P_ptg_t[t])* storage_eff / hhv * 1000  * ptg_deg)        
