@@ -104,6 +104,10 @@ class hpp_model_P2X:
         # pv_deg_per_year = sim_pars['pv_deg_per_year']
         wpp_efficiency = sim_pars['wpp_efficiency']
         # land_use_per_solar_MW = sim_pars['land_use_per_solar_MW']
+        if 'capex_phasing_curve' in sim_pars:
+            capex_phasing = sim_pars['capex_phasing_curve']
+        else:
+            capex_phasing = None
         
         # Extract weather timeseries
         if input_ts_fn == None:
@@ -358,7 +362,8 @@ class hpp_model_P2X:
             'finance_P2X', 
             finance_P2X(
                 N_time = N_time, 
-                life_h = life_h),
+                life_h = life_h,
+                capex_phasing=capex_phasing),
             promotes_inputs=['price_H2',
                              'wind_WACC',
                              'solar_WACC', 
@@ -724,6 +729,7 @@ class hpp_model_P2X:
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
         design_df.to_csv(f'{name_file}.csv')
+        return design_df
     
 # -----------------------------------------------------------------------
 # Auxiliar functions for ems modelling

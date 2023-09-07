@@ -23,6 +23,7 @@ class finance(om.ExplicitComponent):
     def __init__(self, 
                  N_time, 
                  life_h = 25*365*24,
+                 capex_phasing=None
                 ):
         """Initialization of the HPP finance model
 
@@ -34,6 +35,8 @@ class finance(om.ExplicitComponent):
         super().__init__()
         self.N_time = int(N_time)
         self.life_h = int(life_h)
+        self.capex_phasing = capex_phasing
+        self.life_y = int(life_h / 365 / 24)
 
     def setup(self):
         self.add_input('price_t_ext',
@@ -83,6 +86,10 @@ class finance(om.ExplicitComponent):
         
         self.add_output('CAPEX',
                         desc="CAPEX")
+
+        self.add_output('CAPEX_t',
+                        desc="CAPEX_t",
+                        shape=[self.life_y + 1])
         
         self.add_output('OPEX',
                         desc="OPEX")
@@ -132,6 +139,7 @@ class finance(om.ExplicitComponent):
         Returns
         -------
         CAPEX : Total capital expenditure costs of the HPP
+        CAPEX_t : Capital expenditure costs of the HPP over time
         OPEX : Operational and maintenance costs of the HPP
         NPV : Net present value
         IRR : Internal rate of return
@@ -143,6 +151,7 @@ class finance(om.ExplicitComponent):
         
         N_time = self.N_time
         life_h = self.life_h
+        capex_phasing = self.capex_phasing
         
         df = pd.DataFrame()
         
@@ -159,8 +168,23 @@ class finance(om.ExplicitComponent):
             inputs['CAPEX_b'] + inputs['CAPEX_el']
         OPEX = inputs['OPEX_w'] + inputs['OPEX_s'] + \
             inputs['OPEX_b'] + inputs['OPEX_el']
+
+        capex_phasing_array = np.zeros(revenues.size + 1)
+        if capex_phasing:
+            ys, cs = capex_phasing
+            for y, c in zip(ys, cs):
+                if y<=0:
+                    capex_phasing_array[0] += c
+                else:
+                    capex_phasing_array[int(y)] = c
+            assert capex_phasing_array.sum() == 1
+        else:
+            capex_phasing_array[0] = 1
+        CAPEX_t = capex_phasing_array * CAPEX
+
         
         outputs['CAPEX'] = CAPEX
+        outputs['CAPEX_t'] = CAPEX_t
         outputs['OPEX'] = OPEX
         
         # len of revenues
@@ -179,7 +203,7 @@ class finance(om.ExplicitComponent):
         
         NPV, IRR = calculate_NPV_IRR(
             Net_revenue_t = revenues.values.flatten(),
-            investment_cost = CAPEX,
+            investment_cost = CAPEX_t,
             maintenance_cost_per_year = OPEX,
             tax_rate = inputs['tax_rate'],
             WACC_after_tax = WACC_after_tax)
@@ -217,6 +241,7 @@ class finance_P2X(om.ExplicitComponent):
     def __init__(self, 
                  N_time, 
                  life_h = 25*365*24,
+                 capex_phasing=None
                 ):
         """Initialization of the HPP finance model
 
@@ -228,6 +253,8 @@ class finance_P2X(om.ExplicitComponent):
         super().__init__()
         self.N_time = int(N_time)
         self.life_h = int(life_h)
+        self.capex_phasing = capex_phasing
+        self.life_y = int(life_h / 365 / 24)
 
     def setup(self):
         self.add_input('price_t_ext',
@@ -317,6 +344,9 @@ class finance_P2X(om.ExplicitComponent):
         
         self.add_output('CAPEX',
                         desc="CAPEX")
+        self.add_output('CAPEX_t',
+                        desc="CAPEX_t",
+                        shape=[self.life_y + 1])
         
         self.add_output('OPEX',
                         desc="OPEX")
@@ -408,6 +438,7 @@ class finance_P2X(om.ExplicitComponent):
         
         N_time = self.N_time
         life_h = self.life_h
+        capex_phasing = self.capex_phasing
         
         df = pd.DataFrame()
         
@@ -436,9 +467,24 @@ class finance_P2X(om.ExplicitComponent):
             inputs['CAPEX_b'] + inputs['CAPEX_el'] 
         OPEX_LCOE = inputs['OPEX_w'] + inputs['OPEX_s'] + \
             inputs['OPEX_b'] + inputs['OPEX_el'] 
+
+        capex_phasing_array = np.zeros(revenues.size + 1)
+        if capex_phasing:
+            ys, cs = capex_phasing
+            for y, c in zip(ys, cs):
+                if y<=0:
+                    capex_phasing_array[0] += c
+                else:
+                    capex_phasing_array[int(y)] = c
+            assert capex_phasing_array.sum() == 1
+        else:
+            capex_phasing_array[0] = 1
+        CAPEX_t = capex_phasing_array * CAPEX
         
         outputs['CAPEX'] = CAPEX
+        outputs['CAPEX_t'] = CAPEX_t
         outputs['OPEX'] = OPEX
+
         
         # len of revenues
         iy = np.arange(len(revenues)) + 1
@@ -467,7 +513,7 @@ class finance_P2X(om.ExplicitComponent):
         
         NPV, IRR = calculate_NPV_IRR(
             Net_revenue_t = revenues.values.flatten(),
-            investment_cost = CAPEX,
+            investment_cost = CAPEX_t,
             maintenance_cost_per_year = OPEX,
             tax_rate = inputs['tax_rate'],
             WACC_after_tax = WACC_after_tax)
@@ -547,13 +593,14 @@ def calculate_NPV_IRR(
     IRR : Internal rate of return
     """
 
-
     # EBIT: earnings before interest and taxes
     EBIT = (Net_revenue_t - maintenance_cost_per_year) 
     
     # WACC: weighted average cost of capital
     Net_income = (EBIT*(1-tax_rate))*(1-WACC_after_tax) 
-    Cashflow = np.insert(Net_income, 0, -investment_cost)
+    if np.size(investment_cost) == 1:
+        investment_cost = np.insert(np.zeros_like(Net_income), 0, investment_cost)
+    Cashflow = np.insert(Net_income, 0, 0) - investment_cost
     NPV = npf.npv(WACC_after_tax, Cashflow)
     if NPV > 0:
         IRR = npf.irr(Cashflow)    

@@ -102,6 +102,9 @@ solar_WACC: 0.048   # After tax WACC for solar PV
 battery_WACC: 0.080 # After tax WACC for stationary storge li-ion batteries
 tax_rate: 0.22      # Corporate tax rate
 ptg_WACC: 0.07      # After tax WACC for P2H plant
+capex_phasing_curve: 
+- [-1, 0, 5, 10, 15]            # year
+- [1, 0, 0, 0, 0]               # fraction of total capex spent that year
 
 # --------------------------------------------------------------------------------------------
 # Weather databases

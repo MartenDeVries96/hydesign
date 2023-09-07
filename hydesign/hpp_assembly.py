@@ -116,6 +116,10 @@ class hpp_model:
         pv_deg_per_year = sim_pars['pv_deg_per_year']
         wpp_efficiency = sim_pars['wpp_efficiency']
         land_use_per_solar_MW = sim_pars['land_use_per_solar_MW']
+        if 'capex_phasing_curve' in sim_pars:
+            capex_phasing = sim_pars['capex_phasing_curve']
+        else:
+            capex_phasing = None
         
         # Extract weather timeseries
         if input_ts_fn == None:
@@ -344,7 +348,9 @@ class hpp_model:
             'finance', 
             finance(
                 N_time = N_time, 
-                life_h = life_h),
+                life_h = life_h,
+                capex_phasing=capex_phasing,
+                ),
             promotes_inputs=['wind_WACC',
                              'solar_WACC', 
                              'battery_WACC',
@@ -357,7 +363,8 @@ class hpp_model:
                               'mean_AEP',
                               'penalty_lifetime',
                               'CAPEX',
-                              'OPEX'
+                              'CAPEX_t',
+                              'OPEX',
                               ],
         )
                   
@@ -656,6 +663,7 @@ class hpp_model:
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
         design_df.to_csv(f'{name_file}.csv')
+        return design_df
         
     
 # -----------------------------------------------------------------------
