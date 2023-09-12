@@ -45,6 +45,7 @@ class hpp_model:
         genWake_fn = lut_filepath+'genWake_v3.nc',
         verbose = True,
         name = '',
+        driver='EGO',
         **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
@@ -360,7 +361,8 @@ class hpp_model:
                               'OPEX'
                               ],
         )
-                  
+        model.add_subsystem('obj_comp', om.ExecComp(['obj=-NPV_over_CAPEX']), promotes=['*'])
+          
                       
         model.connect('genericWT.ws', 'genericWake.ws')
         model.connect('genericWT.pc', 'genericWake.pc')
@@ -414,9 +416,25 @@ class hpp_model:
             model,
             reports=None
         )
+        
+        prob.model.add_objective('obj')
+        prob.driver = om.SimpleGADriver(max_gen=2, pop_size=10, bits={'hh': [4], 'd': [4],
+                                                          'p_rated': [4], 'Nwt': [4], 'Awpp': [4]})
+        prob.driver.options['debug_print'] = ['desvars','objs']
+        prob.model.add_design_var('hh', lower=70, upper=85)
+        prob.model.add_design_var('d', lower=120, upper=150)
+        prob.model.add_design_var('p_rated', lower=3, upper=7)
+        prob.model.add_design_var('Nwt', lower=40, upper=80)
+        prob.model.add_design_var('Awpp', lower=30, upper=55)
 
         prob.setup()        
         
+        # pass design variables        
+        prob.set_val('hh', 77)
+        prob.set_val('d', val=134)
+        prob.set_val('p_rated', val=5)
+        prob.set_val('Nwt', val=60)        
+        prob.set_val('Awpp', val=43)
         # Additional parameters
         prob.set_val('price_t', weather['Price'])
         prob.set_val('G_MW', sim_pars['G_MW'])
@@ -486,7 +504,70 @@ class hpp_model:
             'cost_of_battery_P_fluct_in_peak_price_ratio'
             ]   
     
-    
+    def optimize(self,        
+                 # Wind plant design
+                # clearance, sp, p_rated, wind_MW_per_km2,
+                # PV plant design
+                solar_MW,  surface_tilt, surface_azimuth, DC_AC_ratio,
+                # Energy storage & EMS price constrains
+                b_P, b_E_h, cost_of_battery_P_fluct_in_peak_price_ratio
+                ):
+        prob = self.prob
+        
+        b_E = b_E_h * b_P
+
+        prob.set_val('surface_tilt', surface_tilt)
+        prob.set_val('surface_azimuth', surface_azimuth)
+        prob.set_val('DC_AC_ratio', DC_AC_ratio)
+        prob.set_val('solar_MW', solar_MW)
+        
+        prob.set_val('b_P', b_P)
+        prob.set_val('b_E', b_E)
+        prob.set_val('cost_of_battery_P_fluct_in_peak_price_ratio',cost_of_battery_P_fluct_in_peak_price_ratio)        
+        
+        prob.run_driver()
+        
+        self.prob = prob
+        hh = prob['hh']
+        d = prob['d']
+        p_rated = prob['p_rated']
+        Nwt = prob['Nwt']
+        Awpp = prob['Awpp']
+        wind_MW = Nwt * p_rated
+
+        
+        return np.hstack([
+            prob['NPV_over_CAPEX'], 
+            prob['NPV']/1e6,
+            prob['IRR'],
+            prob['LCOE'],
+            prob['CAPEX']/1e6,
+            prob['OPEX']/1e6,
+            prob.get_val('finance.CAPEX_w')/1e6,
+            prob.get_val('finance.OPEX_w')/1e6,
+            prob.get_val('finance.CAPEX_s')/1e6,
+            prob.get_val('finance.OPEX_s')/1e6,
+            prob.get_val('finance.CAPEX_b')/1e6,
+            prob.get_val('finance.OPEX_b')/1e6,
+            prob.get_val('finance.CAPEX_el')/1e6,
+            prob.get_val('finance.OPEX_el')/1e6,
+            prob['penalty_lifetime']/1e6,
+            prob['mean_AEP']/1e3, #[GWh]
+            # Grid Utilization factor
+            prob['mean_AEP']/(self.sim_pars['G_MW']*365*24),
+            self.sim_pars['G_MW'],
+            wind_MW,
+            solar_MW,
+            b_E,
+            b_P,
+            prob['total_curtailment']/1e3, #[GWh]
+            Awpp,
+            prob.get_val('shared_cost.Apvp'),
+            d,
+            hh,
+            prob.get_val('battery_degradation.n_batteries') * (b_P>0),
+            ])
+        
     def evaluate(
         self,
         # Wind plant design
