@@ -1,18 +1,18 @@
 # %%
-import glob
+# import glob
 import os
-import time
+# import time
 
 # basic libraries
 import numpy as np
-from numpy import newaxis as na
-import numpy_financial as npf
+# from numpy import newaxis as na
+# import numpy_financial as npf
 import pandas as pd
 # import seaborn as sns
 import openmdao.api as om
 import yaml
-import scipy as sp
-from scipy import stats
+# import scipy as sp
+# from scipy import stats
 import xarray as xr
 
 from hydesign.weather import extract_weather_for_HPP, ABL, select_years
@@ -417,24 +417,27 @@ class hpp_model:
             reports=None
         )
         
-        prob.model.add_objective('obj')
-        prob.driver = om.SimpleGADriver(max_gen=2, pop_size=10, bits={'hh': [4], 'd': [4],
-                                                          'p_rated': [4], 'Nwt': [4], 'Awpp': [4]})
-        prob.driver.options['debug_print'] = ['desvars','objs']
-        prob.model.add_design_var('hh', lower=70, upper=85)
-        prob.model.add_design_var('d', lower=120, upper=150)
-        prob.model.add_design_var('p_rated', lower=3, upper=7)
-        prob.model.add_design_var('Nwt', lower=40, upper=80)
-        prob.model.add_design_var('Awpp', lower=30, upper=55)
+        if driver == 'GA':
+            prob.model.add_objective('obj')
+            prob.driver = om.SimpleGADriver(max_gen=2, pop_size=10, bits={'hh': [4], 'd': [4],
+                                                              'p_rated': [4], 'Nwt': [4], 'Awpp': [4]})
+            prob.driver.options['debug_print'] = ['desvars','objs']
+            prob.model.add_design_var('hh', lower=70, upper=85)
+            prob.model.add_design_var('d', lower=120, upper=150)
+            prob.model.add_design_var('p_rated', lower=3, upper=7)
+            prob.model.add_design_var('Nwt', lower=40, upper=80)
+            prob.model.add_design_var('Awpp', lower=30, upper=55)
 
         prob.setup()        
         
-        # pass design variables        
-        prob.set_val('hh', 77)
-        prob.set_val('d', val=134)
-        prob.set_val('p_rated', val=5)
-        prob.set_val('Nwt', val=60)        
-        prob.set_val('Awpp', val=43)
+        if driver == 'GA':
+            # pass design variables        
+            prob.set_val('hh', 77)
+            prob.set_val('d', val=134)
+            prob.set_val('p_rated', val=5)
+            prob.set_val('Nwt', val=60)        
+            prob.set_val('Awpp', val=43)
+        
         # Additional parameters
         prob.set_val('price_t', weather['Price'])
         prob.set_val('G_MW', sim_pars['G_MW'])

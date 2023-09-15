@@ -323,7 +323,7 @@ def model_evaluation(inputs): # Evaluates the model
     	return np.array(
         kwargs['opt_sign']*hpp_m.evaluate(*x_eval[0,:])[kwargs['op_var_index']])
     except:
-        print('x=['+', '.join(map(str, x_eval[0,:]))+']')
+        print('error with: x=['+', '.join(map(str, x_eval[0,:]))+']')
     
 
 
@@ -407,6 +407,8 @@ class EfficientGlobalOptimizationDriver(Driver):
 
     def __init__(self, **kwargs):
         self.kwargs = kwargs
+        self.rec_vars = ['x_scaled', 'x_unscaled', 'y_scaled', 'time_start', 'time_finish', 'itr']
+        self.recorder = {r: [] for r in self.rec_vars}
         super().__init__(**kwargs)
 
     def _declare_options(self):
@@ -415,9 +417,14 @@ class EfficientGlobalOptimizationDriver(Driver):
         """
         for k, v in self.kwargs.items():
             self.options.declare(k, v)
+    
+    def record(self, rec_vals):
+        for k, v in zip(self.rec_vars, rec_vals):
+            self.recorder[k].append(v)
 
     def run(self):
         kwargs = self.kwargs
+
 
         # -----------------
         # INPUTS
@@ -500,7 +507,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         n_procs = kwargs['n_procs']
         PE = ParallelEvaluator(n_procs = n_procs)
         ydoe = PE.run_ydoe(fun=model_evaluation,x=xdoe, **kwargs)
-        
+        self.record([xdoe, scaler.inverse_transform(xdoe), ydoe, start_total, time.time(), -1])
         lapse = np.round((time.time() - start)/60, 2)
         print(f'Initial {xdoe.shape[0]} simulations took {lapse} minutes')
         
@@ -581,8 +588,15 @@ class EfficientGlobalOptimizationDriver(Driver):
             xdoe_upd, ydoe_upd = drop_duplicates(xdoe_upd, ydoe_upd)
             
             # Drop yopt if it is not better than best design seen
-            xopt = xdoe_upd[[np.argmin(ydoe_upd)],:]
-            yopt = ydoe_upd[[np.argmin(ydoe_upd)],:]
+            try:
+                xopt = xdoe_upd[[np.argmin(ydoe_upd)],:]
+                yopt = ydoe_upd[[np.argmin(ydoe_upd)],:]
+            except:
+                print('error: ')
+                print('xopt_iter: ', xopt_iter)
+                print('yopt_iter: ', yopt_iter)
+                print('xdoe: ', xdoe)
+                print('ydoe: ', ydoe)
             
             #if itr > 0:
             error = opt_sign * float(1 - (yold/yopt) ) 
@@ -594,10 +608,13 @@ class EfficientGlobalOptimizationDriver(Driver):
             ydoe = np.copy(ydoe_upd)
             # xold = np.copy(xopt)
             yold = np.copy(yopt)
+            self.record([xopt, scaler.inverse_transform(xopt), yopt, start_iter, time.time(), itr])
             itr = itr+1
         
             lapse = np.round( ( time.time() - start_iter )/60, 2)
             print(f'Iteration {itr} took {lapse} minutes\n')
+            
+
         
             if (np.abs(error) < kwargs['tol']):
                 conv_iter += 1
@@ -613,6 +630,9 @@ class EfficientGlobalOptimizationDriver(Driver):
         # Re-Evaluate the last design to get all outputs
         outs = hpp_m.evaluate(*xopt[0,:])
         yopt = np.array(opt_sign*outs[[op_var_index]])[:,na]
+        
+        # self.record([xopt, yopt, time.time(), time.time(), itr])
+
         hpp_m.print_design(xopt[0,:], outs)
         
         n_model_evals = xdoe.shape[0] 
@@ -653,15 +673,15 @@ if __name__ == '__main__':
         'opt_var': "NPV_over_CAPEX",
         'num_batteries': 1,
         'n_procs': 7,
-        'n_doe': 16,
+        'n_doe': 24,
         'n_clusters': 4, # total number of evals per iteration = n_clusters + 2*n_dims
         'n_seed': 0,
-        'max_iter': 4,
+        'max_iter': 10,
         'final_design_fn': 'hydesign_design_0.csv',
         'npred': 3e4,
         'tol': 1e-6,
-        'theta_bounds': [1e-3, 1e2],
-        'n_comp': 1,
+        # 'theta_bounds': [1e-3, 1e2],
+        # 'n_comp': 1,
         'min_conv_iter': 3,
         'work_dir': './',
         'hpp_model': hpp_model,
