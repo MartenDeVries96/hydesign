@@ -176,7 +176,7 @@ def battery_replacement(
     if np.min(1-LoC) > min_LoH: # First battery is NOT fully used after the full lifetime
         try: #split the minimum into the number of levels
             ind_q = [np.where(1-LoC < q)[0][0] 
-                for q in np.linspace(1,np.min(1-LoC),n_steps_in_LoH+1+1, endpoint = False)]
+                     for q in np.linspace(1,np.min(1-LoC),n_steps_in_LoH+1, endpoint = False)]
             ind_q_last = ind_q[-1]
         except: #split the time into equal number of levels
             ind_q = np.linspace(0, len(rf_i_start), n_steps_in_LoH+1, dtype=int, endpoint = False)
@@ -207,7 +207,7 @@ def battery_replacement(
             if min_LoH >  (1 - LoC_new[-1]):
                 
                 ind_q_new = [np.where(1-LoC_new < q)[0][0] + ind_q_last
-                             for q in np.linspace(1,min_LoH,n_steps_in_LoH+1, endpoint = True)]
+                             for q in np.linspace(1,min_LoH,n_steps_in_LoH+1, endpoint = False)]
                 ind_q_last = ind_q_new[-1] 
                 ind_q = ind_q + ind_q_new[1:]
 
@@ -220,7 +220,7 @@ def battery_replacement(
 
         except:
             raise('This many bateries are not required. Reduce the number.')
-    
+
     return LoC, ind_q, ind_q_last
 
 def degradation(rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, LLoC_0=0):
