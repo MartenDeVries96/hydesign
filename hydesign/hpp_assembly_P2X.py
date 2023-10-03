@@ -724,6 +724,7 @@ class hpp_model_P2X:
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
         design_df.to_csv(f'{name_file}.csv')
+        return design_df
     
 # -----------------------------------------------------------------------
 # Auxiliar functions for ems modelling
