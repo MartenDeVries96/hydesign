@@ -25,7 +25,7 @@ It is recommended to create a new environment to install hydesign if you have ot
    git clone https://gitlab.windenergy.dtu.dk/TOPFARM/hydesign.git
    cd hydesign
    conda env create --file environment.yml
-   activate hydesign
+   conda activate hydesign
 
 
 Simple Installation
