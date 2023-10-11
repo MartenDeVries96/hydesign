@@ -8,7 +8,7 @@ test_hydesign:
   - pip install .[test]
   - python -m pytest
   tags:
-  - debian
+  - linux
 
 # ===== TEST hydesign windows=====
 test_hydesign_windows:
@@ -46,7 +46,7 @@ pages:
   - /^test_docdeploy.*/ 
   - main
   tags: 
-  - debian
+  - linux
 
 # ===== DEPLOY publish hydesign on pypi=====
 pypi:
@@ -69,5 +69,5 @@ pypi:
     - twine upload dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD
     #- twine upload --repository-url https://test.pypi.org/legacy/ dist/* -u $TWINE_USERNAME -p $TWINE_PASSWORD # for testing purposes
   tags:
-  - debian
+  - linux
 

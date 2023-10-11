@@ -466,6 +466,7 @@ class hpp_model:
             'Total curtailment [GWh]',
             'Awpp [km2]',
             'Apvp [km2]',
+            'Plant area [km2]',
             'Rotor diam [m]',
             'Hub height [m]',
             'Number of batteries used in lifetime',
@@ -590,6 +591,7 @@ class hpp_model:
             prob['total_curtailment']/1e3, #[GWh]
             Awpp,
             prob.get_val('shared_cost.Apvp'),
+            max( Awpp , prob.get_val('shared_cost.Apvp') ),
             d,
             hh,
             prob.get_val('battery_degradation.n_batteries') * (b_P>0),
@@ -650,6 +652,7 @@ class hpp_model:
                                             'Total curtailment [GWh]',
                                             'Awpp [km2]',
                                             'Apvp [km2]',
+                                            'Plant area [km2]',
                                             'Rotor diam [m]',
                                             'Hub height [m]',
                                             'Number of batteries used in lifetime',
