@@ -221,6 +221,9 @@ def get_design_vars(variables):
            ], [var_ for var_ in variables.keys() 
                if variables[var_]['var_type']=='fixed']
 
+def get_init_vars(variables):
+    return [np.mean(v['limits']) if 'init' not in v else v['init'] for k, v in variables.items() if v['var_type'] == 'design']
+
 def get_limits(variables, design_var=[]):
     if len(design_var)==0:
         design_var, fixed_var = get_design_vars(variables)
@@ -296,7 +299,7 @@ def get_mixint_context(variables, seed=None):
 
 def expand_x_for_model_eval(x, kwargs):
     
-    list_vars = kwargs['list_vars']
+    list_vars = kwargs['list_vars_unitless']
     variables = kwargs['variables']
     design_vars = kwargs['design_vars']
     fixed_vars = kwargs['fixed_vars']
@@ -443,6 +446,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         
         variables = kwargs['variables']
         design_vars, fixed_vars = get_design_vars(variables)
+        init_vars = get_init_vars(variables)
         xlimits = get_xlimits(variables, design_vars)
         xtypes = get_xtypes(variables, design_vars)
                 
@@ -499,6 +503,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         # Stablish types for design variables
         
         kwargs['list_vars'] = list_vars
+        kwargs['list_vars_unitless'] = [l.split(' ')[0] for l in list_vars]
         kwargs['design_vars'] = design_vars
         kwargs['fixed_vars'] = fixed_vars
         
@@ -506,6 +511,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         start = time.time()
         n_procs = kwargs['n_procs']
         PE = ParallelEvaluator(n_procs = n_procs)
+        expand_x_for_model_eval(xdoe, kwargs)
         ydoe = PE.run_ydoe(fun=model_evaluation,x=xdoe, **kwargs)
         self.record([xdoe, scaler.inverse_transform(xdoe), ydoe, start_total, time.time(), -1])
         lapse = np.round((time.time() - start)/60, 2)

@@ -23,6 +23,7 @@ from hydesign.battery_degradation import battery_degradation
 from hydesign.costs import wpp_cost, pvp_cost, battery_cost, shared_cost
 from hydesign.finance import finance
 from hydesign.look_up_tables import lut_filepath
+# from hydesign.Parallel_EGO import EfficientGlobalOptimizationDriver
 
 
 class hpp_model:
@@ -45,10 +46,11 @@ class hpp_model:
         genWake_fn = lut_filepath+'genWake_v3.nc',
         verbose = True,
         name = '',
-        driver='EGO',
-        design_vars=None,
-        init_state=None,
-        objective_comp=None,
+        driver=None,
+        variables=None,
+        # init_state=None,
+        objective='NPV_over_CAPEX',
+        maximize=False,
         **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
@@ -92,8 +94,8 @@ class hpp_model:
                                 kwargs={"fill_value": 0.0}
                             ).values
         if verbose:
-            print(f'\nFixed parameters on the site')
-            print(f'-------------------------------')
+            print('\nFixed parameters on the site')
+            print('-------------------------------')
             print('longitude =',longitude)
             print('latitude =',latitude)
             print('altitude =',altitude)
@@ -369,8 +371,9 @@ class hpp_model:
                               'OPEX'
                               ],
         )
-        if isinstance(driver, om.SimpleGADriver):
-            model.add_subsystem('objective_comp', objective_comp, promotes=['*'])
+        # if isinstance(driver, om.SimpleGADriver):
+        sign = 1 - 2 * maximize  # maximize = False => sign = 1, maximize = True => sign = -1
+        model.add_subsystem('objective_comp', om.ExecComp([f'objective={sign} * {objective}']), promotes=['*'])
           
                       
         model.connect('genericWT.ws', 'genericWake.ws')
@@ -426,18 +429,20 @@ class hpp_model:
             reports=None
         )
         
-        if isinstance(driver, om.SimpleGADriver):
-            prob.model.add_objective('objective')
+        design_vars, init_state = get_vars(variables)
+        # if isinstance(driver, om.SimpleGADriver):
+        prob.model.add_objective('objective')
+        if driver:
             prob.driver = driver
 
-            for desvar_args in design_vars:
-                prob.model.add_design_var(**desvar_args)
+        for desvar_args in design_vars:
+            prob.model.add_design_var(**desvar_args)
 
         prob.setup()        
         
-        if isinstance(driver, om.SimpleGADriver):
-            for k, v in init_state.items():
-                prob.set_val(k, v)
+        # if isinstance(driver, om.SimpleGADriver):
+        for k, v in init_state.items():
+            prob.set_val(k, v)
 
         
         # Additional parameters
@@ -808,5 +813,12 @@ class hpp_parameters(om.ExplicitComponent):
         outputs['Awpp'] = Awpp
         outputs['b_E'] = b_E
 
+def get_vars(variables):
+    design_vars = [{'name': k,
+                    'lower': v['limits'][0],
+                    'upper': v['limits'][1],
+                    } for k, v in variables.items() if v['var_type']=='design']
+    init_state = {k: v['value'] if v['var_type']=='fixed' else (np.mean(v['limits']) if 'init' not in v else v['init']) for k, v in variables.items()}
+    return design_vars, init_state
 
 
