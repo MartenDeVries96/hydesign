@@ -17,8 +17,10 @@ import xarray as xr
 # import matplotlib.pyplot as plt
 
 from hydesign.weather import extract_weather_for_HPP, ABL
-from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_d # , get_rotor_area
-from hydesign.pv import pvp #, pvp_degradation_linear
+# from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_d # , get_rotor_area
+# from hydesign.pv import pvp #, pvp_degradation_linear
+from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_d # , wpp_with_degradation, get_rotor_area
+from hydesign.pv import pvp #, pvp_with_degradation
 from hydesign.ems import ems_P2X #, ems_long_term_operation
 # from hydesign.battery_degradation import battery_degradation
 from hydesign.costs import wpp_cost, pvp_cost, battery_cost, shared_cost, ptg_cost
@@ -36,7 +38,8 @@ class hpp_model_P2X:
         altitude=None,
         sim_pars_fn=None,
         work_dir = './',
-        num_batteries = 1,
+        num_batteries = 3,
+        factor_battery_cost = 1,
         ems_type='cplex',
         input_ts_fn = None, # If None then it computes the weather
         price_fn = None, # If input_ts_fn is given it should include Price column.
@@ -96,7 +99,6 @@ class hpp_model_P2X:
         year_end = sim_pars['year']
         N_life = sim_pars['N_life']
         life_h = N_life*365*24
-        n_steps_in_LoH = sim_pars['n_steps_in_LoH']
         # G_MW = sim_pars['G_MW']
         # battery_depth_of_discharge = sim_pars['battery_depth_of_discharge']
         # battery_charge_efficiency = sim_pars['battery_charge_efficiency']
@@ -243,7 +245,6 @@ class hpp_model_P2X:
         #     'battery_degradation', 
         #     battery_degradation(
         #         num_batteries = num_batteries,
-        #         n_steps_in_LoH = n_steps_in_LoH,
         #         life_h = life_h),
         #     promotes_inputs=[
         #         'min_LoH'
@@ -262,7 +263,6 @@ class hpp_model_P2X:
         #     ems_long_term_operation(
         #         N_time = N_time,
         #         num_batteries = num_batteries,
-        #         n_steps_in_LoH = n_steps_in_LoH,
         #         life_h = life_h),
         #     promotes_inputs=[
         #         'b_P',
@@ -308,13 +308,11 @@ class hpp_model_P2X:
         model.add_subsystem(
             'battery_cost',
             battery_cost(
-                battery_energy_cost=sim_pars['battery_energy_cost'],
-                battery_power_cost=sim_pars['battery_power_cost'],
-                battery_BOP_installation_commissioning_cost=sim_pars['battery_BOP_installation_commissioning_cost'],
-                battery_control_system_cost=sim_pars['battery_control_system_cost'],
-                battery_energy_onm_cost=sim_pars['battery_energy_onm_cost'],
-                num_batteries = num_batteries,
-                n_steps_in_LoH = n_steps_in_LoH,
+                battery_energy_cost=factor_battery_cost*sim_pars['battery_energy_cost'],
+                battery_power_cost=factor_battery_cost*sim_pars['battery_power_cost'],
+                battery_BOP_installation_commissioning_cost=factor_battery_cost*sim_pars['battery_BOP_installation_commissioning_cost'],
+                battery_control_system_cost=factor_battery_cost*sim_pars['battery_control_system_cost'],
+                battery_energy_onm_cost=factor_battery_cost*sim_pars['battery_energy_onm_cost'],
                 N_life = N_life,
                 life_h = life_h
             ),

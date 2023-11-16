@@ -33,33 +33,13 @@ def test_ems():
 
 # ------------------------------------------------------------------------------------------------
 def run_operation_with_deg():
-    with open(tfp+'ems_input_ems.pickle', 'rb') as f:
-        input_ems = pickle.load(f)
-    with open(tfp+'ems_output_ems.pickle','rb') as f:
-        ems_out = pickle.load(f)
-    P_HPP_ts, P_curtailment_ts, P_charge_discharge_ts, E_SOC_ts, penalty_ts =  ems_out
-    out_operation_with_deg = operation_solar_batt_deg(
-                    pv_degradation = 0.8,
-                    batt_degradation = 0.8,
-                    wind_t = input_ems['wind_ts'].values,
-                    solar_t = input_ems['solar_ts'].values,
-                    hpp_curt_t = P_curtailment_ts,
-                    b_t = P_charge_discharge_ts,
-                    b_E_SOC_t = E_SOC_ts,
-                    G_MW = input_ems['hpp_grid_connection'],
-                    b_E = input_ems['E_batt_MWh_t'][0],
-                    battery_depth_of_discharge = input_ems['battery_depth_of_discharge'],
-                    battery_charge_efficiency = input_ems['charge_efficiency'],
-                    b_E_SOC_0 = 0,
-                    price_ts = input_ems['price_ts'],
-                    peak_hr_quantile = input_ems['peak_hr_quantile'],
-                    n_full_power_hours_expected_per_day_at_peak_price = \
-                        input_ems['n_full_power_hours_expected_per_day_at_peak_price'],
-                )
+    with open(tfp+'ems_input_ems_longterm.pickle', 'rb') as f:
+        input_ems_long = pickle.load(f)
+    out_operation_with_deg = operation_solar_batt_deg(**input_ems_long)
     return out_operation_with_deg
 
 def load_operation_with_deg():
-    with open(tfp+'out_operation_with_deg.pickle','rb') as f:
+    with open(tfp+'ems_output_ems_longterm.pickle','rb') as f:
         out_operation_with_deg = pickle.load(f)
     return out_operation_with_deg
 

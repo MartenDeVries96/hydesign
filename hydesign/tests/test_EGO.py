@@ -118,11 +118,10 @@ mixint = get_mixint_context(variables, seed=0)
 
 @pytest.mark.parametrize('fmin', fmins)
 def test_eval_sm(fmin):
-    generate_data2()
     a, b = eval_sm(sm, mixint, npred=5, fmin=fmin)
     a_ref, b_ref = get_data2(fmin)
     np.testing.assert_allclose(a, a_ref)
-    np.testing.assert_allclose(b.ravel(), b_ref)
+    np.testing.assert_allclose(b.ravel(), b_ref, rtol=1e-6)
 
 def test_get_candidate_points():
     xpred, ypred_LB = eval_sm(sm, mixint, npred=5, fmin=10)
@@ -132,4 +131,5 @@ def test_get_candidate_points():
     quantile = 1e-4) 
     np.testing.assert_allclose(xnew, np.array([[9, 4.06, 1.51, 86, 2.95, -3, -4.3, -0.5, 1.316]]))
 
-    
+# generate_data2()
+

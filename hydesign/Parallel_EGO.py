@@ -74,13 +74,22 @@ def KB(sm, point):
 def get_sm(xdoe, ydoe, theta_bounds=[1e-06, 2e1], n_comp=4):
     '''
     Function that trains the surrogate and uses it to predict on random input points
+
+    Parameters
+    ----------
+    xdoe: design of exeriments (DOE) in the inputs. [Ndoe, Ndims]
+    ydoe: model outputs at DOE. [Ndoe, 1]
+    theta_bounds: Bounds for the hyperparameter optimization. 
+                  The theta parameter of the kernel function represnet an inverse squared length scale: 
+                  the largest the number the faster the kernel decays to 0.  Suggestion: theta_bounds = [1e-3, 1e2].
+    n_comp: Number of components of a PCA applied to the hyperparameters; note that there is a theta per dimension. 
+            Note that for problems with large number of dimensions (Ndims>10) might require a n_comp in [3,5]. Default value is n_comp = 1.
     '''    
     sm = KPLSK(
         corr="squar_exp",
         poly='linear',
         theta0=[1e-2],
         theta_bounds=theta_bounds,
-        #noise_bounds=[1e-12, 1e2],
         n_comp=n_comp,
         print_global=False)
     sm.set_training_values(xdoe, ydoe)
@@ -513,7 +522,8 @@ class EfficientGlobalOptimizationDriver(Driver):
         kwargs['yopt'] = yopt
         yold = np.copy(yopt)
         # xold = None
-        print(f'  Current solution {opt_sign}*{opt_var} = {float(yopt):.3E}\n'.replace('1*',''))
+        print(f'  Current solution {opt_sign}*{opt_var} = {float(yopt):.3E}'.replace('1*',''))
+        print(f'  Current No. model evals: {xdoe.shape[0]}\n')
     
         while itr < kwargs['max_iter']:
             # Iteration
@@ -586,17 +596,17 @@ class EfficientGlobalOptimizationDriver(Driver):
             
             #if itr > 0:
             error = opt_sign * float(1 - (yold/yopt) ) 
-            print(f'  Current solution {opt_sign}*{opt_var} = {float(yopt):.3E}'.replace('1*',''))
-            print(f'  rel_yopt_change = {error:.2E}')
-
         
             xdoe = np.copy(xdoe_upd)
             ydoe = np.copy(ydoe_upd)
             # xold = np.copy(xopt)
             yold = np.copy(yopt)
-            itr = itr+1
-        
+            itr = itr+1        
             lapse = np.round( ( time.time() - start_iter )/60, 2)
+
+            print(f'  Current solution {opt_sign}*{opt_var} = {float(yopt):.3E}'.replace('1*',''))
+            print(f'  Current No. model evals: {xdoe.shape[0]}')
+            print(f'  rel_yopt_change = {error:.2E}')
             print(f'Iteration {itr} took {lapse} minutes\n')
         
             if (np.abs(error) < kwargs['tol']):

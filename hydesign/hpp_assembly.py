@@ -16,10 +16,10 @@ from scipy import stats
 import xarray as xr
 
 from hydesign.weather import extract_weather_for_HPP, ABL, select_years
-from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_area, get_rotor_d
-from hydesign.pv import pvp, pvp_degradation_linear
+from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, wpp_with_degradation, get_rotor_area, get_rotor_d
+from hydesign.pv import pvp, pvp_with_degradation
 from hydesign.ems import ems, ems_long_term_operation
-from hydesign.battery_degradation import battery_degradation
+from hydesign.battery_degradation import battery_degradation, battery_loss_in_capacity_due_to_temp
 from hydesign.costs import wpp_cost, pvp_cost, battery_cost, shared_cost
 from hydesign.finance import finance
 from hydesign.look_up_tables import lut_filepath
@@ -35,7 +35,8 @@ class hpp_model:
         altitude=None,
         sim_pars_fn=None,
         work_dir = './',
-        num_batteries = 1,
+        num_batteries = 3,
+        factor_battery_cost = 1,
         ems_type='cplex',
         weeks_per_season_per_year = None,
         seed=0, # For selecting random weeks pe season to reduce the computational time
@@ -108,12 +109,11 @@ class hpp_model:
             
         N_life = sim_pars['N_life']
         life_h = N_life*365*24
-        n_steps_in_LoH = sim_pars['n_steps_in_LoH']
         G_MW = sim_pars['G_MW']
         battery_depth_of_discharge = sim_pars['battery_depth_of_discharge']
         battery_charge_efficiency = sim_pars['battery_charge_efficiency']
         min_LoH = sim_pars['min_LoH']
-        pv_deg_per_year = sim_pars['pv_deg_per_year']
+        #pv_deg_per_year = sim_pars['pv_deg_per_year']
         wpp_efficiency = sim_pars['wpp_efficiency']
         land_use_per_solar_MW = sim_pars['land_use_per_solar_MW']
         
@@ -247,27 +247,53 @@ class hpp_model:
         model.add_subsystem(
             'battery_degradation', 
             battery_degradation(
+                weather_fn = input_ts_fn, # for extracting temperature
                 num_batteries = num_batteries,
-                n_steps_in_LoH = n_steps_in_LoH,
-                life_h = life_h),
+                life_h = life_h,
+                weeks_per_season_per_year = weeks_per_season_per_year,
+            ),
             promotes_inputs=[
                 'min_LoH'
                 ])
-        
+
         model.add_subsystem(
-            'pvp_degradation_linear', 
-            pvp_degradation_linear(
-                life_h = life_h),
-            promotes_inputs=[
-                'pv_deg_per_year'
-                ])
+            'battery_loss_in_capacity_due_to_temp', 
+            battery_loss_in_capacity_due_to_temp(
+                weather_fn = input_ts_fn, # for extracting temperature
+                life_h = life_h,
+                weeks_per_season_per_year = weeks_per_season_per_year,
+            ),
+            )
+
+        model.add_subsystem(
+            'wpp_with_degradation', 
+            wpp_with_degradation(
+                N_time = N_time,
+                N_ws = N_ws,
+                wpp_efficiency = wpp_efficiency,
+                life_h = life_h,
+                wind_deg_yr = sim_pars['wind_deg_yr'],
+                wind_deg = sim_pars['wind_deg'],
+                share_WT_deg_types = sim_pars['share_WT_deg_types'],
+                weeks_per_season_per_year = weeks_per_season_per_year,
+                
+            )
+        )
+
+        model.add_subsystem(
+            'pvp_with_degradation', 
+            pvp_with_degradation(
+                life_h = life_h,
+                pv_deg_yr = sim_pars['pv_deg_yr'],
+                pv_deg = sim_pars['pv_deg'],
+            )
+        )
+        
         
         model.add_subsystem(
             'ems_long_term_operation', 
             ems_long_term_operation(
                 N_time = N_time,
-                num_batteries = num_batteries,
-                n_steps_in_LoH = n_steps_in_LoH,
                 life_h = life_h),
             promotes_inputs=[
                 'b_P',
@@ -313,13 +339,11 @@ class hpp_model:
         model.add_subsystem(
             'battery_cost',
             battery_cost(
-                battery_energy_cost=sim_pars['battery_energy_cost'],
-                battery_power_cost=sim_pars['battery_power_cost'],
-                battery_BOP_installation_commissioning_cost=sim_pars['battery_BOP_installation_commissioning_cost'],
-                battery_control_system_cost=sim_pars['battery_control_system_cost'],
-                battery_energy_onm_cost=sim_pars['battery_energy_onm_cost'],
-                num_batteries = num_batteries,
-                n_steps_in_LoH = n_steps_in_LoH,
+                battery_energy_cost=factor_battery_cost*sim_pars['battery_energy_cost'],
+                battery_power_cost=factor_battery_cost*sim_pars['battery_power_cost'],
+                battery_BOP_installation_commissioning_cost=factor_battery_cost*sim_pars['battery_BOP_installation_commissioning_cost'],
+                battery_control_system_cost=factor_battery_cost*sim_pars['battery_control_system_cost'],
+                battery_energy_onm_cost=factor_battery_cost*sim_pars['battery_energy_onm_cost'],
                 N_life = N_life,
                 life_h = life_h
             ),
@@ -366,9 +390,7 @@ class hpp_model:
         model.connect('genericWT.pc', 'genericWake.pc')
         model.connect('genericWT.ct', 'genericWake.ct')
         model.connect('genericWT.ws', 'wpp.ws')
-
         model.connect('genericWake.pcw', 'wpp.pcw')
-
         model.connect('abl.wst', 'wpp.wst')
         
         model.connect('wpp.wind_t', 'ems.wind_t')
@@ -376,9 +398,17 @@ class hpp_model:
         
         model.connect('ems.b_E_SOC_t', 'battery_degradation.b_E_SOC_t')
         
-        model.connect('battery_degradation.ii_time', 'ems_long_term_operation.ii_time')
-        model.connect('battery_degradation.SoH', 'ems_long_term_operation.SoH')
-        model.connect('pvp_degradation_linear.SoH_pv', 'ems_long_term_operation.SoH_pv')
+        model.connect('battery_degradation.SoH', 'battery_loss_in_capacity_due_to_temp.SoH')
+        model.connect('battery_loss_in_capacity_due_to_temp.SoH_all', 'ems_long_term_operation.SoH')
+        
+
+        model.connect('genericWT.ws', 'wpp_with_degradation.ws')
+        model.connect('genericWake.pcw', 'wpp_with_degradation.pcw')
+        model.connect('abl.wst', 'wpp_with_degradation.wst')
+        model.connect('wpp_with_degradation.wind_t_ext_deg', 'ems_long_term_operation.wind_t_ext_deg')
+
+        model.connect('ems.solar_t_ext','pvp_with_degradation.solar_t_ext')
+        model.connect('pvp_with_degradation.solar_t_ext_deg', 'ems_long_term_operation.solar_t_ext_deg')
         
         model.connect('ems.wind_t_ext', 'ems_long_term_operation.wind_t_ext')
         model.connect('ems.solar_t_ext', 'ems_long_term_operation.solar_t_ext')
@@ -389,7 +419,6 @@ class hpp_model:
 
         model.connect('wpp.wind_t', 'wpp_cost.wind_t')
         
-        model.connect('battery_degradation.ii_time','battery_cost.ii_time')
         model.connect('battery_degradation.SoH','battery_cost.SoH')
         
         model.connect('pvp.Apvp', 'shared_cost.Apvp')
@@ -420,7 +449,7 @@ class hpp_model:
         # Additional parameters
         prob.set_val('price_t', weather['Price'])
         prob.set_val('G_MW', sim_pars['G_MW'])
-        prob.set_val('pv_deg_per_year', sim_pars['pv_deg_per_year'])
+        #prob.set_val('pv_deg_per_year', sim_pars['pv_deg_per_year'])
         prob.set_val('battery_depth_of_discharge', sim_pars['battery_depth_of_discharge'])
         prob.set_val('battery_charge_efficiency', sim_pars['battery_charge_efficiency'])      
         prob.set_val('peak_hr_quantile',sim_pars['peak_hr_quantile'] )
@@ -536,7 +565,7 @@ class hpp_model:
         """
 
         prob = self.prob
-        
+
         d = get_rotor_d(p_rated*1e6/sp)
         hh = (d/2)+clearance
         wind_MW = Nwt * p_rated

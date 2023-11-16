@@ -551,8 +551,12 @@ def calculate_NPV_IRR(
     # EBIT: earnings before interest and taxes
     EBIT = (Net_revenue_t - maintenance_cost_per_year) 
     
-    # WACC: weighted average cost of capital
-    Net_income = (EBIT*(1-tax_rate))*(1-WACC_after_tax) 
+    # # WACC: weighted average cost of capital
+    # Net_income = (EBIT*(1-tax_rate))*(1-WACC_after_tax) 
+    # # Should it be?
+    # Net_income = EBIT*(1-tax_rate*(1-WACC_after_tax) )
+    # # For now we use
+    Net_income = (EBIT*(1-tax_rate))
     Cashflow = np.insert(Net_income, 0, -investment_cost)
     NPV = npf.npv(WACC_after_tax, Cashflow)
     if NPV > 0:

@@ -125,7 +125,51 @@ class pvp(om.ExplicitComponent):
 
         
 
+class pvp_with_degradation(om.ExplicitComponent):
+    """
+    PV degradation model providing the PV degradation time series throughout the lifetime of the plant
+    """
+    def __init__(
+        self, 
+        life_h = 25*365*24,
+        pv_deg_yr = [0, 25],
+        pv_deg = [0, 25*1/100],
+        ):
+        """Initialization of the PV degradation model
 
+        Parameters
+        ----------
+        life_h : lifetime of the plant
+
+        """ 
+        super().__init__()
+        self.life_h = life_h
+        
+        # number of elements in PV degradation curve
+        self.pv_deg_yr = pv_deg_yr
+        self.pv_deg = pv_deg        
+        
+    def setup(self):
+        self.add_input(
+            'solar_t_ext', 
+            desc="PVP power time series", 
+            units='MW',
+            shape=[self.life_h])
+        
+        self.add_output(
+            'solar_t_ext_deg', 
+            desc="PVP power time series with degradation", 
+            units='MW',
+            shape=[self.life_h])   
+
+    def compute(self, inputs, outputs):
+
+        solar_t_ext = inputs['solar_t_ext']
+        t_over_year = np.arange(self.life_h)/(365*24)
+        degradation = np.interp(t_over_year, self.pv_deg_yr, self.pv_deg)
+
+        outputs['solar_t_ext_deg'] = (1-degradation)*solar_t_ext
+    
 class pvp_degradation_linear(om.ExplicitComponent):
     """
     PV degradation model providing the PV degradation time series throughout the lifetime of the plant, 

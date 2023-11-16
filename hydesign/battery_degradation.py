@@ -18,6 +18,8 @@ from docplex.mp.model import Model
 
 import rainflow
 
+from hydesign.ems import expand_to_lifetime
+
 class battery_degradation(om.ExplicitComponent):
     """
     Battery degradation model to predict the degradation of the battery throughout the lifetime of the plant
@@ -29,20 +31,33 @@ class battery_degradation(om.ExplicitComponent):
 
     Returns
     -------
-    ii_time : indices on the lifetime timeseries on which Hydesign operates in at constant battery health
     SoH : battery state of health at discretization levels
     """
 
     def __init__(
         self, 
+        weather_fn,
         num_batteries = 1,
-        n_steps_in_LoH = 30,
-        life_h = 25*365*24):
+        life_h = 25*365*24,
+        weeks_per_season_per_year = None,
+    ):
 
         super().__init__()
         self.life_h = life_h
         self.num_batteries = num_batteries
-        self.n_steps_in_LoH = n_steps_in_LoH
+        self.weather_fn = weather_fn
+
+        weather = pd.read_csv(
+            weather_fn, 
+            index_col=0,
+            parse_dates=True)
+
+        air_temp_K_t = expand_to_lifetime(
+            weather.temp_air_1.values, 
+            life_h = life_h, 
+            weeks_per_season_per_year = weeks_per_season_per_year)
+
+        self.air_temp_K_t = air_temp_K_t
 
     def setup(self):
         self.add_input(
@@ -56,14 +71,9 @@ class battery_degradation(om.ExplicitComponent):
         # -------------------------------------------------------
 
         self.add_output(
-            'ii_time',
-            desc="indices on the lifetime timeseries on which"+
-                " Hydesign operates in at constant battery health",
-            shape=[self.n_steps_in_LoH*self.num_batteries + 1 ])
-        self.add_output(
             'SoH',
             desc="Battery state of health at discretization levels",
-            shape=[self.n_steps_in_LoH*self.num_batteries + 1])
+            shape=[self.life_h])
         self.add_output(
             'n_batteries',
             desc="Number of batteries used.",
@@ -72,44 +82,98 @@ class battery_degradation(om.ExplicitComponent):
     def compute(self, inputs, outputs):
 
         num_batteries = self.num_batteries
-        n_steps_in_LoH = self.n_steps_in_LoH
         life_h = self.life_h
 
         b_E_SOC_t = inputs['b_E_SOC_t']
         min_LoH = inputs['min_LoH'][0]
 
+        air_temp_K_t = self.air_temp_K_t
+        
         if np.max(b_E_SOC_t) == 0 or num_batteries==0:
-            nn = self.n_steps_in_LoH*self.num_batteries + 1
-            outputs['ii_time'] = np.linspace(0,self.life_h, nn, dtype=int, endpoint=False)
-            outputs['SoH'] = 0*np.ones(nn)
+            outputs['SoH'] = np.zeros(self.life_h)
             outputs['n_batteries'] = 0
         else:
             SoC = b_E_SOC_t/np.max(b_E_SOC_t)
             rf_DoD, rf_SoC, rf_count, rf_i_start = RFcount(SoC)   
 
-            # To do: use the temperature time-series
-            avr_tem = 20
+            # use the temperature time-series
+            avr_tem = np.mean(air_temp_K_t)
 
             # loop to determine the maximum number of replacements
             for n_batteries in np.arange(num_batteries, dtype=int) + 1:
                 LoC, ind_q, _ = battery_replacement(
                     rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, 
-                    min_LoH, n_steps_in_LoH, n_batteries)
+                    min_LoH, num_batteries=n_batteries)
                 if 1-LoC[-1] >= min_LoH: # stop replacing batteries
                     break         
 
-            ii_time = rf_i_start[ind_q].astype(int)
-            SoH = 1 - LoC[ind_q]
-            nn = self.n_steps_in_LoH*self.num_batteries + 1
-            if len(ii_time) == nn:
-                outputs['ii_time'] = rf_i_start[ind_q].astype(int)
-                outputs['SoH'] = 1 - LoC[ind_q]
-                outputs['n_batteries'] = n_batteries
-            else:                
-                ii_time_new, SoH_new = incerase_resolution(ii_time, SoH, life_h, nn)
-                outputs['ii_time'] = ii_time_new
-                outputs['SoH'] = SoH_new
-                outputs['n_batteries'] = n_batteries
+            SoH_all = np.interp( 
+                x = np.arange(life_h)/(24*365),
+                xp = np.array(rf_i_start)/(24*365),
+                fp = 1-LoC )
+            outputs['SoH'] = SoH_all
+            outputs['n_batteries'] = n_batteries
+
+class battery_loss_in_capacity_due_to_temp(om.ExplicitComponent):
+    """
+    Battery non-permanent loss of capacity due to low temp
+
+    Parameters
+    ----------
+    SoH : battery state of health at discretization levels
+
+    Returns
+    -------
+    SoH_all : battery state of health at discretization levels
+    """
+
+    def __init__(
+        self, 
+        weather_fn,
+        num_batteries = 1,
+        life_h = 25*365*24,
+        weeks_per_season_per_year = None,
+    ):
+
+        super().__init__()
+        self.life_h = life_h
+        self.num_batteries = num_batteries
+        self.weather_fn = weather_fn
+
+        weather = pd.read_csv(
+            weather_fn, 
+            index_col=0,
+            parse_dates=True)
+
+        air_temp_C_t = expand_to_lifetime(
+            (weather.temp_air_1 - 273.15).values, 
+            life_h = life_h, 
+            weeks_per_season_per_year = weeks_per_season_per_year)
+
+        self.air_temp_C_t = air_temp_C_t
+
+    def setup(self):
+        self.add_input(
+            'SoH',
+            desc="Battery state of health at discretization levels",
+            shape=[self.life_h])
+        
+        # -------------------------------------------------------
+
+        self.add_output(
+            'SoH_all',
+            desc="Battery state of health at discretization levels",
+            shape=[self.life_h])
+
+    def compute(self, inputs, outputs):
+        
+        life_h = self.life_h
+        air_temp_C_t = self.air_temp_C_t
+
+        B_E_loss_due_to_low_temp = thermal_loss_of_storage(air_temp_C_t)
+        
+        outputs['SoH_all'] = B_E_loss_due_to_low_temp * inputs['SoH']
+         
 
 # -----------------------------------------------------------------------
 # Auxiliar functions for bat_deg modelling
@@ -141,7 +205,7 @@ def incerase_resolution(ii_time, SoH, life_h, nn):
     
 def battery_replacement(
     rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, 
-    min_LoH, n_steps_in_LoH, num_batteries):
+    min_LoH, n_steps_in_LoH=30, num_batteries=2):
     """
     Battery degradation in steps and battery replacement
 
@@ -225,7 +289,10 @@ def battery_replacement(
 
 def degradation(rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, LLoC_0=0):
     """
-    Calculating the new level of capacity of the battery
+    Calculating the new level of capacity of the battery.
+    
+    Xu, B., Oudalov, A., Ulbig, A., Andersson, G., and Kirschen, D. S.: Modeling of lithium-ion battery degradation for cell life assessment, 
+    IEEE Transactions on Smart Grid, 9, 1131–1140, 2016.
 
     Parameters
     ----------
@@ -275,7 +342,10 @@ def degradation(rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, LLoC_0=0):
 
 def Linear_Degfun(rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem): 
     """
-    Linear degradation function
+    Linear degradation function.
+
+    Xu, B., Oudalov, A., Ulbig, A., Andersson, G., and Kirschen, D. S.: Modeling of lithium-ion battery degradation for cell life assessment, 
+    IEEE Transactions on Smart Grid, 9, 1131–1140, 2016.
 
     Parameters
     ----------
@@ -296,34 +366,35 @@ def Linear_Degfun(rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem):
     #S_SoC: stress model of state of charge
     #S_T: stress model of cell temperature
         
-    kdelta1 = 140000
-    kdelta2 = -0.5010
-    kdelta3 = -123000
+    kdelta1 = 1.4e5
+    kdelta2 = -5.01e-1
+    kdelta3 = -1.23e5
     ksigma = 1.04
     sigma_ref = 0.5
-    kT = 0.0693
-    Tref = 25
+    kT = 6.93e-2
+    Tref = 293.15 # in Kelvin
     kti = 4.14e-10
           
     LLoC_hist = []
-    for j in range(len(rf_DoD)):
-        #S_DoD = (kdelta1*rf_DoD[j]**kdelta2+kdelta3)**(-1)*rf_count[j]*2
-        
+    for j in range(len(rf_DoD)):        
         # To ensure no divide by zero problems
-        aux = rf_DoD[j]
-        if aux != 0:
-            term = aux**kdelta2
+        if rf_DoD[j] != 0:
+            term = rf_DoD[j]**kdelta2
         else:
-            aux += 1e-12
-            term = aux**kdelta2        
-        S_DoD = (kdelta1*term+kdelta3)**(-1)*rf_count[j]*2
+            term = 0
+        S_DoD = ( (kdelta1*term+kdelta3)**(-1) )
         
         #S_time = kti*(age_day*24/sum(rf_count)*rf_count[j]*3600)
         S_time = kti* rf_i_start[j]
         S_SoC = np.exp(ksigma*(rf_SoC[j]-sigma_ref))
-        S_T = np.exp(kT*(avr_tem-Tref)*Tref/avr_tem)
+
+        # instead force it to be 1 the factor on bellow the normal operating range [15-25]
+        if avr_tem>Tref:
+            S_T = np.exp(kT*(avr_tem-Tref)*Tref/avr_tem)
+        else:
+            S_T = 1
                                 
-        LLoC_i = (S_DoD+S_time)*S_SoC*S_T
+        LLoC_i = (S_DoD+S_time)*S_SoC*S_T *rf_count[j]*0.7
         LLoC_hist += [LLoC_i]
                 
                             
@@ -355,5 +426,14 @@ def RFcount(SoC):
     return rf_df.rng_.values, rf_df.mean_.values, rf_df.count_.values, rf_df.i_start.astype(int).values
 
 
+def thermal_loss_of_storage(air_temp_C_t):
+    '''
+    Battery temporary loss of storage at low temperatures. Simple piecewise linear fit from:
 
-    
+    Lv, S., Wang, X., Lu, W., Zhang, J., & Ni, H. (2021). The influence of temperature on the capacity of lithium ion batteries with different anodes. Energies, 15(1), 60.
+    '''
+    B_E_loss_due_to_low_temp = np.interp( 
+            x = air_temp_C_t,
+            xp = [-60, -30, 0, 15, 25, 40, 70], 
+            fp = [0, 0.5, 0.9, 1, 1, 1, 1] )
+    return B_E_loss_due_to_low_temp

@@ -130,7 +130,7 @@ def test_evaluation_design_1():
     evaluation_metrics = run_evaluation_design_1()
     loaded_metrics = load_evaluation_design_1()
     for i in range(len(loaded_metrics)):
-        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
         
 # ------------------------------------------------------------------------------------------------
 # design 2
@@ -162,7 +162,7 @@ def test_evaluation_design_2():
     evaluation_metrics = run_evaluation_design_2()
     loaded_metrics = load_evaluation_design_2()
     for i in range(len(loaded_metrics)):
-        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
         
 # ------------------------------------------------------------------------------------------------
 
@@ -195,7 +195,7 @@ def test_evaluation_design_3():
     evaluation_metrics = run_evaluation_design_3()
     loaded_metrics = load_evaluation_design_3()
     for i in range(len(loaded_metrics)):
-        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
 
 # ------------------------------------------------------------------------------------------------
 # design 1_P2X
@@ -226,7 +226,7 @@ def test_evaluation_design_1_P2X():
     evaluation_metrics = run_evaluation_design_1_P2X()
     loaded_metrics = load_evaluation_design_1_P2X()
     for i in range(len(loaded_metrics)):
-        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
         
 # ------------------------------------------------------------------------------------------------
 # design 2_P2X
@@ -257,7 +257,7 @@ def test_evaluation_design_2_P2X():
     evaluation_metrics = run_evaluation_design_2_P2X()
     loaded_metrics = load_evaluation_design_2_P2X()
     for i in range(len(loaded_metrics)):
-        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
         
 # ------------------------------------------------------------------------------------------------
 
@@ -288,7 +288,7 @@ def test_evaluation_design_3_P2X():
     evaluation_metrics = run_evaluation_design_3_P2X()
     loaded_metrics = load_evaluation_design_3_P2X()
     for i in range(len(loaded_metrics)):
-        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i])
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
 
 
         

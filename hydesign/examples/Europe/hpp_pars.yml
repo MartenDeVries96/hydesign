@@ -13,10 +13,15 @@ wind_civil_works_cost: 260_000  # [Euro/MW]
 wind_fixed_onm_cost: 12_600  # Wind fixed O&M cost per year [Euro/MW /year]
 wind_variable_onm_cost: 1.35 #[EUR/MWh_e] Danish Energy Agency
 
-wpp_efficiency: 1.0
 d_ref: 145
 hh_ref: 100
 p_rated_ref: 5.0 #[MW] 
+
+# Degradation
+wpp_efficiency: 1
+wind_deg_yr: [0, 25]
+wind_deg: [0, 0.25] #25yr * 1%/yr
+share_WT_deg_types: 0.5
 
 # --------------------------------------------------------------------------------------------
 # PV 
@@ -25,11 +30,14 @@ solar_PV_cost: 110_000   # [Euro/MW DC]
 solar_hardware_installation_cost: 100_000  # [Euro/MW DC]
 solar_inverter_cost: 20_000 #[Euro/MW]
 solar_fixed_onm_cost: 4_500  # Solar O&M cost per year [Euro/MW] DC
-pv_deg_per_year: 0.5e-2
 land_use_per_solar_MW: 0.01226 # Danish energy agency
 
 #selected tracker
 tracking: 'No' # 'single_axis'  #
+
+# Degradation
+pv_deg_yr: [0,    1,   25]
+pv_deg: [0.03, 0.03, 0.28] #0.03 intial + 25yr * 1%/yr
 
 # --------------------------------------------------------------------------------------------
 # Battery
@@ -50,7 +58,7 @@ battery_energy_onm_cost: 0
 battery_depth_of_discharge: 0.9 # 1 - Minimum energy level in the battery
 battery_charge_efficiency: 0.98  # Charge efficiency for Lithium-ion
 battery_price_reduction_per_year: 0.10 # Battery price reduction per year
-n_steps_in_LoH: 20 # Number of battery degradation levels for discretization of lifetime operation
+# n_steps_in_LoH: 20 # Number of battery degradation levels for discretization of lifetime operation
 min_LoH: 0.7 # Minimum energy storage capacity in percent for the storage to be replaced
 
 # Penalty is defined as: Number of peak hours of full load expected per day.

@@ -6,11 +6,13 @@ import time
 # basic libraries
 import numpy as np
 from numpy import newaxis as na
+import scipy as sp
 import pandas as pd
 import xarray as xr
 import openmdao.api as om
 
 from hydesign.look_up_tables import lut_filepath
+from hydesign.ems import expand_to_lifetime
 
 class genericWT_surrogate(om.ExplicitComponent):
     """
@@ -251,6 +253,94 @@ class wpp(om.ExplicitComponent):
             wpp_efficiency = self.wpp_efficiency,
         )
 
+class wpp_with_degradation(om.ExplicitComponent):
+    """
+    Wind power plant model
+
+    Provides the wind power time series using wake affected power curve and the wind speed time series.
+
+    Parameters
+    ----------
+    N_time : Number of time-steps in weather simulation
+    life_h : lifetime in hours
+    N_ws : number of points in the power curves
+    wpp_efficiency : WPP efficiency
+    wind_deg_yr : year list for providing WT degradation curve
+    wind_deg : degradation losses at yr
+    share_WT_deg_types : share ratio between two degradation mechanism (0: only shift in power curve, 1: degradation as a loss factor )
+    ws : Power curve wind speed list
+    pcw : Wake affected power curve
+    wst : wind speed time series at the hub height
+
+    Returns
+    -------
+    wind_t_ext_deg : power time series with degradation extended through lifetime
+
+    """
+
+    def __init__(
+        self, 
+        N_time,
+        N_ws = 51,
+        wpp_efficiency = 0.95,
+        life_h = 25*365*24,
+        wind_deg_yr = [0, 25],
+        wind_deg = [0, 25*1/100],
+        share_WT_deg_types = 0.5,
+        weeks_per_season_per_year = None,
+        ):
+        super().__init__()
+        self.N_time = N_time
+        self.life_h = life_h
+        # number of points in the power curves
+        self.N_ws = N_ws
+        self.wpp_efficiency = wpp_efficiency
+        
+        # number of elements in WT degradation curve
+        self.wind_deg_yr = wind_deg_yr
+        self.wind_deg = wind_deg
+        self.share_WT_deg_types = share_WT_deg_types
+
+        # In case data is provided as weeks per season
+        self.weeks_per_season_per_year = weeks_per_season_per_year
+        
+    def setup(self):
+        self.add_input('ws',
+                       desc="Turbine's ws",
+                       units='m/s',
+                       shape=[self.N_ws])
+        self.add_input('pcw',
+                       desc="Wake affected power curve",
+                       shape=[self.N_ws])
+        self.add_input('wst',
+                       desc="ws time series at the hub height",
+                       units='m/s',
+                       shape=[self.N_time])
+
+        self.add_output('wind_t_ext_deg',
+                        desc="power time series with degradation",
+                        units='MW',
+                        shape=[self.life_h])
+
+
+    def compute(self, inputs, outputs):
+        
+        ws = inputs['ws']
+        pcw = inputs['pcw']
+        wst = inputs['wst']
+
+        wst_ext = expand_to_lifetime(
+            wst, life_h = self.life_h, weeks_per_season_per_year = self.weeks_per_season_per_year)
+        
+        outputs['wind_t_ext_deg'] = self.wpp_efficiency*get_wind_ts_degradation(
+            ws = ws, 
+            pc = pcw, 
+            ws_ts = wst_ext, 
+            yr = self.wind_deg_yr, 
+            wind_deg=self.wind_deg, 
+            life_h = self.life_h, 
+            share = self.share_WT_deg_types)
+
 # -----------------------------------------------------------------------
 # Auxiliar functions 
 # -----------------------------------------------------------------------        
@@ -352,3 +442,72 @@ def get_wind_ts(
     """
     wind_ts = wpp_efficiency * np.interp(wst, ws, pcw, left=0, right=0, period=None)
     return wind_ts
+
+
+# ---------------------------------------------
+# Auxiliar functions for wind plant degradation
+# ---------------------------------------------
+def get_prated_end(ws,pc,tol=1e-6):
+    if np.max(pc)>0:
+        pc = pc/np.max(pc)
+        ind = np.where( (np.diff(pc)<=tol)&(pc[:-1]>=1-tol) )[0]
+        ind_sel = [ind[0], ind[-1]]
+        return ind[-1]
+    return -3
+
+def get_shifted_pc(ws,pc,Dws):
+    ind_sel = get_prated_end(ws,pc)
+    pcdeg_init = get_wind_ts(ws=ws+Dws, pcw=pc, wst=ws, wpp_efficiency=1)
+    pcdeg = np.copy(pcdeg_init)
+    pcdeg[ind_sel:] = pc[ind_sel:]
+    return pcdeg
+
+def get_losses_shift_power_curve(ws,pc,ws_ts,Dws):
+    CF_ref = np.mean(get_wind_ts(ws=ws, pcw=pc, wst=ws_ts, wpp_efficiency=1))
+    if CF_ref > 0:
+        pcdeg = get_shifted_pc(ws,pc,Dws)
+        CF_deg = np.mean(get_wind_ts(ws=ws, pcw=pcdeg, wst=ws_ts, wpp_efficiency=1))
+        return (1-CF_deg/CF_ref)
+    else:
+        return np.NaN
+
+def get_Dws(ws, pc, ws_ts, wind_deg_end):
+    CF_ref = np.mean(get_wind_ts(ws=ws, pcw=pc, wst=ws_ts, wpp_efficiency=1))
+    if CF_ref > 0:
+        def fun(x, target):
+            return (get_losses_shift_power_curve(ws,pc,ws_ts,Dws=x) - target)**2
+    
+        out = sp.optimize.minimize(
+            fun=fun, 
+            x0=0.5, 
+            args=(wind_deg_end), 
+            method='SLSQP',
+            tol=1e-10)
+    
+        return out.x
+    else:
+        return 0.0
+    
+def get_wind_ts_degradation(ws, pc, ws_ts, yr, wind_deg, life_h, share=0.5):
+    
+    t_over_year = np.arange(life_h)/(365*24)
+    #degradation = wind_deg_per_year * t_over_year
+    degradation = np.interp(t_over_year, yr, wind_deg)
+
+    p_ts = get_wind_ts(ws=ws, pcw=pc, wst=ws_ts, wpp_efficiency=1)
+    Dws = get_Dws(ws, pc, ws_ts,wind_deg_end=degradation[-1])
+    pcdeg = get_shifted_pc(ws,pc,Dws=Dws)
+    p_ts_fulldeg = get_wind_ts(ws=ws, pcw=pcdeg, wst=ws_ts, wpp_efficiency=1)
+
+    # blend variable for pc shift over time
+    alpha = degradation/np.max(degradation)
+
+    # degradation in CF as a results of a shift in ws on power curve
+    p_ts_deg = (1-alpha)*p_ts + alpha*p_ts_fulldeg
+    # degradation in CF as a factor or losses
+    p_ts_deg_factor = (1-degradation)*p_ts
+
+    p_ts_deg_partial_factor = (1-share)*p_ts_deg + share*p_ts_deg_factor
+
+    return p_ts_deg_partial_factor
+

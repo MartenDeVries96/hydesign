@@ -297,8 +297,6 @@ class battery_cost(om.ExplicitComponent):
                  battery_BOP_installation_commissioning_cost,
                  battery_control_system_cost,
                  battery_energy_onm_cost,
-                 num_batteries = 1,
-                 n_steps_in_LoH = 30,
                  N_life = 25,
                  life_h = 25*365*24):
         """Initialization of the battery cost model
@@ -311,7 +309,6 @@ class battery_cost(om.ExplicitComponent):
         battery_control_system_cost : Battery system controt cost [Euro/MW]
         battery_energy_onm_cost : Battery operation and maintenance cost [Euro/MW]
         num_batteries : Number of battery replacement in the lifetime of the plant
-        n_steps_in_LoH : Number of discretization steps in battery level of health
         N_life : Lifetime of the plant in years
         life_h : Total number of hours in the lifetime of the plant
 
@@ -325,8 +322,6 @@ class battery_cost(om.ExplicitComponent):
         self.battery_energy_onm_cost = battery_energy_onm_cost
         self.N_life = N_life
         self.life_h = life_h
-        self.num_batteries = num_batteries
-        self.n_steps_in_LoH = n_steps_in_LoH
 
 
     def setup(self):
@@ -336,14 +331,9 @@ class battery_cost(om.ExplicitComponent):
         self.add_input('b_E',
                        desc="Battery energy storage capacity")
         self.add_input(
-            'ii_time',
-            desc="indices on the lifetime timeseries."+
-                " Hydesign operates in each range at constant battery health",
-            shape=[self.n_steps_in_LoH*self.num_batteries + 1 ])
-        self.add_input(
             'SoH',
             desc="Battery state of health at discretization levels",
-            shape=[self.n_steps_in_LoH*self.num_batteries + 1])
+            shape=[self.life_h])
         self.add_input('battery_price_reduction_per_year',
                        desc="Factor of battery price reduction per year")
 
@@ -374,10 +364,10 @@ class battery_cost(om.ExplicitComponent):
         
         N_life = self.N_life
         life_h = self.life_h
+        age = np.arange(life_h)/(24*365)
         
         b_E = inputs['b_E']
         b_P = inputs['b_P']
-        ii_time = inputs['ii_time']
         SoH = inputs['SoH']
         battery_price_reduction_per_year = inputs['battery_price_reduction_per_year']
 
@@ -387,18 +377,23 @@ class battery_cost(om.ExplicitComponent):
         battery_control_system_cost = self.battery_control_system_cost
         battery_energy_onm_cost = self.battery_energy_onm_cost
         
-        ind_replace = np.append(0, np.where(np.diff(SoH)>0.15 )[0]+1 )
-        ii_battery_change = ii_time[ind_replace]
+
+        ii_battery_change = np.where(SoH>0.99 )[0]
+        year_new_battery = np.unique(np.floor(age[ii_battery_change]))
         
-        factor = 1.0 - battery_price_reduction_per_year[0]
-        N_b_equi = np.sum([factor**(N_life*ii/life_h) for ii in ii_battery_change])
-        
-        outputs['CAPEX_b'] = N_b_equi * (battery_energy_cost * b_E) + \
+        battery_price_reduction_per_year = 0.1
+        factor = 1.0 - battery_price_reduction_per_year
+        N_beq = np.sum([factor**iy for iy in year_new_battery])
+
+        CAPEX_b = N_beq*(battery_energy_cost * b_E) + \
                 (battery_power_cost + \
                  battery_BOP_installation_commissioning_cost + \
                  battery_control_system_cost) * b_P
-        outputs['OPEX_b'] = battery_energy_onm_cost * b_E
+        
+        OPEX_b  = battery_energy_onm_cost * b_E
 
+        outputs['CAPEX_b'] = CAPEX_b
+        outputs['OPEX_b'] = OPEX_b
 
 class shared_cost(om.ExplicitComponent):
     """Electrical infrastructure and land rent cost model"""

@@ -41,7 +41,7 @@ def main():
                 #   },
              'sp [W/m2]':
                 {'var_type':'design',
-                 'limits':[200, 360],
+                 'limits':[200, 359],
                  'types':'int'
                  },
             'p_rated [MW]':
