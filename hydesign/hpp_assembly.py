@@ -117,6 +117,15 @@ class hpp_model:
         wpp_efficiency = sim_pars['wpp_efficiency']
         land_use_per_solar_MW = sim_pars['land_use_per_solar_MW']
         
+        if 'wind_deg' in sim_pars:
+            wind_deg = sim_pars['wind_deg']
+            wind_deg_yr = sim_pars['wind_deg_yr']
+            share_WT_deg_types = sim_pars['share_WT_deg_types']
+        else:
+            wind_deg = [0, 0]
+            wind_deg_yr = [0, 25]
+            share_WT_deg_types = 0.5
+        
         # Extract weather timeseries
         if input_ts_fn == None:
             
@@ -272,9 +281,9 @@ class hpp_model:
                 N_ws = N_ws,
                 wpp_efficiency = wpp_efficiency,
                 life_h = life_h,
-                wind_deg_yr = sim_pars['wind_deg_yr'],
-                wind_deg = sim_pars['wind_deg'],
-                share_WT_deg_types = sim_pars['share_WT_deg_types'],
+                wind_deg_yr = wind_deg_yr,
+                wind_deg = wind_deg,
+                share_WT_deg_types = share_WT_deg_types,
                 weeks_per_season_per_year = weeks_per_season_per_year,
                 
             )

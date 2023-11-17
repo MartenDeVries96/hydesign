@@ -500,7 +500,10 @@ def get_wind_ts_degradation(ws, pc, ws_ts, yr, wind_deg, life_h, share=0.5):
     p_ts_fulldeg = get_wind_ts(ws=ws, pcw=pcdeg, wst=ws_ts, wpp_efficiency=1)
 
     # blend variable for pc shift over time
-    alpha = degradation/np.max(degradation)
+    if np.max(wind_deg) <= 0:
+        alpha = 0
+    else:
+        alpha = degradation/np.max(degradation)
 
     # degradation in CF as a results of a shift in ws on power curve
     p_ts_deg = (1-alpha)*p_ts + alpha*p_ts_fulldeg
