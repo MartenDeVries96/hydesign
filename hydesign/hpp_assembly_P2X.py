@@ -377,7 +377,8 @@ class hpp_model_P2X:
                               'annual_P_ptg',
                               'penalty_lifetime',
                               'CAPEX',
-                              'OPEX'
+                              'OPEX',
+                              'break_even_H2_price',
                               ],
         )
                   
@@ -509,6 +510,7 @@ class hpp_model_P2X:
             'Rotor diam [m]',
             'Hub height [m]',
             'Number of batteries used in lifetime',
+            'break_even_H2_price',
             ]
 
         self.list_vars = [
@@ -659,6 +661,7 @@ class hpp_model_P2X:
             d,
             hh,
             self.num_batteries * (b_P>0),
+            prob['break_even_H2_price'],
             ])
     
     def print_design(self, x_opt, outs):
@@ -719,6 +722,7 @@ class hpp_model_P2X:
                                             'Rotor diam [m]',
                                             'Hub height [m]',
                                             'Number of batteries used in lifetime',
+                                            'break even H2 price [Euro/kg]',
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
         design_df.to_csv(f'{name_file}.csv')

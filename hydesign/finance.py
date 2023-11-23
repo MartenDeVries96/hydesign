@@ -10,6 +10,7 @@ import pandas as pd
 # import seaborn as sns
 import openmdao.api as om
 import yaml
+import scipy as sp
 
 class finance(om.ExplicitComponent):
     """Hybrid power plant financial model to estimate the overall profitability of the hybrid power plant.
@@ -354,6 +355,10 @@ class finance_P2X(om.ExplicitComponent):
         self.add_output('penalty_lifetime',
                         desc="penalty_lifetime")
         
+        self.add_output('break_even_H2_price',
+                        desc='price of hydrogen that results in NPV=0 with the given hybrid power plant configuration and operation',
+                        val=0)
+        
 
     def setup_partials(self):
         self.declare_partials('*', '*', method='fd')
@@ -421,12 +426,12 @@ class finance_P2X(om.ExplicitComponent):
         penalty_H2 = inputs['penalty_H2']
         df['price_t'] = inputs['price_t_ext']
         df['penalty_t'] = inputs['penalty_t']
-        df['revenue'] = df['hpp_t'] * df['price_t'] + df['m_H2_offtake_t'] * price_H2 - penalty_H2 * (df['m_H2_demand_t_ext'] - df['m_H2_offtake_t']) - df['penalty_t']
+        # df['revenue'] = df['hpp_t'] * df['price_t'] + df['m_H2_offtake_t'] * price_H2 - penalty_H2 * (df['m_H2_demand_t_ext'] - df['m_H2_offtake_t']) - df['penalty_t']
         
         df['i_year'] = np.hstack([np.array([ii]*N_time) 
                                   for ii in range(int(np.ceil(life_h/N_time)))])[:life_h]
 
-        revenues = df.groupby('i_year').revenue.mean()*365*24
+        revenues = calculate_revenues(price_H2, penalty_H2, df)
         CAPEX = inputs['CAPEX_w'] + inputs['CAPEX_s'] + \
             inputs['CAPEX_b'] + inputs['CAPEX_el'] + inputs['CAPEX_ptg']
         OPEX = inputs['OPEX_w'] + inputs['OPEX_s'] + \
@@ -511,18 +516,19 @@ class finance_P2X(om.ExplicitComponent):
         else:
             outputs['LCOH'] = 1e6
 
+        break_even_H2_price = calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, inputs['tax_rate'], WACC_after_tax)
         outputs['Revenue'] = np.sum(revenues.values.flatten())
         outputs['annual_P_ptg'] = mean_P_ptg_per_year
         outputs['mean_AEP'] = mean_AEP_per_year
         outputs['mean_Power2Grid'] = mean_Power2Grid_per_year
         outputs['annual_H2'] = mean_AHP_per_year
         outputs['penalty_lifetime'] = df['penalty_t'].sum()
+        outputs['break_even_H2_price'] = break_even_H2_price
 
 
 # -----------------------------------------------------------------------
 # Auxiliar functions for financial modelling
 # -----------------------------------------------------------------------
-
 
 def calculate_NPV_IRR(
     Net_revenue_t,
@@ -644,3 +650,26 @@ def calculate_WACC_P2X(
         ( CAPEX_w + CAPEX_s + CAPEX_b + CAPEX_el + CAPEX_ptg)
     return WACC_after_tax
 
+def calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, tax_rate, WACC_after_tax):
+    def fun(price_H2):
+        revenues = calculate_revenues(price_H2, penalty_H2, df)
+        NPV, _ = calculate_NPV_IRR(
+            Net_revenue_t = revenues.values.flatten(),
+            investment_cost = CAPEX,
+            maintenance_cost_per_year = OPEX,
+            tax_rate = tax_rate,
+            WACC_after_tax = WACC_after_tax)
+        return NPV ** 2
+        
+    out = sp.optimize.minimize(
+        fun=fun, 
+        x0=4, 
+        method='SLSQP',
+        tol=1e-10)
+    return out.x
+
+
+def calculate_revenues(price_H2, penalty_H2, df):
+    df['revenue'] = df['hpp_t'] * df['price_t'] + df['m_H2_offtake_t'] * price_H2 - penalty_H2 * (df['m_H2_demand_t_ext'] - df['m_H2_offtake_t']) - df['penalty_t']
+    return df.groupby('i_year').revenue.mean()*365*24
+    
