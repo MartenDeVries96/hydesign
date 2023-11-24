@@ -508,6 +508,7 @@ class hpp_model:
             'Rotor diam [m]',
             'Hub height [m]',
             'Number of batteries used in lifetime',
+            'Capacity factor wind [-]'
             ]
 
         self.list_vars = [
@@ -602,6 +603,11 @@ class hpp_model:
         
         self.prob = prob
         
+        if Nwt == 0:
+            cf_wind = np.nan
+        else:
+            cf_wind = prob.get_val('wpp_with_degradation.wind_t_ext_deg').mean() / p_rated / Nwt  # Capacity factor of wind only
+
         return np.hstack([
             prob['NPV_over_CAPEX'], 
             prob['NPV']/1e6,
@@ -633,6 +639,7 @@ class hpp_model:
             d,
             hh,
             prob.get_val('battery_degradation.n_batteries') * (b_P>0),
+            cf_wind,
             ])
     
     def print_design(self, x_opt, outs):
@@ -694,6 +701,7 @@ class hpp_model:
                                             'Rotor diam [m]',
                                             'Hub height [m]',
                                             'Number of batteries used in lifetime',
+                                            'Capacity factor wind [-]'
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
         design_df.to_csv(f'{name_file}.csv')

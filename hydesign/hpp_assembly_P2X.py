@@ -510,7 +510,8 @@ class hpp_model_P2X:
             'Rotor diam [m]',
             'Hub height [m]',
             'Number of batteries used in lifetime',
-            'break_even_H2_price',
+            'Break-even H2 price [Euro/kg]',
+            'Capacity factor wind [-]'
             ]
 
         self.list_vars = [
@@ -631,7 +632,12 @@ class hpp_model_P2X:
         prob.run_model()
         
         self.prob = prob
-        
+
+        if Nwt == 0:
+            cf_wind = np.nan
+        else:
+            cf_wind = prob.get_val('wpp.wind_t').mean() / p_rated / Nwt  # Capacity factor of wind only
+
         return np.hstack([
             prob['NPV_over_CAPEX'], 
             prob['NPV']/1e6,
@@ -662,6 +668,7 @@ class hpp_model_P2X:
             hh,
             self.num_batteries * (b_P>0),
             prob['break_even_H2_price'],
+            cf_wind,
             ])
     
     def print_design(self, x_opt, outs):
@@ -722,7 +729,8 @@ class hpp_model_P2X:
                                             'Rotor diam [m]',
                                             'Hub height [m]',
                                             'Number of batteries used in lifetime',
-                                            'break even H2 price [Euro/kg]',
+                                            'Break-even H2 price [Euro/kg]',
+                                            'Capacity factor wind [-]'
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
         design_df.to_csv(f'{name_file}.csv')
