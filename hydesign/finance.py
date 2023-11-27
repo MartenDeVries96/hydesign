@@ -106,6 +106,10 @@ class finance(om.ExplicitComponent):
         self.add_output('penalty_lifetime',
                         desc="penalty_lifetime")
 
+        self.add_output('break_even_PPA_price',
+                        desc='PPA price of electricity that results in NPV=0 with the given hybrid power plant configuration and operation',
+                        val=0)
+
     def setup_partials(self):
         self.declare_partials('*', '*', method='fd')
 
@@ -148,14 +152,14 @@ class finance(om.ExplicitComponent):
         df = pd.DataFrame()
         
         df['hpp_t'] = inputs['hpp_t_with_deg']
-        df['price_t'] = inputs['price_t_ext']
+        # df['price_t'] = inputs['price_t_ext']
         df['penalty_t'] = inputs['penalty_t']
-        df['revenue'] = df['hpp_t'] * df['price_t'] - df['penalty_t']
+        # df['revenue'] = df['hpp_t'] * df['price_t'] - df['penalty_t']
         
         df['i_year'] = np.hstack([np.array([ii]*N_time) 
                                   for ii in range(int(np.ceil(life_h/N_time)))])[:life_h]
 
-        revenues = df.groupby('i_year').revenue.mean()*365*24
+        revenues = calculate_revenues(inputs['price_t_ext'], df)
         CAPEX = inputs['CAPEX_w'] + inputs['CAPEX_s'] + \
             inputs['CAPEX_b'] + inputs['CAPEX_el']
         OPEX = inputs['OPEX_w'] + inputs['OPEX_s'] + \
@@ -186,6 +190,7 @@ class finance(om.ExplicitComponent):
             WACC_after_tax = WACC_after_tax)
         
         hpp_discount_factor = WACC_after_tax
+        break_even_PPA_price = np.maximum(0, calculate_break_even_PPA_price(df, CAPEX, OPEX, inputs['tax_rate'], WACC_after_tax))
 
         outputs['NPV'] = NPV
         outputs['IRR'] = IRR
@@ -204,6 +209,7 @@ class finance(om.ExplicitComponent):
         outputs['mean_AEP'] = mean_AEP_per_year
         
         outputs['penalty_lifetime'] = df['penalty_t'].sum()
+        outputs['break_even_PPA_price'] = break_even_PPA_price
 
 
 class finance_P2X(om.ExplicitComponent):
@@ -359,6 +365,10 @@ class finance_P2X(om.ExplicitComponent):
                         desc='price of hydrogen that results in NPV=0 with the given hybrid power plant configuration and operation',
                         val=0)
         
+        self.add_output('break_even_PPA_price',
+                        desc='PPA price of electricity that results in NPV=0 with the given hybrid power plant configuration and operation',
+                        val=0)
+        
 
     def setup_partials(self):
         self.declare_partials('*', '*', method='fd')
@@ -424,14 +434,14 @@ class finance_P2X(om.ExplicitComponent):
         df['hpp_curt_t'] = inputs['hpp_curt_t']
         price_H2 = inputs['price_H2']
         penalty_H2 = inputs['penalty_H2']
-        df['price_t'] = inputs['price_t_ext']
+        price_t = inputs['price_t_ext']
         df['penalty_t'] = inputs['penalty_t']
         # df['revenue'] = df['hpp_t'] * df['price_t'] + df['m_H2_offtake_t'] * price_H2 - penalty_H2 * (df['m_H2_demand_t_ext'] - df['m_H2_offtake_t']) - df['penalty_t']
         
         df['i_year'] = np.hstack([np.array([ii]*N_time) 
                                   for ii in range(int(np.ceil(life_h/N_time)))])[:life_h]
 
-        revenues = calculate_revenues(price_H2, penalty_H2, df)
+        revenues = calculate_revenues_P2X(price_H2, price_t, penalty_H2, df)
         CAPEX = inputs['CAPEX_w'] + inputs['CAPEX_s'] + \
             inputs['CAPEX_b'] + inputs['CAPEX_el'] + inputs['CAPEX_ptg']
         OPEX = inputs['OPEX_w'] + inputs['OPEX_s'] + \
@@ -516,7 +526,8 @@ class finance_P2X(om.ExplicitComponent):
         else:
             outputs['LCOH'] = 1e6
 
-        break_even_H2_price = calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, inputs['tax_rate'], WACC_after_tax)
+        break_even_H2_price = calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, inputs['tax_rate'], WACC_after_tax, price_t)
+        break_even_PPA_price = np.maximum(0, calculate_break_even_PPA_price_P2X(penalty_H2, df, CAPEX, OPEX, inputs['tax_rate'], WACC_after_tax, price_H2))
         outputs['Revenue'] = np.sum(revenues.values.flatten())
         outputs['annual_P_ptg'] = mean_P_ptg_per_year
         outputs['mean_AEP'] = mean_AEP_per_year
@@ -524,6 +535,7 @@ class finance_P2X(om.ExplicitComponent):
         outputs['annual_H2'] = mean_AHP_per_year
         outputs['penalty_lifetime'] = df['penalty_t'].sum()
         outputs['break_even_H2_price'] = break_even_H2_price
+        outputs['break_even_PPA_price'] = break_even_PPA_price
 
 
 # -----------------------------------------------------------------------
@@ -650,9 +662,20 @@ def calculate_WACC_P2X(
         ( CAPEX_w + CAPEX_s + CAPEX_b + CAPEX_el + CAPEX_ptg)
     return WACC_after_tax
 
-def calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, tax_rate, WACC_after_tax):
-    def fun(price_H2):
-        revenues = calculate_revenues(price_H2, penalty_H2, df)
+
+def calculate_revenues(price_el, df):
+    df['revenue'] = df['hpp_t'] * np.broadcast_to(price_el, df['hpp_t'].shape) - df['penalty_t']
+    return df.groupby('i_year').revenue.mean()*365*24
+
+
+def calculate_revenues_P2X(price_H2, price_el, penalty_H2, df):
+    df['revenue'] = df['hpp_t'] * np.broadcast_to(price_el, df['hpp_t'].shape) + df['m_H2_offtake_t'] * price_H2 - penalty_H2 * (df['m_H2_demand_t_ext'] - df['m_H2_offtake_t']) - df['penalty_t']
+    return df.groupby('i_year').revenue.mean()*365*24
+    
+
+def calculate_break_even_PPA_price(df, CAPEX, OPEX, tax_rate, WACC_after_tax):
+    def fun(price_el):
+        revenues = calculate_revenues(price_el, df)
         NPV, _ = calculate_NPV_IRR(
             Net_revenue_t = revenues.values.flatten(),
             investment_cost = CAPEX,
@@ -660,16 +683,45 @@ def calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, tax_rate, WACC_af
             tax_rate = tax_rate,
             WACC_after_tax = WACC_after_tax)
         return NPV ** 2
-        
+    out = sp.optimize.minimize(
+        fun=fun, 
+        x0=50, 
+        method='SLSQP',
+        tol=1e-10)
+    return out.x
+
+
+def calculate_break_even_PPA_price_P2X(penalty_H2, df, CAPEX, OPEX, tax_rate, WACC_after_tax, price_H2):
+    def fun(price_el):
+        revenues = calculate_revenues_P2X(price_H2, price_el, penalty_H2, df)
+        NPV, _ = calculate_NPV_IRR(
+            Net_revenue_t = revenues.values.flatten(),
+            investment_cost = CAPEX,
+            maintenance_cost_per_year = OPEX,
+            tax_rate = tax_rate,
+            WACC_after_tax = WACC_after_tax)
+        return NPV ** 2
+    out = sp.optimize.minimize(
+        fun=fun, 
+        x0=50, 
+        method='SLSQP',
+        tol=1e-10)
+    return out.x
+
+
+def calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, tax_rate, WACC_after_tax, price_el):
+    def fun(price_H2):
+        revenues = calculate_revenues_P2X(price_H2, price_el, penalty_H2, df)
+        NPV, _ = calculate_NPV_IRR(
+            Net_revenue_t = revenues.values.flatten(),
+            investment_cost = CAPEX,
+            maintenance_cost_per_year = OPEX,
+            tax_rate = tax_rate,
+            WACC_after_tax = WACC_after_tax)
+        return NPV ** 2
     out = sp.optimize.minimize(
         fun=fun, 
         x0=4, 
         method='SLSQP',
         tol=1e-10)
     return out.x
-
-
-def calculate_revenues(price_H2, penalty_H2, df):
-    df['revenue'] = df['hpp_t'] * df['price_t'] + df['m_H2_offtake_t'] * price_H2 - penalty_H2 * (df['m_H2_demand_t_ext'] - df['m_H2_offtake_t']) - df['penalty_t']
-    return df.groupby('i_year').revenue.mean()*365*24
-    

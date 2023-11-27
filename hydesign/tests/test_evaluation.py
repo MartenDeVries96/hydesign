@@ -15,6 +15,7 @@ def run_evaluation(out_name = 'France_good_wind_design.csv',
                    design_name = 'Design 1',
                    p2x = False,
                    tmp_name = 'test_eval_design_1',
+                   PPA=None,
                    ):
     output_df = pd.read_csv(
         tfp+out_name,
@@ -27,7 +28,17 @@ def run_evaluation(out_name = 'France_good_wind_design.csv',
     altitude = ex_site['altitude'].values[0]
     input_ts_fn = examples_filepath+ex_site['input_ts_fn'].values[0]
     sim_pars_fn = examples_filepath+ex_site['sim_pars_fn'].values[0]
-    if not p2x:
+    if PPA is not None:
+        hpp = hpp_model(
+            latitude,
+            longitude,
+            altitude,
+            num_batteries = 1,
+            work_dir = './',
+            sim_pars_fn = sim_pars_fn,
+            input_ts_fn = input_ts_fn,
+            ppa_price=PPA,)
+    elif not p2x:
         hpp = hpp_model(
             latitude,
             longitude,
@@ -77,19 +88,20 @@ def update_test(out_name='France_good_wind_design.csv',
                 design_name = 'Design 1',
                 p2x = False,
                 tmp_name = 'test_eval_design_1',
+                PPA=None,
                 ):
     output_df = pd.read_csv(
         tfp+out_name,
         index_col=0, 
         parse_dates = True)
-    run_evaluation(out_name, name, design_name, p2x, tmp_name)
+    run_evaluation(out_name, name, design_name, p2x, tmp_name, PPA)
     eval_df = pd.read_csv(os.path.join(tfp + 'tmp', tmp_name + '.csv'))
     output_df[design_name] = eval_df.T[0]
     output_df.to_csv(tfp+out_name)
     
 def load_evaluation(out_name='France_good_wind_design.csv',
                     design_name = 'Design 1',
-                    p2x = False,):
+                    p2x = False):
     output_df = pd.read_csv(
         tfp+out_name,
         index_col=0, 
@@ -291,6 +303,72 @@ def test_evaluation_design_3_P2X():
         np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
 
 
+# ------------------------------------------------------------------------------------------------
+# PPA 1
+
+def run_evaluation_PPA():
+    return run_evaluation(out_name = 'PPA_design.csv',
+                       name = 'France_good_wind',
+                       design_name = 'Design 1',
+                       p2x = False,
+                       tmp_name = 'test_eval_PPA',
+                       PPA=21.4,
+                       )
+
+def update_test_PPA():
+    update_test(out_name='PPA_design.csv',
+                    name = 'France_good_wind',
+                    design_name = 'Design 1',
+                    p2x = False,
+                    tmp_name = 'test_eval_PPA',
+                    PPA=21.4,
+                    )
+    
+
+def load_evaluation_PPA():
+    return load_evaluation(out_name='PPA_design.csv',
+                        design_name = 'Design 1',
+                        p2x = False)
+
+def test_evaluation_PPA():
+    evaluation_metrics = run_evaluation_PPA()
+    loaded_metrics = load_evaluation_PPA()
+    for i in range(len(loaded_metrics)):
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
+
+        
+# PPA 2
+
+def run_evaluation_PPA2():
+    return run_evaluation(out_name = 'PPA_design.csv',
+                       name = 'France_good_wind',
+                       design_name = 'Design 2',
+                       p2x = False,
+                       tmp_name = 'test_eval_PPA2',
+                       PPA=41.4,
+                       )
+
+def update_test_PPA2():
+    update_test(out_name='PPA_design.csv',
+                    name = 'France_good_wind',
+                    design_name = 'Design 2',
+                    p2x = False,
+                    tmp_name = 'test_eval_PPA2',
+                    PPA=41.4,
+                    )
+    
+
+def load_evaluation_PPA2():
+    return load_evaluation(out_name='PPA_design.csv',
+                        design_name = 'Design 2',
+                        p2x = False)
+
+def test_evaluation_PPA2():
+    evaluation_metrics = run_evaluation_PPA2()
+    loaded_metrics = load_evaluation_PPA2()
+    for i in range(len(loaded_metrics)):
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
+
         
 # ------------------------------------------------------------------------------------------------
 # update_test_design_1()
@@ -299,3 +377,6 @@ def test_evaluation_design_3_P2X():
 # update_test_design_1_P2X()
 # update_test_design_2_P2X()
 # update_test_design_3_P2X()
+# update_test_PPA()
+# update_test_PPA2()
+

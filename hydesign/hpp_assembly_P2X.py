@@ -48,6 +48,7 @@ class hpp_model_P2X:
         genWake_fn = lut_filepath+'genWake_v3.nc',
         verbose = True,
         name = '',
+        ppa_price=None,
         **kwargs
 
         ):
@@ -90,6 +91,8 @@ class hpp_model_P2X:
                                 kwargs={"fill_value": 0.0}
                             ).values
         if verbose:
+            print('\nFixed parameters on the site')
+            print('-------------------------------')
             print('longitude =',longitude)
             print('latitude =',latitude)
             print('altitude =',altitude)
@@ -140,6 +143,11 @@ class hpp_model_P2X:
         else: # User provided weather timeseries
             weather = pd.read_csv(input_ts_fn, index_col=0, parse_dates=True)
             N_time = len(weather)
+
+        if ppa_price is None:
+            price = weather['Price']
+        else:
+            price = ppa_price * np.ones_like(weather['Price'])
 
         H2_demand_data = pd.read_csv(H2_demand_fn, index_col=0, parse_dates=True)
         electrolyzer_eff_fn = os.path.join(os.path.dirname(sim_pars_fn), 'Electrolyzer_efficiency_curves.csv')
@@ -379,6 +387,7 @@ class hpp_model_P2X:
                               'CAPEX',
                               'OPEX',
                               'break_even_H2_price',
+                              'break_even_PPA_price',
                               ],
         )
                   
@@ -453,7 +462,7 @@ class hpp_model_P2X:
         prob.setup()        
         
         # Additional parameters
-        prob.set_val('price_t', weather['Price'])
+        prob.set_val('price_t', price)
         prob.set_val('m_H2_demand_t', H2_demand_data['H2_demand'])
         prob.set_val('G_MW', sim_pars['G_MW'])
         #prob.set_val('pv_deg_per_year', sim_pars['pv_deg_per_year'])
@@ -511,6 +520,7 @@ class hpp_model_P2X:
             'Hub height [m]',
             'Number of batteries used in lifetime',
             'Break-even H2 price [Euro/kg]',
+            'Break-even PPA price [Euro/MWh]',
             'Capacity factor wind [-]'
             ]
 
@@ -668,6 +678,7 @@ class hpp_model_P2X:
             hh,
             self.num_batteries * (b_P>0),
             prob['break_even_H2_price'],
+            prob['break_even_PPA_price'],
             cf_wind,
             ])
     
@@ -730,6 +741,7 @@ class hpp_model_P2X:
                                             'Hub height [m]',
                                             'Number of batteries used in lifetime',
                                             'Break-even H2 price [Euro/kg]',
+                                            'Break-even PPA price [Euro/MWh]',
                                             'Capacity factor wind [-]'
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)

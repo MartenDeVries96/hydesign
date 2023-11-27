@@ -46,6 +46,7 @@ class hpp_model:
         genWake_fn = lut_filepath+'genWake_v3.nc',
         verbose = True,
         name = '',
+        ppa_price=None,
         **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
@@ -89,8 +90,8 @@ class hpp_model:
                                 kwargs={"fill_value": 0.0}
                             ).values
         if verbose:
-            print(f'\nFixed parameters on the site')
-            print(f'-------------------------------')
+            print('\nFixed parameters on the site')
+            print('-------------------------------')
             print('longitude =',longitude)
             print('latitude =',latitude)
             print('altitude =',altitude)
@@ -161,6 +162,11 @@ class hpp_model:
         else: # User provided weather timeseries
             weather = pd.read_csv(input_ts_fn, index_col=0, parse_dates=True)
             N_time = len(weather)
+        
+        if ppa_price is None:
+            price = weather['Price']
+        else:
+            price = ppa_price * np.ones_like(weather['Price'])
             
         if weeks_per_season_per_year != None:
             weather = select_years(
@@ -390,7 +396,8 @@ class hpp_model:
                               'mean_AEP',
                               'penalty_lifetime',
                               'CAPEX',
-                              'OPEX'
+                              'OPEX',
+                              'break_even_PPA_price',
                               ],
         )
                   
@@ -456,7 +463,7 @@ class hpp_model:
         prob.setup()        
         
         # Additional parameters
-        prob.set_val('price_t', weather['Price'])
+        prob.set_val('price_t', price)
         prob.set_val('G_MW', sim_pars['G_MW'])
         #prob.set_val('pv_deg_per_year', sim_pars['pv_deg_per_year'])
         prob.set_val('battery_depth_of_discharge', sim_pars['battery_depth_of_discharge'])
@@ -508,6 +515,7 @@ class hpp_model:
             'Rotor diam [m]',
             'Hub height [m]',
             'Number of batteries used in lifetime',
+            'Break-even PPA price [Euro/MWh]',
             'Capacity factor wind [-]'
             ]
 
@@ -639,6 +647,7 @@ class hpp_model:
             d,
             hh,
             prob.get_val('battery_degradation.n_batteries') * (b_P>0),
+            prob['break_even_PPA_price'],
             cf_wind,
             ])
     
@@ -701,6 +710,7 @@ class hpp_model:
                                             'Rotor diam [m]',
                                             'Hub height [m]',
                                             'Number of batteries used in lifetime',
+                                            'Break-even PPA price [Euro/MWh]',
                                             'Capacity factor wind [-]'
                                             ]  , index=range(1))
         design_df.iloc[0] =  [longitude,latitude,altitude] + list(x_opt) + list(outs)
