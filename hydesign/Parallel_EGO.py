@@ -252,12 +252,12 @@ def concat_to_existing(x,y,xnew,ynew):
 
 def surrogate_optimization(inputs): # Calling the optimization of the surrogate model
     x, kwargs = inputs
-    mixint = get_mixint_context(kwargs['variables'])
+    mixint = get_mixint_context(kwargs['variables'], kwargs['n_seed'])
     return opt_sm(kwargs['sm'], mixint, x, fmin=kwargs['yopt'][0,0])
 
 def surrogate_evaluation(inputs): # Evaluates the surrogate model
     seed, kwargs = inputs
-    mixint = get_mixint_context(kwargs['variables'])
+    mixint = get_mixint_context(kwargs['variables'], kwargs['n_seed'])
     return eval_sm(
         kwargs['sm'], mixint, 
         scaler=kwargs['scaler'],
@@ -457,7 +457,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         # -------------------------------------------------------        
         
         # LHS intial doe
-        mixint = get_mixint_context(kwargs['variables'])
+        mixint = get_mixint_context(kwargs['variables'], kwargs['n_seed'])
         sampling = mixint.build_sampling_method(
           LHS, criterion="maximin", random_state=kwargs['n_seed'])
         xdoe = sampling(kwargs['n_doe'])
