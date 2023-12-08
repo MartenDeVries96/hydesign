@@ -195,7 +195,8 @@ class wpp_cost(om.ExplicitComponent):
         outputs['CAPEX_w'] = scale*(
             wind_turbine_cost + \
             wind_civil_works_cost) * (Nwt * p_rated)
-        outputs['OPEX_w'] = wind_fixed_onm_cost * (Nwt * p_rated) + mean_aep_wind * wind_variable_onm_cost * p_rated_ref/p_rated
+        outputs['OPEX_w'] = wind_fixed_onm_cost * (Nwt * p_rated) + \
+                            mean_aep_wind * wind_variable_onm_cost * p_rated/p_rated_ref
 
 
 
@@ -266,9 +267,9 @@ class pvp_cost(om.ExplicitComponent):
         solar_hardware_installation_cost = self.solar_hardware_installation_cost
         solar_inverter_cost= self.solar_inverter_cost
         solar_fixed_onm_cost = self.solar_fixed_onm_cost
-        DC_AC_ratio_tech_ref =  1.25 #extracted from danish energy agency technology catalogue reference
+        
         outputs['CAPEX_s'] = (solar_PV_cost + solar_hardware_installation_cost ) * solar_MW * DC_AC_ratio + \
-             solar_inverter_cost * DC_AC_ratio_tech_ref/DC_AC_ratio * solar_MW
+                              solar_inverter_cost * solar_MW
         outputs['OPEX_s'] = solar_fixed_onm_cost * solar_MW * DC_AC_ratio
 
     def compute_partials(self, inputs, partials):
