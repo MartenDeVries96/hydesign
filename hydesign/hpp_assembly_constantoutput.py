@@ -18,7 +18,7 @@ import xarray as xr
 from hydesign.weather import extract_weather_for_HPP, ABL, select_years
 from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, wpp_with_degradation, get_rotor_area, get_rotor_d
 from hydesign.pv import pvp, pvp_with_degradation
-from hydesign.ems import ems, ems_long_term_operation
+from hydesign.ems import ems_constantoutput, ems_long_term_operation
 from hydesign.battery_degradation import battery_degradation, battery_loss_in_capacity_due_to_temp
 from hydesign.costs import wpp_cost, pvp_cost, battery_cost, shared_cost
 from hydesign.finance import finance
@@ -242,7 +242,7 @@ class hpp_model:
                 ])
         model.add_subsystem(
             'ems', 
-            ems(
+            ems_constantoutput(
                 N_time = N_time,
                 weeks_per_season_per_year = weeks_per_season_per_year,
                 life_h = life_h, 
@@ -257,6 +257,7 @@ class hpp_model:
                 'peak_hr_quantile',
                 'cost_of_battery_P_fluct_in_peak_price_ratio',
                 'n_full_power_hours_expected_per_day_at_peak_price',
+                'load_min',
                 ]
             )
         model.add_subsystem(
@@ -309,15 +310,15 @@ class hpp_model:
             'ems_long_term_operation', 
             ems_long_term_operation(
                 N_time = N_time,
-                life_h = life_h),
+                life_h = life_h,
+                ems_type = 'constant_output'),
             promotes_inputs=[
                 'b_P',
                 'b_E',
                 'G_MW',
                 'battery_depth_of_discharge',
                 'battery_charge_efficiency',
-                'peak_hr_quantile',
-                'n_full_power_hours_expected_per_day_at_peak_price'
+                'load_min'
                 ],
             promotes_outputs=[
                 'total_curtailment'
@@ -477,7 +478,7 @@ class hpp_model:
         prob.set_val('battery_WACC', sim_pars['battery_WACC'])
         prob.set_val('tax_rate', sim_pars['tax_rate'])
         prob.set_val('land_use_per_solar_MW', sim_pars['land_use_per_solar_MW'])
-
+        prob.set_val('load_min', sim_pars['load_min'])
         
 
         self.sim_pars = sim_pars
