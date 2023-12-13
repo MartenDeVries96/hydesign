@@ -21,10 +21,25 @@ class finance(om.ExplicitComponent):
     as the internal rate of return (IRR).
     """
 
-    def __init__(self, 
-                 N_time, 
-                 life_h = 25*365*24,
-                ):
+    def __init__(
+        self, 
+        N_time, 
+
+        # Depreciation curve
+        depreciation_yr,
+        depreciation,
+        
+        # Inflation curve
+        inflation_yr,
+        inflation,
+        ref_yr_inflation,
+        
+        # Early paying or CAPEX Phasing
+        phasing_yr,
+        phasing_CAPEX,
+        
+        life_h = 25*365*24,
+        ):
         """Initialization of the HPP finance model
 
         Parameters
@@ -35,6 +50,19 @@ class finance(om.ExplicitComponent):
         super().__init__()
         self.N_time = int(N_time)
         self.life_h = int(life_h)
+
+        # Depreciation curve
+        self.depreciation_yr = depreciation_yr
+        self.depreciation = depreciation
+
+        # Inflation curve
+        self.inflation_yr = inflation_yr
+        self.inflation = inflation
+        self.ref_yr_inflation = ref_yr_inflation
+
+        # Early paying or CAPEX Phasing
+        self.phasing_yr = phasing_yr
+        self.phasing_CAPEX = phasing_CAPEX
 
     def setup(self):
         self.add_input('price_t_ext',
@@ -148,6 +176,17 @@ class finance(om.ExplicitComponent):
         
         N_time = self.N_time
         life_h = self.life_h
+        life_yr = int(np.ceil(life_h/N_time))
+
+        depreciation_yr = self.depreciation_yr
+        depreciation = self.depreciation
+
+        inflation_yr = self.inflation_yr
+        inflation = self.inflation
+        ref_yr_inflation = self.ref_yr_inflation
+
+        phasing_yr = self.phasing_yr
+        phasing_CAPEX = self.phasing_CAPEX
         
         df = pd.DataFrame()
         
@@ -156,23 +195,17 @@ class finance(om.ExplicitComponent):
         df['penalty_t'] = inputs['penalty_t']
         # df['revenue'] = df['hpp_t'] * df['price_t'] - df['penalty_t']
         
-        df['i_year'] = np.hstack([np.array([ii]*N_time) 
-                                  for ii in range(int(np.ceil(life_h/N_time)))])[:life_h]
+        df['i_year'] = np.hstack([np.array([ii]*N_time) for ii in range(life_yr)])[:life_h]
 
+        # Compute yearly revenues and cashflow
         revenues = calculate_revenues(inputs['price_t_ext'], df)
         CAPEX = inputs['CAPEX_w'] + inputs['CAPEX_s'] + \
             inputs['CAPEX_b'] + inputs['CAPEX_el']
         OPEX = inputs['OPEX_w'] + inputs['OPEX_s'] + \
             inputs['OPEX_b'] + inputs['OPEX_el']
-        
-        outputs['CAPEX'] = CAPEX
-        outputs['OPEX'] = OPEX
-        
-        # len of revenues
-        iy = np.arange(len(revenues)) + 1
-        Net_revenue_t = revenues.values.flatten()
-        
-        WACC_after_tax = calculate_WACC(
+
+        # Discount rate
+        hpp_discount_factor = calculate_WACC(
             inputs['CAPEX_w'],
             inputs['CAPEX_s'],
             inputs['CAPEX_b'],
@@ -182,15 +215,65 @@ class finance(om.ExplicitComponent):
             inputs['battery_WACC'],
             )
         
+        # Apply CAPEX phasing using the inflation index for all years before the start of the project (t=0). 
+        inflation_index_phasing = get_inflation_index(
+            yr = phasing_yr,
+            inflation_yr = inflation_yr, 
+            inflation = inflation,
+            ref_yr_inflation = ref_yr_inflation,
+        )
+        CAPEX_eq = calculate_CAPEX_phasing(
+            CAPEX = CAPEX,
+            phasing_yr = phasing_yr,
+            phasing_CAPEX = phasing_CAPEX,
+            discount_rate = hpp_discount_factor,
+            inflation_index = inflation_index_phasing,
+            )
+
+        # len of revenues = years of life
+        iy = np.arange(len(revenues)) + 1 # Plus becasue the year zero is added externally in the NPV and IRR calculations
+        
+        # Compute inflation, all cahsflow are in nominal prices
+        inflation_index = get_inflation_index(
+                yr = np.arange(len(revenues)+1), # It includes t=0, to compute the reference
+                inflation_yr = inflation_yr, 
+                inflation = inflation,
+                ref_yr_inflation = ref_yr_inflation,
+        )
+        
+        revenues = revenues.values.flatten()
+        outputs['CAPEX'] = CAPEX
+        outputs['OPEX'] = OPEX
+
+        # We need to add DEVEX
+        DEVEX = 0
+
+        # Calculate the 
         NPV, IRR = calculate_NPV_IRR(
-            Net_revenue_t = revenues.values.flatten(),
-            investment_cost = CAPEX,
+            Net_revenue_t = revenues,
+            investment_cost = CAPEX_eq, # includes early paying of CAPEX, CAPEX-phasing
             maintenance_cost_per_year = OPEX,
             tax_rate = inputs['tax_rate'],
-            WACC_after_tax = WACC_after_tax)
+            discount_rate = hpp_discount_factor,
+            depreciation_yr = depreciation_yr,
+            depreciation = depreciation,
+            development_cost = DEVEX, 
+            inflation_index = inflation_index,
+        )
         
-        hpp_discount_factor = WACC_after_tax
-        break_even_PPA_price = np.maximum(0, calculate_break_even_PPA_price(df, CAPEX, OPEX, inputs['tax_rate'], WACC_after_tax))
+        break_even_PPA_price = np.maximum(
+            0, 
+            calculate_break_even_PPA_price(
+                df = df, 
+                CAPEX = CAPEX_eq, 
+                OPEX = OPEX, 
+                tax_rate = inputs['tax_rate'],
+                discount_rate = hpp_discount_factor,
+                depreciation_yr = depreciation_yr, 
+                depreciation = depreciation, 
+                DEVEX = DEVEX,
+                inflation_index = inflation_index,
+                ))
 
         outputs['NPV'] = NPV
         outputs['IRR'] = IRR
@@ -221,10 +304,24 @@ class finance_P2X(om.ExplicitComponent):
     as the internal rate of return (IRR).
     """
 
-    def __init__(self, 
-                 N_time, 
-                 life_h = 25*365*24,
-                ):
+    def __init__(
+        self, 
+        N_time, 
+        
+        # Depreciation curve
+        depreciation_yr,
+        depreciation,
+        
+        # Inflation curve
+        inflation_yr,
+        inflation,
+        ref_yr_inflation,
+        
+        # Early paying or CAPEX Phasing
+        phasing_yr,
+        phasing_CAPEX,
+        life_h = 25*365*24,
+        ):
         """Initialization of the HPP finance model
 
         Parameters
@@ -235,6 +332,19 @@ class finance_P2X(om.ExplicitComponent):
         super().__init__()
         self.N_time = int(N_time)
         self.life_h = int(life_h)
+         
+        # Depreciation curve
+        self.depreciation_yr = depreciation_yr
+        self.depreciation = depreciation
+
+        # Inflation curve
+        self.inflation_yr = inflation_yr
+        self.inflation = inflation
+        self.ref_yr_inflation = ref_yr_inflation
+
+        # Early paying or CAPEX Phasing
+        self.phasing_yr = phasing_yr
+        self.phasing_CAPEX = phasing_CAPEX
 
     def setup(self):
         self.add_input('price_t_ext',
@@ -423,6 +533,16 @@ class finance_P2X(om.ExplicitComponent):
         
         N_time = self.N_time
         life_h = self.life_h
+
+        depreciation_yr = self.depreciation_yr
+        depreciation = self.depreciation
+
+        inflation_yr = self.inflation_yr
+        inflation = self.inflation
+        ref_yr_inflation = self.ref_yr_inflation
+
+        phasing_yr = self.phasing_yr
+        phasing_CAPEX = self.phasing_CAPEX
         
         df = pd.DataFrame()
         
@@ -436,11 +556,11 @@ class finance_P2X(om.ExplicitComponent):
         penalty_H2 = inputs['penalty_H2']
         price_t = inputs['price_t_ext']
         df['penalty_t'] = inputs['penalty_t']
-        # df['revenue'] = df['hpp_t'] * df['price_t'] + df['m_H2_offtake_t'] * price_H2 - penalty_H2 * (df['m_H2_demand_t_ext'] - df['m_H2_offtake_t']) - df['penalty_t']
         
         df['i_year'] = np.hstack([np.array([ii]*N_time) 
                                   for ii in range(int(np.ceil(life_h/N_time)))])[:life_h]
 
+        # Compute yearly revenues and cashflow
         revenues = calculate_revenues_P2X(price_H2, price_t, penalty_H2, df)
         CAPEX = inputs['CAPEX_w'] + inputs['CAPEX_s'] + \
             inputs['CAPEX_b'] + inputs['CAPEX_el'] + inputs['CAPEX_ptg']
@@ -454,11 +574,8 @@ class finance_P2X(om.ExplicitComponent):
         
         outputs['CAPEX'] = CAPEX
         outputs['OPEX'] = OPEX
-        
-        # len of revenues
-        iy = np.arange(len(revenues)) + 1
-        # Net_revenue_t = revenues.values.flatten()
-        
+
+        # Discount rates
         WACC_after_tax = calculate_WACC_P2X(
             inputs['CAPEX_w'],
             inputs['CAPEX_s'],
@@ -479,13 +596,47 @@ class finance_P2X(om.ExplicitComponent):
             inputs['solar_WACC'],
             inputs['battery_WACC'],
             )
+
+        # Apply CAPEX phasing using the inflation index for all years before the start of the project (t=0). 
+        inflation_index_phasing = get_inflation_index(
+            yr = phasing_yr,
+            inflation_yr = inflation_yr, 
+            inflation = inflation,
+            ref_yr_inflation = ref_yr_inflation,
+        )
+        CAPEX_eq = calculate_CAPEX_phasing(
+            CAPEX = CAPEX,
+            phasing_yr = phasing_yr,
+            phasing_CAPEX = phasing_CAPEX,
+            discount_rate = WACC_after_tax,
+            inflation_index = inflation_index_phasing,
+            )
+
+        # len of revenues = years of life
+        iy = np.arange(len(revenues)) + 1 # Plus becasue the year zero is added externally in the NPV and IRR calculations
+
+        # Compute inflation, all cahsflow are in nominal prices
+        inflation_index = get_inflation_index(
+                yr = np.arange(len(revenues)+1), # It includes t=0, to compute the reference
+                inflation_yr = inflation_yr, 
+                inflation = inflation,
+                ref_yr_inflation = ref_yr_inflation,
+        )
+        
+        # We need to add Development costs
+        DEVEX = 0
         
         NPV, IRR = calculate_NPV_IRR(
             Net_revenue_t = revenues.values.flatten(),
-            investment_cost = CAPEX,
+            investment_cost = CAPEX_eq, # Include phasing
             maintenance_cost_per_year = OPEX,
             tax_rate = inputs['tax_rate'],
-            WACC_after_tax = WACC_after_tax)
+            discount_rate = WACC_after_tax,
+            depreciation_yr = depreciation_yr,
+            depreciation = depreciation,
+            development_cost = DEVEX, 
+            inflation_index = inflation_index,
+        )
         
         
         outputs['NPV'] = NPV
@@ -526,8 +677,37 @@ class finance_P2X(om.ExplicitComponent):
         else:
             outputs['LCOH'] = 1e6
 
-        break_even_H2_price = calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, inputs['tax_rate'], WACC_after_tax, price_t)
-        break_even_PPA_price = np.maximum(0, calculate_break_even_PPA_price_P2X(penalty_H2, df, CAPEX, OPEX, inputs['tax_rate'], WACC_after_tax, price_H2))
+        break_even_H2_price = calculate_break_even_H2_price(
+            penalty_H2 = penalty_H2, 
+            df = df, 
+            CAPEX = CAPEX_eq, 
+            OPEX = OPEX, 
+            tax_rate = inputs['tax_rate'], 
+            discount_rate = WACC_after_tax, 
+            price_el = price_t,     
+            depreciation_yr = depreciation_yr, 
+            depreciation = depreciation, 
+            DEVEX = DEVEX, 
+            inflation_index = inflation_index,
+        )
+
+        break_even_PPA_price = np.maximum(
+            0, 
+            calculate_break_even_PPA_price_P2X(
+                penalty_H2 = penalty_H2, 
+                df = df, 
+                CAPEX = CAPEX_eq, 
+                OPEX = OPEX, 
+                tax_rate = inputs['tax_rate'],
+                discount_rate = WACC_after_tax, 
+                price_H2 = price_H2,
+                depreciation_yr = depreciation_yr, 
+                depreciation = depreciation, 
+                DEVEX = DEVEX, 
+                inflation_index = inflation_index,
+                )
+            )
+        
         outputs['Revenue'] = np.sum(revenues.values.flatten())
         outputs['annual_P_ptg'] = mean_P_ptg_per_year
         outputs['mean_AEP'] = mean_AEP_per_year
@@ -547,7 +727,12 @@ def calculate_NPV_IRR(
     investment_cost,
     maintenance_cost_per_year,
     tax_rate,
-    WACC_after_tax):
+    discount_rate,
+    depreciation_yr,
+    depreciation,
+    development_cost,
+    inflation_index
+):
     """ A function to estimate the yearly cashflow using the net revenue time series, and the yearly OPEX costs.
     It then calculates the NPV and IRR using the yearly cashlow, the CAPEX, the WACC after tax, and the tax rate.
 
@@ -557,7 +742,11 @@ def calculate_NPV_IRR(
     investment_cost : Capital costs
     maintenance_cost_per_year : yearly operation and maintenance costs
     tax_rate : tax rate
-    WACC_after_tax : Weighted average cost of capital after tax
+    discount_rate : Discount rate
+    depreciation_yr : Depreciation curve (x-axis) time in years
+    depreciation : Depreciation curve at the given times 
+    development_cost : DEVEX
+    inflation_index : Yearly Inflation index time-sereis
 
     Returns
     -------
@@ -565,18 +754,22 @@ def calculate_NPV_IRR(
     IRR : Internal rate of return
     """
 
+    yr = np.arange(len(Net_revenue_t)+1) # extra year to start at 0 and end at end of lifetime.
+    depre = np.interp(yr, depreciation_yr, depreciation)
 
-    # EBIT: earnings before interest and taxes
-    EBIT = (Net_revenue_t - maintenance_cost_per_year) 
+    # EBITDA: earnings before interest and taxes in nominal prices
+    EBITDA = (Net_revenue_t - maintenance_cost_per_year) * inflation_index[1:]
+
+    # EBIT taxable income
+    depreciation_on_each_year = np.diff(investment_cost*depre)
+    EBIT = EBITDA - depreciation_on_each_year
     
-    # # WACC: weighted average cost of capital
-    # Net_income = (EBIT*(1-tax_rate))*(1-WACC_after_tax) 
-    # # Should it be?
-    # Net_income = EBIT*(1-tax_rate*(1-WACC_after_tax) )
-    # # For now we use
-    Net_income = (EBIT*(1-tax_rate))
-    Cashflow = np.insert(Net_income, 0, -investment_cost)
-    NPV = npf.npv(WACC_after_tax, Cashflow)
+    # Taxes
+    Taxes = EBIT*tax_rate
+    
+    Net_income = EBITDA - Taxes
+    Cashflow = np.insert(Net_income, 0, -investment_cost-development_cost)
+    NPV = npf.npv(discount_rate, Cashflow)
     if NPV > 0:
         IRR = npf.irr(Cashflow)    
     else:
@@ -673,7 +866,8 @@ def calculate_revenues_P2X(price_H2, price_el, penalty_H2, df):
     return df.groupby('i_year').revenue.mean()*365*24
     
 
-def calculate_break_even_PPA_price(df, CAPEX, OPEX, tax_rate, WACC_after_tax):
+def calculate_break_even_PPA_price(df, CAPEX, OPEX, tax_rate, discount_rate,
+                                   depreciation_yr, depreciation, DEVEX, inflation_index):
     def fun(price_el):
         revenues = calculate_revenues(price_el, df)
         NPV, _ = calculate_NPV_IRR(
@@ -681,7 +875,12 @@ def calculate_break_even_PPA_price(df, CAPEX, OPEX, tax_rate, WACC_after_tax):
             investment_cost = CAPEX,
             maintenance_cost_per_year = OPEX,
             tax_rate = tax_rate,
-            WACC_after_tax = WACC_after_tax)
+            discount_rate = discount_rate,
+            depreciation_yr = depreciation_yr,
+            depreciation = depreciation,
+            development_cost = DEVEX,
+            inflation_index = inflation_index,
+        )
         return NPV ** 2
     out = sp.optimize.minimize(
         fun=fun, 
@@ -691,7 +890,8 @@ def calculate_break_even_PPA_price(df, CAPEX, OPEX, tax_rate, WACC_after_tax):
     return out.x
 
 
-def calculate_break_even_PPA_price_P2X(penalty_H2, df, CAPEX, OPEX, tax_rate, WACC_after_tax, price_H2):
+def calculate_break_even_PPA_price_P2X(penalty_H2, df, CAPEX, OPEX, tax_rate, discount_rate, price_H2,
+                                       depreciation_yr, depreciation, DEVEX, inflation_index):
     def fun(price_el):
         revenues = calculate_revenues_P2X(price_H2, price_el, penalty_H2, df)
         NPV, _ = calculate_NPV_IRR(
@@ -699,7 +899,12 @@ def calculate_break_even_PPA_price_P2X(penalty_H2, df, CAPEX, OPEX, tax_rate, WA
             investment_cost = CAPEX,
             maintenance_cost_per_year = OPEX,
             tax_rate = tax_rate,
-            WACC_after_tax = WACC_after_tax)
+            discount_rate = discount_rate,
+            depreciation_yr = depreciation_yr,
+            depreciation = depreciation,
+            development_cost = DEVEX,
+            inflation_index = inflation_index,
+        )
         return NPV ** 2
     out = sp.optimize.minimize(
         fun=fun, 
@@ -709,7 +914,8 @@ def calculate_break_even_PPA_price_P2X(penalty_H2, df, CAPEX, OPEX, tax_rate, WA
     return out.x
 
 
-def calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, tax_rate, WACC_after_tax, price_el):
+def calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, tax_rate, discount_rate, price_el, 
+                                  depreciation_yr, depreciation, DEVEX, inflation_index):
     def fun(price_H2):
         revenues = calculate_revenues_P2X(price_H2, price_el, penalty_H2, df)
         NPV, _ = calculate_NPV_IRR(
@@ -717,7 +923,12 @@ def calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, tax_rate, WACC_af
             investment_cost = CAPEX,
             maintenance_cost_per_year = OPEX,
             tax_rate = tax_rate,
-            WACC_after_tax = WACC_after_tax)
+            discount_rate = discount_rate,
+            depreciation_yr = depreciation_yr,
+            depreciation = depreciation,
+            development_cost = DEVEX,
+            inflation_index = inflation_index
+        )
         return NPV ** 2
     out = sp.optimize.minimize(
         fun=fun, 
@@ -725,3 +936,62 @@ def calculate_break_even_H2_price(penalty_H2, df, CAPEX, OPEX, tax_rate, WACC_af
         method='SLSQP',
         tol=1e-10)
     return out.x
+
+
+
+
+def calculate_CAPEX_phasing(
+    CAPEX,
+    phasing_yr,
+    phasing_CAPEX,
+    discount_rate,
+    inflation_index,
+    ):
+
+    """ This function calulates the equivalent net present value CAPEX given a early paying "phasing" approach.
+
+    Parameters
+    ----------
+    CAPEX : CAPEX 
+    phasing_yr : Yearly early paying of CAPEX curve. x-axis, time in years. 
+    phasing_CAPEX : Yearly early paying of CAPEX curve. Shares will be normalized to sum the CAPEX. 
+    discount_rate : Discount rate for present value calculation
+    inflation_index : Inflation index time series at the phasing_yr years. Accounts for inflation.
+
+    Returns
+    -------
+    CAPEX_eq : Present value equivalent CAPEX
+    """
+    
+    phasing_CAPEX = inflation_index*CAPEX*phasing_CAPEX/np.sum(phasing_CAPEX)
+    CAPEX_eq = np.sum([phasing_CAPEX[ii]/( 1 + discount_rate)**yr for ii,yr in enumerate(phasing_yr)])
+    
+    return CAPEX_eq
+
+def get_inflation_index(
+    yr,
+    inflation_yr, 
+    inflation,
+    ref_yr_inflation = 0
+):
+    """ This function calulates the inflation index time series.
+
+    Parameters
+    ----------
+    yr : Years for eavaluation of the  inflation index
+    inflation_yr : Yearly inflation curve. x-axis, time in years. To be used in interpolation.
+    inflation : Yearly inflation curve.  To be used in interpolation.
+    ref_yr_inflation : Referenece year, at which the inflation index takes value of 1.
+
+    Returns
+    -------
+    inflation_index : inflation index time series at yr
+    """
+    infl = np.interp(yr, inflation_yr, inflation)
+    
+    
+    ind_ref = np.where(np.array(yr)==ref_yr_inflation)[0]
+    inflation_index = np.cumprod(1/(1-np.array(infl)))
+    inflation_index = inflation_index/inflation_index[ind_ref]
+    
+    return inflation_index

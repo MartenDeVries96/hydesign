@@ -145,7 +145,7 @@ class pvp_with_degradation(om.ExplicitComponent):
         super().__init__()
         self.life_h = life_h
         
-        # number of elements in PV degradation curve
+        # PV degradation curve
         self.pv_deg_yr = pv_deg_yr
         self.pv_deg = pv_deg        
         

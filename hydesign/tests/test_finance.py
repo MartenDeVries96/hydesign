@@ -50,3 +50,10 @@ def test_NPV():
         np.testing.assert_allclose(NPV_out[i], NPV_out_data[i])
         # print(np.allclose(NPV_out[i], NPV_out_data[i]))
 
+def update_NPV():
+    NPV_out = run_NPV()
+    with open(tfp+'finance_output_NPV.pickle','wb') as f:
+        pickle.dump(NPV_out, f)
+    
+# update_NPV()
+

@@ -122,35 +122,11 @@ class wpp_cost(om.ExplicitComponent):
         wind_civil_works_cost = self.wind_civil_works_cost
         wind_fixed_onm_cost = self.wind_fixed_onm_cost
         wind_variable_onm_cost= self.wind_variable_onm_cost
-        # costs scales as a function of diameter and hh with respect reference values 
-        # https://www.nrel.gov/docs/fy07osti/40566.pdf
-        # # Cheap
-        # d_ref = 120
-        # hh_ref = 100
-        
-        # # Medium
-        #d_ref = 100
-        #hh_ref = 80
-        
-        # Expensive
-        # d_ref = 80
-        # hh_ref = 60
         
         d_ref = self.d_ref
         hh_ref = self.hh_ref
         p_rated_ref = self.p_rated_ref
         
-        # WT_cost_ref = get_WT_cost_wisdem(
-        #     rotor_diameter = d_ref,
-        #     turbine_class = 1,
-        #     blade_has_carbon = False,
-        #     blade_number = 3    ,
-        #     machine_rating = p_rated_ref*1e3, #kW
-        #     hub_height = hh_ref,
-        #     bearing_number = 2,
-        #     crane = True,  
-        #     verbosity = False
-        #     )
         WT_cost_ref = wt_cost(
             rotor_diameter = d_ref,
             turbine_class = 1,
@@ -162,17 +138,6 @@ class wpp_cost(om.ExplicitComponent):
             crane = True,  
             )*1e-6
         
-        # WT_cost = get_WT_cost_wisdem(
-        #     rotor_diameter = d,
-        #     turbine_class = 1,
-        #     blade_has_carbon = False,
-        #     blade_number = 3    ,
-        #     machine_rating = p_rated*1e3, #kW
-        #     hub_height = hh,
-        #     bearing_number = 2,
-        #     crane = True,  
-        #     verbosity = False
-        #     )
         WT_cost = wt_cost(
             rotor_diameter = d,
             turbine_class = 1,
@@ -460,6 +425,7 @@ class shared_cost(om.ExplicitComponent):
             land_rent = land_cost * Awpp
         else:
             land_rent= land_cost * Apvp
+            
         #print(land_rent)
         outputs['CAPEX_sh'] = (
             hpp_BOS_soft_cost + hpp_grid_connection_cost) * G_MW + land_rent

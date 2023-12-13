@@ -383,6 +383,16 @@ class hpp_model:
             'finance', 
             finance(
                 N_time = N_time, 
+                # Depreciation curve
+                depreciation_yr = sim_pars['depreciation_yr'],
+                depreciation = sim_pars['depreciation'],
+                # Inflation curve
+                inflation_yr = sim_pars['inflation_yr'],
+                inflation = sim_pars['inflation'],
+                ref_yr_inflation = sim_pars['ref_yr_inflation'],
+                # Early paying or CAPEX Phasing
+                phasing_yr = sim_pars['phasing_yr'],
+                phasing_CAPEX = sim_pars['phasing_CAPEX'],
                 life_h = life_h),
             promotes_inputs=['wind_WACC',
                              'solar_WACC', 
