@@ -199,7 +199,7 @@ class hpp_model_hybridization:
             existing_wpp(
                 N_time = N_time,
                 wpp_efficiency = wpp_efficiency,
-                existing_wpp_power_curve_xr_fn=existing_wpp_power_curve_xr_fn,
+                existing_wpp_power_curve_xr_fn = sim_pars['existing_wpp_power_curve_xr_fn'],
             )
                 )
         
@@ -264,7 +264,7 @@ class hpp_model_hybridization:
             'existing_wpp_with_degradation', 
             existing_wpp_with_degradation(
                 N_time = N_time,
-                existing_wpp_power_curve_xr_fn = existing_wpp_power_curve_xr_fn, 
+                existing_wpp_power_curve_xr_fn =  sim_pars['existing_wpp_power_curve_xr_fn'],
                 wpp_efficiency = wpp_efficiency,
                 life_h = life_h,
                 wind_deg_yr = wind_deg_yr,
@@ -452,7 +452,12 @@ class hpp_model_hybridization:
         prob.set_val('battery_WACC', sim_pars['battery_WACC'])
         prob.set_val('tax_rate', sim_pars['tax_rate'])
         prob.set_val('land_use_per_solar_MW', sim_pars['land_use_per_solar_MW'])
-        
+
+        prob.set_val('hh', sim_pars['hh'])
+        prob.set_val('d', sim_pars['d'])
+        prob.set_val('p_rated', sim_pars['p_rated'])
+        prob.set_val('Nwt', sim_pars['Nwt'])
+        prob.set_val('Awpp', sim_pars['Awpp'])
 
         self.sim_pars = sim_pars
         self.prob = prob
@@ -547,20 +552,9 @@ class hpp_model_hybridization:
 
         prob = self.prob
 
-        d = get_rotor_d(p_rated*1e6/sp)
-        hh = (d/2)+clearance
-        wind_MW = Nwt * p_rated
-        Awpp = wind_MW / wind_MW_per_km2 
-        #Awpp = Awpp + 1e-10*(Awpp==0)
         b_E = b_E_h * b_P
         
         # pass design variables        
-        prob.set_val('hh', hh)
-        prob.set_val('d', d)
-        prob.set_val('p_rated', p_rated)
-        prob.set_val('Nwt', Nwt)
-        prob.set_val('Awpp', Awpp)
-
         prob.set_val('surface_tilt', surface_tilt)
         prob.set_val('surface_azimuth', surface_azimuth)
         prob.set_val('DC_AC_ratio', DC_AC_ratio)
