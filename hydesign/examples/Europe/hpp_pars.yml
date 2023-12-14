@@ -4,7 +4,6 @@
 G_MW: 300 # Grid capacity
 year: '2012' # Single representative year
 N_life: 25
-load_min: 30  # minimum output [MW]
 
 # --------------------------------------------------------------------------------------------
 # Wind

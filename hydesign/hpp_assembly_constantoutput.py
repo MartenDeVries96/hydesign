@@ -47,6 +47,7 @@ class hpp_model:
         verbose = True,
         name = '',
         ppa_price=None,
+        load_min=3, # MW
         **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
@@ -488,7 +489,7 @@ class hpp_model:
         prob.set_val('battery_WACC', sim_pars['battery_WACC'])
         prob.set_val('tax_rate', sim_pars['tax_rate'])
         prob.set_val('land_use_per_solar_MW', sim_pars['land_use_per_solar_MW'])
-        prob.set_val('load_min', sim_pars['load_min'])
+        prob.set_val('load_min', load_min)
         
 
         self.sim_pars = sim_pars

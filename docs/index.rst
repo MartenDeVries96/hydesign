@@ -38,6 +38,7 @@ Explanations of hydesign's core objects can be found in the following tutorials:
 	notebooks/hpp_sizing
 	notebooks/more_sizing_examples
 	notebooks/break_even_price_and_PPA
+	notebooks/constant_output
 
     .. toctree::
         :maxdepth: 1
