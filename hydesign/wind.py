@@ -410,7 +410,6 @@ class existing_wpp(om.ExplicitComponent):
     def compute(self, inputs, outputs):
 
         N_time = self.N_time
-        life_h = self.life_h
         wpp_efficiency = self.wpp_efficiency
         
         wst = inputs['wst']
@@ -428,18 +427,16 @@ class existing_wpp(om.ExplicitComponent):
             dims = ['t'],
             coords = {'t':np.arange(N_time)})
 
-        wake_loss_t = existing_wpp_power_curve_xr.wake_losses.interp(ws=xr_time.wst, wd=xr_time.wdt).values
+        wake_losses_eff_t = existing_wpp_power_curve_xr.wake_losses_eff.interp(ws=xr_time.wst, wd=xr_time.wdt).values
 
-        wind_t_ext_deg_no_wake = get_wind_ts(
+        wind_t_no_wake = get_wind_ts(
             ws = existing_wpp_power_curve_xr.ws.values,
             pcw = existing_wpp_power_curve_xr.P_no_wake.values,
             wst = wst,
             wpp_efficiency = self.wpp_efficiency,
         )
         
-        outputs['wind_t'] = wake_loss_t_ext*wind_t_ext_deg_no_wake
-        
-        outputs['wind_t_ext_deg'] = wind_t_ext_deg
+        outputs['wind_t'] = wake_losses_eff_t*wind_t_no_wake
 
 class existing_wpp_with_degradation(om.ExplicitComponent):
     """
@@ -519,6 +516,14 @@ class existing_wpp_with_degradation(om.ExplicitComponent):
                        units='deg',
                        shape=[self.N_time])
 
+        self.add_output('wst_ext',
+                       desc="ws time series at the hub height",
+                       units='m/s',
+                       shape=[self.life_h])
+        self.add_output('wdt_ext',
+                       desc="wd time series at the hub height",
+                       units='deg',
+                       shape=[self.life_h])
         self.add_output('wind_t_ext_deg',
                         desc="power time series with degradation",
                         units='MW',
@@ -559,9 +564,9 @@ class existing_wpp_with_degradation(om.ExplicitComponent):
             dims = ['t'],
             coords = {'t':np.arange(life_h)})
 
-        wake_loss_t = existing_wpp_power_curve_xr.wake_losses.interp(ws=xr_time.wst, wd=xr_time.wdt).values
-        wake_loss_t_ext = expand_to_lifetime(
-            wake_loss_t, life_h = life_h, weeks_per_season_per_year = weeks_per_season_per_year)
+        wake_losses_eff_t = existing_wpp_power_curve_xr.wake_losses_eff.interp(ws=xr_time.wst, wd=xr_time.wdt).values
+        wake_losses_eff_t_ext = expand_to_lifetime(
+            wake_losses_eff_t, life_h = life_h, weeks_per_season_per_year = weeks_per_season_per_year)
 
         ws = existing_wpp_power_curve_xr.ws.values
         pcw = existing_wpp_power_curve_xr.P_no_wake.values
@@ -575,8 +580,10 @@ class existing_wpp_with_degradation(om.ExplicitComponent):
             life_h = life_h, 
             share = share_WT_deg_types)
         
-        wind_t_ext_deg = wake_loss_t_ext*wind_t_ext_deg_no_wake
-        
+        wind_t_ext_deg = wake_losses_eff_t_ext*wind_t_ext_deg_no_wake
+
+        outputs['wst_ext'] = wst_ext
+        outputs['wdt_ext'] = wdt_ext
         outputs['wind_t_ext_deg'] = wind_t_ext_deg
 
 
@@ -751,5 +758,8 @@ def get_wind_ts_degradation(ws, pc, ws_ts, yr, wind_deg, life_h, share=0.5):
 
     p_ts_deg_partial_factor = (1-share)*p_ts_deg + share*p_ts_deg_factor
 
+    # ws shift cannot handle large degradations. (degradation >0.8)
+    p_ts_deg_partial_factor[np.where(degradation>0.8)[0]] = p_ts_deg_factor[np.where(degradation>0.8)[0]]
+    
     return p_ts_deg_partial_factor
 

@@ -100,17 +100,15 @@ class ABL_WD(om.ExplicitComponent):
                         units='deg',
                         shape=[self.N_time])
 
-    def precompute(self, hh):
 
+    def compute(self, inputs, outputs):
+
+        hh = inputs['hh']
         weather = pd.read_csv(self.weather_fn, index_col=0, parse_dates=True)
         ds_interpolated = interpolate_WS_loglog(weather, hh=hh)
         ds_interpolated_aux = interpolate_WD_linear(weather, hh=hh)
         ds_interpolated['WD'] = ds_interpolated_aux['WD']
-        return ds_interpolated
-
-    def compute(self, inputs, outputs):
-
-        ds_interpolated = self.precompute(inputs['hh'])
+        
         self.ds_interpolated = ds_interpolated
 
         outputs['wst'] = ds_interpolated.WS.values.flatten()
@@ -120,6 +118,9 @@ class ABL_WD(om.ExplicitComponent):
 # Auxiliar functions for weather handling
 # -----------------------------------------------------------------------
 
+cosd = lambda x: np.cos(np.radians(x))
+sind = lambda x: np.sin(np.radians(x))
+        
 def interpolate_WS_loglog(weather, hh):
     """
     Auxiliar functions for WS, shear and WS gradient interpolation.
@@ -204,18 +205,15 @@ def interpolate_WD_linear(weather, hh):
     
     ds_interpolated = xr.Dataset()
     ds_interpolated['WD_x'] = ds_all.WD_x.interp(height=hh, method='linear')
-    ds_interpolated['WD_y'] = ds_all.WD_x.interp(height=hh, method='linear')
+    ds_interpolated['WD_y'] = ds_all.WD_y.interp(height=hh, method='linear')
     
-    ds_interpolated['WD'] = np.mod( np.arctan2(ds_interpolated['WD_y'],ds_interpolated['WD_x'])*360/(2*np.pi) , 360)
+    ds_interpolated['WD'] = np.mod( np.degrees(np.arctan2(ds_interpolated['WD_y'],ds_interpolated['WD_x']) ) + 360, 360)
     
     return ds_interpolated
 
 # -----------------------------------------------------------------
 # Auxiliar functions for extractions on a ERA5 database
 # -----------------------------------------------------------------
-
-cosd = lambda x: np.cos(np.degrees(x))
-sind = lambda x: np.sin(np.degrees(x))
 
 # pvlib imports
 from pvlib import pvsystem, tools, irradiance, atmosphere
@@ -755,7 +753,7 @@ def apply_interpolation_f(
 
     if varWD in vars_xy_logz + vars_xyz + \
             vars_xy + vars_nearest_xy + vars_nearest_xyz:
-        interp[varWD] = np.mod( np.arctan2(interp[varWD+'_y'],interp[varWD+'_x'])*360/(2*np.pi) , 360)
+        interp[varWD] = np.mod( np.degrees(np.arctan2(interp[varWD+'_y'],interp[varWD+'_x'])) +360, 360)
 
     return interp
 

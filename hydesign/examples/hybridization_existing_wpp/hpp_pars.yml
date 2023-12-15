@@ -8,17 +8,24 @@ N_life: 25
 # --------------------------------------------------------------------------------------------
 # Existing Wind
 # --------------------------------------------------------------------------------------------
-wind_turbine_cost: 640_000  # [Euro/MW] for reference turbine
-wind_civil_works_cost: 260_000  # [Euro/MW]
+# For New turbine
+# wind_turbine_cost: 640_000  # [Euro/MW] for reference turbine
+# wind_civil_works_cost: 260_000  # [Euro/MW]
+# wind_fixed_onm_cost: 12_600  # Wind fixed O&M cost per year [Euro/MW /year]
+# wind_variable_onm_cost: 1.35 #[EUR/MWh_e] Danish Energy Agency
+
+# For hybridiazation with existing turbines operating
+wind_turbine_cost: 0  # [Euro/MW] for reference turbine
+wind_civil_works_cost: 0  # [Euro/MW]
 wind_fixed_onm_cost: 12_600  # Wind fixed O&M cost per year [Euro/MW /year]
 wind_variable_onm_cost: 1.35 #[EUR/MWh_e] Danish Energy Agency
 
-hh:  
-d:  
-p_rated:  
-Nwt:  
-Awpp:  
-existing_wpp_power_curve_xr_fn:  
+
+hh: 100
+d:  145
+p_rated: 5  
+Nwt:  20
+Awpp:  1400 # km**2  
 
 d_ref: 145
 hh_ref: 100
@@ -26,9 +33,21 @@ p_rated_ref: 5.0 #[MW]
 
 # Degradation
 wpp_efficiency: 1
-wind_deg_yr: [0, 25]
-wind_deg: [0, 0.25] #25yr * 1%/yr
 share_WT_deg_types: 0.5
+
+# new turbine degradation
+#wind_deg_yr: [0, 25]
+#wind_deg: [0, 0.25] #25yr * 1%/yr
+
+# For hybridiazation with existing turbines degraded. 
+# Assuming: 
+# (1) 5 years of operation before hybridiazation
+# (2) Full degradation after the year 20 ( full lifeteime of the turbines)
+wind_deg_yr: [-5, 20, 20.00001, 25] 
+wind_deg: [0.0, 0.25, 1,        1] #25yr * 1%/yr
+
+
+
 
 # --------------------------------------------------------------------------------------------
 # PV 
@@ -119,11 +138,11 @@ ptg_WACC: 0.07      # After tax WACC for P2H plant
 
 # Early CAPEX payment, or phasing 
 phasing_yr: [-1,0]
-phasing_CAPEX: [1,1] # shares will be normalized to sum the CAPEX
+phasing_CAPEX: [0,1] # shares will be normalized to sum the CAPEX
 
 # Inflation will be linearly interpolated at integer year values
-inflation_yr: [-3,    0,    1,   25]
-inflation: [ 0.10, 0.10, 0.06, 0.06]
+inflation_yr: [-3,    0,  25]
+inflation: [ 0.02, 0.02, 0.02]
 ref_yr_inflation: 0 # inflation index is computed with respect to this year
 
 # depreciation

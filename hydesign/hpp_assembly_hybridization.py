@@ -15,8 +15,8 @@ import scipy as sp
 from scipy import stats
 import xarray as xr
 
-from hydesign.weather import extract_weather_for_HPP, ABL, select_years
-from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, wpp_with_degradation, get_rotor_area, get_rotor_d
+from hydesign.weather import extract_weather_for_HPP, ABL, ABL_WD, select_years
+from hydesign.wind import genericWT_surrogate, genericWake_surrogate, existing_wpp, existing_wpp_with_degradation, get_rotor_area, get_rotor_d
 from hydesign.pv import pvp, pvp_with_degradation
 from hydesign.ems import ems, ems_long_term_operation
 from hydesign.battery_degradation import battery_degradation, battery_loss_in_capacity_due_to_temp
@@ -25,7 +25,7 @@ from hydesign.finance import finance
 from hydesign.look_up_tables import lut_filepath
 
 
-class hpp_model_hybridization:
+class hpp_model:
     """HPP design evaluator"""
 
     def __init__(
@@ -199,7 +199,7 @@ class hpp_model_hybridization:
             existing_wpp(
                 N_time = N_time,
                 wpp_efficiency = wpp_efficiency,
-                existing_wpp_power_curve_xr_fn = sim_pars['existing_wpp_power_curve_xr_fn'],
+                existing_wpp_power_curve_xr_fn = existing_wpp_power_curve_xr_fn,
             )
                 )
         
@@ -264,7 +264,7 @@ class hpp_model_hybridization:
             'existing_wpp_with_degradation', 
             existing_wpp_with_degradation(
                 N_time = N_time,
-                existing_wpp_power_curve_xr_fn =  sim_pars['existing_wpp_power_curve_xr_fn'],
+                existing_wpp_power_curve_xr_fn =  existing_wpp_power_curve_xr_fn,
                 wpp_efficiency = wpp_efficiency,
                 life_h = life_h,
                 wind_deg_yr = wind_deg_yr,
@@ -362,6 +362,16 @@ class hpp_model_hybridization:
             'finance', 
             finance(
                 N_time = N_time, 
+                # Depreciation curve
+                depreciation_yr = sim_pars['depreciation_yr'],
+                depreciation = sim_pars['depreciation'],
+                # Inflation curve
+                inflation_yr = sim_pars['inflation_yr'],
+                inflation = sim_pars['inflation'],
+                ref_yr_inflation = sim_pars['ref_yr_inflation'],
+                # Early paying or CAPEX Phasing
+                phasing_yr = sim_pars['phasing_yr'],
+                phasing_CAPEX = sim_pars['phasing_CAPEX'],
                 life_h = life_h),
             promotes_inputs=['wind_WACC',
                              'solar_WACC', 
@@ -396,7 +406,7 @@ class hpp_model_hybridization:
         model.connect('abl_wd.wst', 'existing_wpp_with_degradation.wst')
         model.connect('abl_wd.wdt', 'existing_wpp_with_degradation.wdt')
         
-        model.connect('wpp_with_degradation.wind_t_ext_deg', 'ems_long_term_operation.wind_t_ext_deg')
+        model.connect('existing_wpp_with_degradation.wind_t_ext_deg', 'ems_long_term_operation.wind_t_ext_deg')
 
         model.connect('ems.solar_t_ext','pvp_with_degradation.solar_t_ext')
         model.connect('pvp_with_degradation.solar_t_ext_deg', 'ems_long_term_operation.solar_t_ext_deg')
@@ -408,7 +418,7 @@ class hpp_model_hybridization:
         model.connect('ems.b_E_SOC_t', 'ems_long_term_operation.b_E_SOC_t')
         model.connect('ems.b_t', 'ems_long_term_operation.b_t')
 
-        model.connect('wpp.wind_t', 'wpp_cost.wind_t')
+        model.connect('existing_wpp.wind_t', 'wpp_cost.wind_t')
         
         model.connect('battery_degradation.SoH','battery_cost.SoH')
         
@@ -567,11 +577,19 @@ class hpp_model_hybridization:
         prob.run_model()
         
         self.prob = prob
+
+        hh = prob['hh']
+        d = prob['d']
+        p_rated = prob['p_rated']
+        Nwt = prob['Nwt']
+        Awpp = prob['Awpp']
+
+        wind_MW = p_rated * Nwt
         
         if Nwt == 0:
             cf_wind = np.nan
         else:
-            cf_wind = prob.get_val('wpp_with_degradation.wind_t_ext_deg').mean() / p_rated / Nwt  # Capacity factor of wind only
+            cf_wind = prob.get_val('existing_wpp_with_degradation.wind_t_ext_deg').mean() / wind_MW   # Capacity factor of wind only
 
         return np.hstack([
             prob['NPV_over_CAPEX'], 
