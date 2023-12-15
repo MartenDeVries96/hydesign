@@ -462,6 +462,10 @@ class EfficientGlobalOptimizationDriver(Driver):
           LHS, criterion="maximin", random_state=kwargs['n_seed'])
         xdoe = sampling(kwargs['n_doe'])
         xdoe = np.array(mixint.design_space.decode_values(xdoe))
+
+        # store intial DOE
+        self.xdoe = xdoe
+        
         xdoe = scaler.transform(xdoe)
         # -----------------
         # HPP model

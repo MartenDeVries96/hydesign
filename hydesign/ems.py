@@ -1933,8 +1933,8 @@ def ems_cplex_parts_constantoutput(
         #log_output=True)
     aa = mdl.get_solve_details()
     #print(aa.status)
-    if not aa.status=='integer optimal solution':
-       print(aa.status)
+    #if not aa.status=='integer optimal solution':
+    #   print(aa.status)
     #   print(wind_ts) 
     #   print(solar_ts) 
     #print(mdl.export_to_string())
@@ -2529,8 +2529,9 @@ def operation_rule_base_no_penalty(
     for i in range(len(b_t)):
         if b_t[i] < 0:
             if change_BES_charging == 'proportional':
-                # Try to keep the ratio of b_t[i] / wind_solar_t[i]  SoC to the maximum
-                b_t_less_sol[i] = ( b_t[i] / wind_solar_t[i] ) * ( wind_solar_t_deg[i] )
+                if wind_solar_t[i] != 0:
+                    # Try to keep the ratio of b_t[i] / wind_solar_t[i]  SoC to the maximum
+                    b_t_less_sol[i] = ( b_t[i] / wind_solar_t[i] ) * ( wind_solar_t_deg[i] )
 
             elif change_BES_charging == 'only_for_less_power':
                 if -b_t[i] > P_loss[i]:    
