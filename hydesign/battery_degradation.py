@@ -40,12 +40,14 @@ class battery_degradation(om.ExplicitComponent):
         num_batteries = 1,
         life_h = 25*365*24,
         weeks_per_season_per_year = None,
+        battery_deg = True,
     ):
 
         super().__init__()
         self.life_h = life_h
         self.num_batteries = num_batteries
         self.weather_fn = weather_fn
+        self.battery_deg = battery_deg
 
         weather = pd.read_csv(
             weather_fn, 
@@ -89,30 +91,35 @@ class battery_degradation(om.ExplicitComponent):
 
         air_temp_K_t = self.air_temp_K_t
         
-        if np.max(b_E_SOC_t) == 0 or num_batteries==0:
-            outputs['SoH'] = np.zeros(self.life_h)
-            outputs['n_batteries'] = 0
+        if self.battery_deg:
+            if np.max(b_E_SOC_t) == 0 or num_batteries==0:
+                outputs['SoH'] = np.zeros(self.life_h)
+                outputs['n_batteries'] = 0
+            else:
+                SoC = b_E_SOC_t/np.max(b_E_SOC_t)
+                rf_DoD, rf_SoC, rf_count, rf_i_start = RFcount(SoC)   
+
+                # use the temperature time-series
+                avr_tem = np.mean(air_temp_K_t)
+
+                # loop to determine the maximum number of replacements
+                for n_batteries in np.arange(num_batteries, dtype=int) + 1:
+                    LoC, ind_q, _ = battery_replacement(
+                        rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, 
+                        min_LoH, num_batteries=n_batteries)
+                    if 1-LoC[-1] >= min_LoH: # stop replacing batteries
+                        break         
+
+                SoH_all = np.interp( 
+                    x = np.arange(life_h)/(24*365),
+                    xp = np.array(rf_i_start)/(24*365),
+                    fp = 1-LoC )
+                outputs['SoH'] = SoH_all
+                outputs['n_batteries'] = n_batteries
         else:
-            SoC = b_E_SOC_t/np.max(b_E_SOC_t)
-            rf_DoD, rf_SoC, rf_count, rf_i_start = RFcount(SoC)   
-
-            # use the temperature time-series
-            avr_tem = np.mean(air_temp_K_t)
-
-            # loop to determine the maximum number of replacements
-            for n_batteries in np.arange(num_batteries, dtype=int) + 1:
-                LoC, ind_q, _ = battery_replacement(
-                    rf_DoD, rf_SoC, rf_count, rf_i_start, avr_tem, 
-                    min_LoH, num_batteries=n_batteries)
-                if 1-LoC[-1] >= min_LoH: # stop replacing batteries
-                    break         
-
-            SoH_all = np.interp( 
-                x = np.arange(life_h)/(24*365),
-                xp = np.array(rf_i_start)/(24*365),
-                fp = 1-LoC )
-            outputs['SoH'] = SoH_all
-            outputs['n_batteries'] = n_batteries
+            outputs['SoH'] = np.ones(self.life_h)
+            outputs['n_batteries'] = 1
+            
 
 class battery_loss_in_capacity_due_to_temp(om.ExplicitComponent):
     """
@@ -133,12 +140,14 @@ class battery_loss_in_capacity_due_to_temp(om.ExplicitComponent):
         num_batteries = 1,
         life_h = 25*365*24,
         weeks_per_season_per_year = None,
+        battery_deg = True,
     ):
 
         super().__init__()
         self.life_h = life_h
         self.num_batteries = num_batteries
         self.weather_fn = weather_fn
+        self.battery_deg = battery_deg
 
         weather = pd.read_csv(
             weather_fn, 
@@ -172,7 +181,10 @@ class battery_loss_in_capacity_due_to_temp(om.ExplicitComponent):
 
         B_E_loss_due_to_low_temp = thermal_loss_of_storage(air_temp_C_t)
         
-        outputs['SoH_all'] = B_E_loss_due_to_low_temp * inputs['SoH']
+        if self.battery_deg:
+            outputs['SoH_all'] = B_E_loss_due_to_low_temp * inputs['SoH']
+        else:
+            outputs['SoH_all'] = np.ones(self.life_h)
          
 
 # -----------------------------------------------------------------------

@@ -427,6 +427,9 @@ class ems_long_term_operation(om.ExplicitComponent):
             args = dict(wind_t_deg = wind_t_ext_deg,
                 solar_t_deg = solar_t_ext_deg,
                 batt_degradation = SoH,
+                wind_t = wind_t_ext,
+                solar_t = solar_t_ext,
+                hpp_curt_t = hpp_curt_t,
                 b_t = b_t,
                 b_E_SOC_t = b_E_SOC_t,
                 G_MW = G_MW[0],
@@ -2464,10 +2467,15 @@ def operation_solar_batt_deg(
     
     return Hpp_deg, P_curt_deg, b_t_sat, b_E_SOC_t_sat, penalty_ts
 
-def operation_constant_output(
+
+
+def operation_rule_base_no_penalty(
     wind_t_deg,
     solar_t_deg,
     batt_degradation,
+    wind_t,
+    solar_t,
+    hpp_curt_t,
     b_t,
     b_E_SOC_t,
     G_MW,
@@ -2477,6 +2485,7 @@ def operation_constant_output(
     b_E_SOC_0 = None,
     load_min = 3,
     load_min_penalty_factor = 1e6,
+    change_BES_charging = 'only_for_less_power',
 ):
 
     """EMS operation for degraded PV and battery based on an existing EMS.
@@ -2504,28 +2513,33 @@ def operation_constant_output(
     b_E_SOC_t_sat : Battery energy SOC time series  
     penalty_ts : penalty for not reaching minimum electrical load constraint
     """
+
     B_p = np.max(np.abs(b_t))
     
-    # wind_solar_t = solar_t + wind_t
+    wind_solar_t = solar_t + wind_t
     wind_solar_t_deg = solar_t_deg + wind_t_deg
-    # P_deg_t_sat_loss = (solar_t - solar_t_deg) + (wind_t - wind_t_deg)
     
-    # P_loss =  np.maximum( 0 , P_deg_t_sat_loss  - hpp_curt_t)
+    P_deg_t_sat_loss = (solar_t - solar_t_deg) + (wind_t - wind_t_deg)
+    P_loss =  np.maximum( 0 , P_deg_t_sat_loss  - hpp_curt_t)
+    
     b_t_less_sol = b_t.copy()
     dt = 1
     
     # Reduction in power to battery due to reduction of solar
     for i in range(len(b_t)):
         if b_t[i] < 0:
-            # Try to keep the ratio of b_t[i] / wind_solar_t[i]  SoC to the maximum
-            # b_t_less_sol[i] = ( b_t[i] / wind_solar_t[i] ) * ( wind_solar_t_deg[i] )
+            if change_BES_charging == 'proportional':
+                # Try to keep the ratio of b_t[i] / wind_solar_t[i]  SoC to the maximum
+                b_t_less_sol[i] = ( b_t[i] / wind_solar_t[i] ) * ( wind_solar_t_deg[i] )
 
-            # Hajar's method
-            #b_t_less_sol[i] = np.minimum(b_t[i] + P_loss[i],0)
-
-            # Try to follow SoC to the maximum
-            if -b_t[i] > wind_solar_t_deg[i]:    
-                b_t_less_sol[i] = -wind_solar_t_deg[i]
+            elif change_BES_charging == 'only_for_less_power':
+                if -b_t[i] > P_loss[i]:    
+                    b_t_less_sol[i] = b_t_less_sol[i] + P_loss[i]
+            
+            elif change_BES_charging == 'always':
+                # Try to follow SoC to the maximum
+                if -b_t[i] > wind_solar_t_deg[i]:    
+                    b_t_less_sol[i] = -wind_solar_t_deg[i]
 
             b_t_less_sol[i] = np.clip(
                 b_t_less_sol[i], 
@@ -2564,6 +2578,140 @@ def operation_constant_output(
     
     Hpp_deg = np.minimum( wind_t_deg + solar_t_deg + b_t_sat, G_MW)
     P_curt_deg = np.maximum( wind_t_deg + solar_t_deg + b_t_sat - G_MW, 0)
+
+
+    return Hpp_deg, P_curt_deg, b_t_sat, b_E_SOC_t_sat
+    
+
+def operation_constant_output(
+    wind_t_deg,
+    solar_t_deg,
+    batt_degradation,
+    wind_t,
+    solar_t,
+    hpp_curt_t,
+    b_t,
+    b_E_SOC_t,
+    G_MW,
+    b_E,
+    battery_depth_of_discharge,
+    battery_charge_efficiency,
+    b_E_SOC_0 = None,
+    load_min = 3,
+    load_min_penalty_factor = 1e6,
+    change_BES_charging = 'only_for_less_power',
+):
+
+    """EMS operation for degraded PV and battery based on an existing EMS.
+
+    Parameters
+    ----------
+    wind_t_deg: Wind time series including degradation
+    solar_t_deg: PV time series including degradation
+    batt_degradation: Battery degradation as health factor [0=dead,1=new]
+    b_t: HPP battery power (charge/discharge) time series results form an EMS planed without degradation
+    b_E_SOC_t: HPP battery state of charge (SoC) time series results form an EMS planed without degradation
+    G_MW : grid connection    
+    E_batt_MWh_t : battery energy capacity time series
+    battery_depth_of_discharge : battery depth of discharge
+    battery_charge_efficiency : battery charge efficiency
+    b_E_SOC_0: Initial charge status of the actual operation
+    load_min: minimum electrical load to meet [MW]
+    load_min_penalty_factor: penalty factor to scale the penalty when not meeting required load
+
+    Returns
+    -------
+    Hpp_deg : HPP power time series 
+    P_curt_deg : HPP curtailed power time series
+    b_t_sat : Battery charge/discharge power time series
+    b_E_SOC_t_sat : Battery energy SOC time series  
+    penalty_ts : penalty for not reaching minimum electrical load constraint
+    """
+    Hpp_deg, P_curt_deg, b_t_sat, b_E_SOC_t_sat =  operation_rule_base_no_penalty(
+        wind_t_deg = wind_t_deg,
+        solar_t_deg = solar_t_deg,
+        batt_degradation = batt_degradation,
+        wind_t = wind_t,
+        solar_t = solar_t,
+        hpp_curt_t = hpp_curt_t,
+        b_t = b_t,
+        b_E_SOC_t = b_E_SOC_t,
+        G_MW = G_MW,
+        b_E = b_E,
+        battery_depth_of_discharge = battery_depth_of_discharge,
+        battery_charge_efficiency = battery_charge_efficiency,
+        b_E_SOC_0 = b_E_SOC_0,
+        load_min = load_min,
+        load_min_penalty_factor = load_min_penalty_factor,
+        change_BES_charging = 'proportional',
+    )
+
+    iterations = 1
+    for ii in range(iterations):
+        # fix opreation to constant daily power
+        df_aux = pd.DataFrame(
+            index = range(len(b_t_sat)),
+        )
+        df_aux['day'] = np.floor(df_aux.index.values/24)
+        df_aux['Hpp_deg'] = Hpp_deg
+        df_aux['P_curt_deg'] = P_curt_deg
+        df_aux['b_t_sat'] = b_t_sat
+    
+        aux_mins = np.repeat( df_aux.groupby('day').min().values, 24,axis=0)
+        df_aux['min_hpp_day'] = aux_mins[:,0]
+        df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day']
+        df_aux['P_to_b_removed'] = (df_aux['Hpp_deg'] - df_aux['min_hpp_day'])
+        
+        df_aux['P_to_b_removed_to_charge_battery'] = 0
+        df_aux.loc[df_aux['b_t_sat'] <= 0, 'P_to_b_removed_to_charge_battery'] = - df_aux.loc[df_aux['b_t_sat'] <= 0,'P_to_b_removed']
+        
+        df_aux['P_to_b_removed_to_curtailment'] = 0
+        df_aux.loc[df_aux['b_t_sat'] > 0, 'P_to_b_removed_to_curtailment'] = - df_aux.loc[df_aux['b_t_sat'] > 0,'P_to_b_removed']
+    
+        # Update curtailment and battery charge to meet constant output
+        P_curt_deg = P_curt_deg + df_aux['P_to_b_removed_to_curtailment'].values
+        b_t_sat = b_t_sat +  df_aux['P_to_b_removed_to_charge_battery'].values
+        
+        Hpp_deg, P_curt_deg, b_t_sat, b_E_SOC_t_sat =  operation_rule_base_no_penalty(
+            #wind_t_deg = wind_t_deg - df_aux['P_to_b_removed_to_curtailment'].values,
+            wind_t_deg = wind_t_deg,
+            solar_t_deg = solar_t_deg,
+            batt_degradation = batt_degradation,
+            wind_t = wind_t,
+            solar_t = solar_t,
+            hpp_curt_t = P_curt_deg,        
+            #b_t = b_t_sat +  df_aux['P_to_b_removed_to_charge_battery'].values,
+            b_t = b_t_sat, 
+            b_E_SOC_t = b_E_SOC_t_sat,
+            G_MW = G_MW,
+            b_E = b_E,
+            battery_depth_of_discharge = battery_depth_of_discharge,
+            battery_charge_efficiency = battery_charge_efficiency,
+            b_E_SOC_0 = b_E_SOC_0,
+            load_min = load_min,
+            load_min_penalty_factor = load_min_penalty_factor,
+            change_BES_charging = 'proportional',
+        )
+        
+
+    # fix opreation to constant daily power
+    df_aux = pd.DataFrame(
+        index = range(len(b_t_sat)),
+    )
+    df_aux['day'] = np.floor(df_aux.index.values/24)
+    df_aux['Hpp_deg'] = Hpp_deg
+    df_aux['P_curt_deg'] = P_curt_deg
+    df_aux['b_t_sat'] = b_t_sat
+
+    aux_mins = np.repeat( df_aux.groupby('day').min().values, 24,axis=0)
+    df_aux['min_hpp_day'] = aux_mins[:,0]
+    df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day']
+    df_aux['P_to_b_removed'] = (df_aux['Hpp_deg'] - df_aux['min_hpp_day'])
+    
+    # Update curtailment and battery charge to meet constant output
+    Hpp_deg = df_aux['Hpp_deg_actual'].values
+    P_curt_deg = P_curt_deg + df_aux['P_to_b_removed'].values
+    
     
     def fneg(x):
         return - x * (x < 0)
@@ -2571,5 +2719,3 @@ def operation_constant_output(
     penalty_ts = load_min_penalty_factor * fneg(Hpp_deg - load_min)
        
     return Hpp_deg, P_curt_deg, b_t_sat, b_E_SOC_t_sat, penalty_ts
-
-

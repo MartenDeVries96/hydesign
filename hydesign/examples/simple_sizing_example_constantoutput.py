@@ -4,6 +4,7 @@ import numpy as np
 from hydesign.hpp_assembly_constantoutput import hpp_model
 from hydesign.examples import examples_filepath
 import matplotlib.pyplot as plt
+import time
 #from ems import ems_cplex_parts_constantoutput
 # Evaluation
 examples_sites = pd.read_csv(f'{examples_filepath}examples_sites.csv', index_col=0)
@@ -21,7 +22,8 @@ hpp = hpp_model(
     latitude,
     longitude,
     altitude,
-    num_batteries = 10,
+    num_batteries = 1,
+    battery_deg = False,
     work_dir = './',
     sim_pars_fn = sim_pars_fn,
     input_ts_fn = input_ts_fn,
@@ -32,8 +34,87 @@ hpp = hpp_model(
         #solar_MW,  surface_tilt, surface_azimuth, DC_AC_ratio,
         # Energy storage & EMS price constrains
         # b_P, b_E_h, cost_of_battery_P_fluct_in_peak_price_ratio]
-x=[35.0, 300.0, 10.0, 46, 7.0, 74, 25.0, 180.0, 1.0, 30, 7, 10.0]
-outs = hpp.evaluate(*x)
+
+number_of_runs = 1        
+x=[35.0, 302.8, 5, 1, 7.0, 150, 25.0, 180.0, 1.0, 30, 0, 10.0]
+times_array1 = np.zeros((number_of_runs, 1))
+for i in range(number_of_runs):
+    start_time = time.time()
+    outs = hpp.evaluate(*x)
+    times_array1[i] = time.time() - start_time
+
+    wind_t = hpp.prob.get_val('wpp_with_degradation.wind_t_ext_deg')
+    solar_t = hpp.prob.get_val('pvp_with_degradation.solar_t_ext_deg')
+
+    hpp_t = hpp.prob.get_val('ems_long_term_operation.hpp_t_with_deg')
+    hpp_curt_t =hpp.prob.get_val('ems_long_term_operation.hpp_curt_t')
+    b_E_SOC_t = hpp.prob.get_val('ems_long_term_operation.b_E_SOC_t')
+    b_t = hpp.prob.get_val('ems_long_term_operation.b_t')
+    penalty_t = hpp.prob.get_val('ems_long_term_operation.penalty_t_with_deg')
+
+output_timeseries = pd.concat([pd.DataFrame(wind_t, columns=['Wind Production (MW)']), 
+                                pd.DataFrame(solar_t, columns=['Solar Production (MW)']), 
+                                pd.DataFrame(hpp_t, columns=['HPP send to grid (MW)']), 
+                                pd.DataFrame(hpp_curt_t, columns=['Curtailment (MW)']), 
+                                pd.DataFrame(b_E_SOC_t, columns=['SoC (MWh)']), 
+                                pd.DataFrame(b_t, columns=['discharge/charge (MW)']),
+                                pd.DataFrame(penalty_t, columns=['penalty_t'])], axis=1)
+output_timeseries.to_csv('output1.csv')
+#output_timeseries.to_excel('output.xlsx', sheet_name='power')
+output_financial = pd.DataFrame([])
+for i, var in enumerate(hpp.list_out_vars):
+    output_financial = pd.concat([output_financial, pd.DataFrame(outs[i], columns=var)],axis=1)
+output_financial.to_csv('financial1.csv')
+
+x=[35.0, 302.8, 5, 1, 7.0, 150, 25.0, 180.0, 1.0, 5, 5, 10.0]
+times_array2 = np.zeros((number_of_runs, 1))
+for i in range(number_of_runs):
+    start_time = time.time()
+    outs = hpp.evaluate(*x)
+    times_array2[i] = time.time() - start_time
+
+    wind_t = hpp.prob.get_val('wpp_with_degradation.wind_t_ext_deg')
+    solar_t = hpp.prob.get_val('pvp_with_degradation.solar_t_ext_deg')
+
+    hpp_t = hpp.prob.get_val('ems_long_term_operation.hpp_t_with_deg')
+    hpp_curt_t =hpp.prob.get_val('ems_long_term_operation.hpp_curt_t')
+    b_E_SOC_t = hpp.prob.get_val('ems_long_term_operation.b_E_SOC_t')
+    b_t = hpp.prob.get_val('ems_long_term_operation.b_t')
+    penalty_t = hpp.prob.get_val('ems_long_term_operation.penalty_t_with_deg')
+output_timeseries = pd.concat([pd.DataFrame(wind_t, columns=['Wind Production (MW)']), 
+                                pd.DataFrame(solar_t, columns=['Solar Production (MW)']), 
+                                pd.DataFrame(hpp_t, columns=['HPP send to grid (MW)']), 
+                                pd.DataFrame(hpp_curt_t, columns=['Curtailment (MW)']), 
+                                pd.DataFrame(b_E_SOC_t, columns=['SoC (MWh)']), 
+                                pd.DataFrame(b_t, columns=['discharge/charge (MW)'])], axis=1)
+output_timeseries.to_csv('output2.csv')
+
+x=[35.0, 302.8, 5, 1, 7.0, 150, 25.0, 180.0, 1.0, 20, 5, 10.0]
+times_array3 = np.zeros((number_of_runs, 1))
+for i in range(number_of_runs):
+    start_time = time.time()
+    outs = hpp.evaluate(*x)
+    times_array3[i] = time.time() - start_time
+
+    wind_t = hpp.prob.get_val('wpp_with_degradation.wind_t_ext_deg')
+    solar_t = hpp.prob.get_val('pvp_with_degradation.solar_t_ext_deg')
+
+    hpp_t = hpp.prob.get_val('ems_long_term_operation.hpp_t_with_deg')
+    hpp_curt_t =hpp.prob.get_val('ems_long_term_operation.hpp_curt_t')
+    b_E_SOC_t = hpp.prob.get_val('ems_long_term_operation.b_E_SOC_t')
+    b_t = hpp.prob.get_val('ems_long_term_operation.b_t')
+    penalty_t = hpp.prob.get_val('ems_long_term_operation.penalty_t_with_deg')
+output_timeseries = pd.concat([pd.DataFrame(wind_t, columns=['Wind Production (MW)']), 
+                                pd.DataFrame(solar_t, columns=['Solar Production (MW)']), 
+                                pd.DataFrame(hpp_t, columns=['HPP send to grid (MW)']), 
+                                pd.DataFrame(hpp_curt_t, columns=['Curtailment (MW)']), 
+                                pd.DataFrame(b_E_SOC_t, columns=['SoC (MWh)']), 
+                                pd.DataFrame(b_t, columns=['discharge/charge (MW)'])], axis=1)    
+output_timeseries.to_csv('output3.csv')    
+
+
+run_times = pd.concat([pd.DataFrame(times_array1, columns=['scenario 1']), pd.DataFrame(times_array2, columns=['scenario 2']), pd.DataFrame(times_array3, columns=['scenario 3'])], axis=1)
+run_times.to_excel('run_times.xlsx', sheet_name='time')
 
 hpp.print_design(x, outs)
 

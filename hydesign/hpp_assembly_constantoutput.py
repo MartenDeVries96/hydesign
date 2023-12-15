@@ -37,6 +37,7 @@ class hpp_model:
         work_dir = './',
         num_batteries = 3,
         factor_battery_cost = 1,
+        battery_deg=False,
         ems_type='cplex',
         weeks_per_season_per_year = None,
         seed=0, # For selecting random weeks pe season to reduce the computational time
@@ -268,6 +269,7 @@ class hpp_model:
                 num_batteries = num_batteries,
                 life_h = life_h,
                 weeks_per_season_per_year = weeks_per_season_per_year,
+                battery_deg = battery_deg
             ),
             promotes_inputs=[
                 'min_LoH'
@@ -279,6 +281,7 @@ class hpp_model:
                 weather_fn = input_ts_fn, # for extracting temperature
                 life_h = life_h,
                 weeks_per_season_per_year = weeks_per_season_per_year,
+                battery_deg = battery_deg
             ),
             )
 
@@ -465,7 +468,7 @@ class hpp_model:
 
         model.connect('ems.price_t_ext', 'finance.price_t_ext')
         model.connect('ems_long_term_operation.hpp_t_with_deg', 'finance.hpp_t_with_deg')
-        model.connect('ems_long_term_operation.penalty_t_with_deg', 'finance.penalty_t')
+        model.connect('ems_long_term_operation.penalty_t_with_deg', 'finance.penalty_t')            
         
         prob = om.Problem(
             model,
@@ -497,6 +500,7 @@ class hpp_model:
         self.num_batteries = num_batteries
         self.input_ts_fn = input_ts_fn
         self.altitude = altitude
+        self.battery_deg = battery_deg
     
         self.list_out_vars = [
             'NPV_over_CAPEX',
