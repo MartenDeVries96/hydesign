@@ -45,7 +45,7 @@ class EGODriver(Driver):
         super().__init__(**kwargs)
         self.maxiter=20
         self.is_converged=False
-        self.kwargs=kwargs
+        # self.kwargs=kwargs
         self.scaler=None
         self.n_seed=0
         self.theta_bounds=[1e-06, 2e1]
@@ -59,6 +59,7 @@ class EGODriver(Driver):
         self.opt_var="NPV_over_CAPEX"
         self.n_doe=20
         self.min_conv_iter=3
+        self.n_procs=7
         # self.design_vars = design_vars
         # self.fixed_vars = fixed_vars
 
@@ -133,7 +134,7 @@ class EGODriver(Driver):
         model._solve_nonlinear()
 
         disp = self.options['disp']
-        kwargs = self.kwargs
+        # kwargs = self.kwargs
 
         # -----------------
         # INPUTS
@@ -180,9 +181,10 @@ class EGODriver(Driver):
        # -----------------
         # HPP model
         # -----------------
-        name = kwargs["name"]
+        # name = kwargs["name"]
         print('\n\n\n')
-        print(f'Sizing a HPP plant at {name}:')
+        # print(f'Sizing a HPP plant at {name}:')
+        print('Sizing a HPP plant:')
         print()
         list_minimize = ['LCOE [Euro/MWh]']
         
@@ -197,8 +199,8 @@ class EGODriver(Driver):
         # kwargs['opt_sign'] = opt_sign
         # kwargs['scaler'] = scaler
         self.scaler = scaler
-        kwargs['xtypes'] = xtypes
-        kwargs['xlimits'] = xlimits
+        # kwargs['xtypes'] = xtypes
+        # kwargs['xlimits'] = xlimits
     
         # hpp_m = kwargs['hpp_model'](**kwargs)
         # Update kwargs to use input file generated when extracting weather
@@ -222,9 +224,9 @@ class EGODriver(Driver):
         
         # Evaluate model at initial doe
         start = time.time()
-        n_procs = kwargs['n_procs']
-        PE = ParallelEvaluator(n_procs = n_procs)
-        ydoe = PE.run_ydoe(fun=self.evaluate_simple, x=xdoe)
+        # n_procs = kwargs['n_procs']
+        PE = ParallelEvaluator(n_procs = self.n_procs)
+        ydoe = PE.run_ydoe(fun=self.model_evaluation, x=xdoe)
         self.xdoe = xdoe
         self.ydoe = ydoe
         self.PE = PE
@@ -238,7 +240,7 @@ class EGODriver(Driver):
         conv_iter = 0
         xopt = xdoe[[np.argmin(ydoe)],:]
         yopt = ydoe[[np.argmin(ydoe)],:]
-        kwargs['yopt'] = yopt
+        # kwargs['yopt'] = yopt
         yold = np.copy(yopt)
         self.yold = yold
         # xold = None

@@ -678,33 +678,27 @@ class hpp_model:
 
         prob = self.prob
 
-        d = get_rotor_d(p_rated*1e6/sp)
-        hh = (d/2)+clearance
-        wind_MW = Nwt * p_rated
-        Awpp = wind_MW / wind_MW_per_km2 
-        #Awpp = Awpp + 1e-10*(Awpp==0)
-        b_E = b_E_h * b_P
-        
-        # pass design variables        
-        prob.set_val('hh', hh)
-        prob.set_val('d', d)
+        prob.set_val('clearance', clearance)
+        prob.set_val('sp', sp)
         prob.set_val('p_rated', p_rated)
         prob.set_val('Nwt', Nwt)
-        prob.set_val('Awpp', Awpp)
-
+        prob.set_val('wind_MW_per_km2', wind_MW_per_km2)
         prob.set_val('surface_tilt', surface_tilt)
         prob.set_val('surface_azimuth', surface_azimuth)
         prob.set_val('DC_AC_ratio', DC_AC_ratio)
         prob.set_val('solar_MW', solar_MW)
-        
         prob.set_val('b_P', b_P)
-        prob.set_val('b_E', b_E)
+        prob.set_val('b_E_h', b_E_h)
         prob.set_val('cost_of_battery_P_fluct_in_peak_price_ratio',cost_of_battery_P_fluct_in_peak_price_ratio)        
         
         prob.run_model()
         
-        self.prob = prob
-        
+        # self.prob = prob
+        hh = prob['hh']
+        d = prob['d']
+        Awpp = prob['Awpp']
+        wind_MW = prob['wind_MW']
+
         if Nwt == 0:
             cf_wind = np.nan
         else:
@@ -732,7 +726,7 @@ class hpp_model:
             self.sim_pars['G_MW'],
             wind_MW,
             solar_MW,
-            b_E,
+            prob['b_E'],
             b_P,
             prob['total_curtailment']/1e3, #[GWh]
             Awpp,
