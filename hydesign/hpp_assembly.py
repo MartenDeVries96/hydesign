@@ -47,6 +47,10 @@ class hpp_model:
         verbose = True,
         name = '',
         ppa_price=None,
+        driver=None,
+        variables=None,
+        objective='NPV_over_CAPEX',
+        maximize=False,
         **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
@@ -184,6 +188,12 @@ class hpp_model:
             N_ws = len(ds.ws.values)
         
         model = om.Group()
+
+        model.add_subsystem(
+            'hpp_parameters',
+            hpp_parameters(),
+            promotes=['*'])
+
         
         model.add_subsystem(
             'abl', 
@@ -411,6 +421,9 @@ class hpp_model:
                               ],
         )
                   
+        sign = 1 - 2 * maximize  # maximize = False => sign = 1, maximize = True => sign = -1
+        model.add_subsystem('objective_comp', om.ExecComp([f'objective={sign} * {objective}']), promotes=['*'])
+
                       
         model.connect('genericWT.ws', 'genericWake.ws')
         model.connect('genericWT.pc', 'genericWake.pc')
@@ -470,8 +483,22 @@ class hpp_model:
             reports=None
         )
 
-        prob.setup()        
+        prob.model.add_objective('objective')
+        if driver:
+            prob.driver = driver
+
+            design_vars, init_state = get_vars(variables)
+            for desvar_args in design_vars:
+                prob.model.add_design_var(**desvar_args)
+
+
+        prob.setup()   
         
+        if driver:
+            for k, v in init_state.items():
+                prob.set_val(k, v)
+
+
         # Additional parameters
         prob.set_val('price_t', price)
         prob.set_val('G_MW', sim_pars['G_MW'])
@@ -546,6 +573,62 @@ class hpp_model:
             ]   
     
     
+    def optimize(self, state=None):
+        prob = self.prob
+        if state:
+            for k, v in state.items():
+                prob.set_val(k, v)
+        prob.run_driver()
+
+        
+        self.prob = prob
+        hh = prob['hh']
+        d = prob['d']
+        Awpp = prob['Awpp']
+        wind_MW = prob['wind_MW']
+        
+        if prob['Nwt'] == 0:
+            cf_wind = np.nan
+        else:
+            cf_wind = prob.get_val('wpp_with_degradation.wind_t_ext_deg').mean() / prob['p_rated'] / prob['Nwt']  # Capacity factor of wind only
+
+        return np.hstack([
+            prob['NPV_over_CAPEX'], 
+            prob['NPV']/1e6,
+            prob['IRR'],
+            prob['LCOE'],
+            prob['CAPEX']/1e6,
+            prob['OPEX']/1e6,
+            prob.get_val('finance.CAPEX_w')/1e6,
+            prob.get_val('finance.OPEX_w')/1e6,
+            prob.get_val('finance.CAPEX_s')/1e6,
+            prob.get_val('finance.OPEX_s')/1e6,
+            prob.get_val('finance.CAPEX_b')/1e6,
+            prob.get_val('finance.OPEX_b')/1e6,
+            prob.get_val('finance.CAPEX_el')/1e6,
+            prob.get_val('finance.OPEX_el')/1e6,
+            prob['penalty_lifetime']/1e6,
+            prob['mean_AEP']/1e3, #[GWh]
+            # Grid Utilization factor
+            prob['mean_AEP']/(self.sim_pars['G_MW']*365*24),
+            self.sim_pars['G_MW'],
+            wind_MW,
+            prob['solar_MW'],
+            prob['b_E'],
+            prob['b_P'],
+            prob['total_curtailment']/1e3, #[GWh]
+            Awpp,
+            prob.get_val('shared_cost.Apvp'),
+            max( Awpp , prob.get_val('shared_cost.Apvp') ),
+            d,
+            hh,
+            prob.get_val('battery_degradation.n_batteries') * (prob['b_P']>0),
+            prob['break_even_PPA_price'],
+            cf_wind,
+            ])
+
+
+
     def evaluate(
         self,
         # Wind plant design
@@ -744,4 +827,88 @@ def mkdir(dir_):
         except BaseException:
             pass
     return dir_
+
+class hpp_parameters(om.ExplicitComponent):
+    """Atmospheric boundary layer WS interpolation and gradient
+    
+    Parameters
+    ----------
+        clearance : Distance from the ground to the tip of the blade [m]
+        sp : Specific power of the turbine [W/m2] 
+        p_rated : Rated powe of the turbine [MW] 
+        Nwt : Number of wind turbines
+        wind_MW_per_km2 : Wind power installation density [MW/km2]
+        b_P : Battery power [MW]
+        b_E_h : Battery storage duration [h]
+
+    Returns
+    -------
+        d : wind turbine diameter [m]
+        hh : hub height of the wind turbine [m]
+        wind_MW : Wind power plant installed capacity [MW]
+        Awpp : Area of wind power plant [km2]
+        b_E : Battery capacity [MWh]
+    """
+
+
+    def __init__(self):
+        super().__init__()
+
+    def setup(self):
+        self.add_input('clearance',
+                       desc="Turbine's clearance",
+                       units='m')
+        self.add_input('sp',
+                       desc="Turbine's specific power",
+                       units='W/m**2')
+        self.add_input('p_rated',
+                       desc="Turbine's rated power",
+                       units='MW')
+        self.add_input('Nwt',
+                       desc="Number of wind turbines")
+        self.add_input('wind_MW_per_km2',
+                       desc="wind_MW_per_km2",
+                       units='MW/km**2')
+        self.add_input('b_E_h',
+                       desc="battery size",
+                       units='h')
+        self.add_input('b_P',
+                       desc="battery power",
+                       units='MW')
+        self.add_output('d',
+                        desc="Turbine's diameter",
+                        units='m')
+        self.add_output('hh',
+                        desc="Turbine's hub height",
+                        units='m')
+        self.add_output('wind_MW',
+                        desc="Wind plant size",
+                        units='MW')
+        self.add_output('Awpp',
+                        desc="Area of wind power plant",
+                        units='km**2')
+        self.add_output('b_E',
+                        desc="battery capacity")
+
+    def compute(self, inputs, outputs):
+        d = get_rotor_d(inputs['p_rated']*1e6/inputs['sp'])
+        hh = (d/2)+inputs['clearance']
+        wind_MW = inputs['Nwt'] * inputs['p_rated']
+        Awpp = wind_MW / inputs['wind_MW_per_km2']
+        b_E = inputs['b_E_h'] * inputs['b_P']
+        
+        outputs['d'] = d
+        outputs['hh'] = hh
+        outputs['wind_MW'] = wind_MW
+        outputs['Awpp'] = Awpp
+        outputs['b_E'] = b_E
+
+def get_vars(variables):
+    design_vars = [{'name': k,
+                    'lower': v['limits'][0],
+                    'upper': v['limits'][1],
+                    } for k, v in variables.items() if v['var_type']=='design']
+    init_state = {k: v['value'] if v['var_type']=='fixed' else (np.mean(v['limits']) if 'init' not in v else v['init']) for k, v in variables.items()}
+    return design_vars, init_state
+
 
