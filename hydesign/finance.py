@@ -991,7 +991,7 @@ def get_inflation_index(
     
     
     ind_ref = np.where(np.array(yr)==ref_yr_inflation)[0]
-    inflation_index = np.cumprod(1/(1-np.array(infl)))
+    inflation_index = np.cumprod(1+np.array(infl))
     inflation_index = inflation_index/inflation_index[ind_ref]
     
     return inflation_index
