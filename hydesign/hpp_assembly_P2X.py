@@ -244,7 +244,10 @@ class hpp_model_P2X:
                 'ptg_deg',
                 'hhv',
                 'm_H2_demand_t',
-                'penalty_H2',
+                'penalty_factor_H2',
+                'min_power_standby',
+                'ramp_up_limit',
+                'ramp_down_limit',
                 ],
             promotes_outputs=[
                 'total_curtailment'
@@ -371,7 +374,7 @@ class hpp_model_P2X:
                              'battery_WACC',
                              'ptg_WACC',
                              'tax_rate',
-                             'penalty_H2',
+                             'penalty_factor_H2',
                             ],
             promotes_outputs=['NPV',
                               'IRR',
@@ -383,6 +386,7 @@ class hpp_model_P2X:
                               'mean_Power2Grid',
                               'annual_H2',
                               'annual_P_ptg',
+                              'annual_P_ptg_H2',
                               'penalty_lifetime',
                               'CAPEX',
                               'OPEX',
@@ -452,7 +456,9 @@ class hpp_model_P2X:
         model.connect('ems_P2X.P_ptg_t', 'finance_P2X.P_ptg_t')
         model.connect('ems_P2X.m_H2_demand_t_ext', 'finance_P2X.m_H2_demand_t_ext')
         model.connect('ems_P2X.m_H2_offtake_t', 'finance_P2X.m_H2_offtake_t')
-        model.connect('ems_P2X.m_H2_offtake_t', 'ptg_cost.m_H2_offtake_t' )
+        model.connect('ems_P2X.P_ptg_grid_t', 'finance_P2X.P_ptg_grid_t')
+        model.connect('ems_P2X.m_H2_demand_t_ext', 'ptg_cost.m_H2_demand_t_ext')
+        model.connect('ems_P2X.m_H2_offtake_t', 'ptg_cost.m_H2_offtake_t')
         
         prob = om.Problem(
             model,
@@ -481,9 +487,11 @@ class hpp_model_P2X:
         prob.set_val('hhv', sim_pars['hhv'])
         prob.set_val('ptg_deg', sim_pars['ptg_deg'])
         prob.set_val('price_H2', sim_pars['price_H2'])
-        prob.set_val('penalty_H2', sim_pars['penalty_H2'])
+        prob.set_val('penalty_factor_H2', sim_pars['penalty_factor_H2'])
         prob.set_val('storage_eff', sim_pars['storage_eff'])
-        
+        prob.set_val('min_power_standby', sim_pars['min_power_standby'])
+        prob.set_val('ramp_up_limit', sim_pars['ramp_up_limit'])
+        prob.set_val('ramp_down_limit', sim_pars['ramp_down_limit'])
 
         self.sim_pars = sim_pars
         self.prob = prob
@@ -506,6 +514,7 @@ class hpp_model_P2X:
             'GUF',
             'annual_H2 [tons]',
             'annual_P_ptg [GWh]',
+            'annual_P_ptg_H2 [GWh]',
             'grid [MW]',
             'wind [MW]',
             'solar [MW]',
@@ -590,6 +599,7 @@ class hpp_model_P2X:
         prob['mean_AEP']/(self.sim_pars['G_MW']*365*24) : Grid utilization factor
         prob['annual_H2']: Annual H2 production
         prob['annual_P_ptg']: Annual power converted to hydrogen
+        prob['annual_P_ptg_H2']: Annual power from grid converted to hydrogen
         self.sim_pars['G_MW'] : Grid connection [MW]
         wind_MW : Wind power plant installed capacity [MW]
         solar_MW : Solar power plant installed capacity [MW]
@@ -664,6 +674,7 @@ class hpp_model_P2X:
             prob['mean_AEP']/(self.sim_pars['G_MW']*365*24),
             prob['annual_H2']/1e3, # in tons
             prob['annual_P_ptg']/1e3, # in GWh
+            prob['annual_P_ptg_H2']/1e3, # in GWh
             self.sim_pars['G_MW'],
             wind_MW,
             solar_MW,
@@ -727,6 +738,7 @@ class hpp_model_P2X:
                                             'GUF',
                                             'annual_H2',
                                             'annual_P_ptg',
+                                            'annual_P_ptg_H2',
                                             'grid [MW]',
                                             'wind [MW]',
                                             'solar [MW]',

@@ -527,10 +527,15 @@ class ptg_cost(om.ExplicitComponent):
         self.add_input('HSS_kg',
                         desc = "Installed capacity of Hydrogen storage",
                         units = 'kg')
+        self.add_input('m_H2_demand_t_ext',
+                        desc = "Hydrogen demand",
+                        units = "kg",
+                        shape=[self.life_h])
         self.add_input('m_H2_offtake_t',
                         desc = "Offtake hydrogen",
                         units = "kg",
                         shape=[self.life_h])
+
         
         #Creating outputs:
         self.add_output('CAPEX_ptg',
@@ -547,6 +552,7 @@ class ptg_cost(om.ExplicitComponent):
         ptg_MW = inputs['ptg_MW']
         m_H2_t = inputs['m_H2_t']
         HSS_kg = inputs['HSS_kg']
+        m_H2_demand_t = inputs['m_H2_demand_t_ext']
         m_H2_offtake_t = inputs['m_H2_offtake_t']
 
         electrolyzer_capex_cost = self.electrolyzer_capex_cost
@@ -563,7 +569,7 @@ class ptg_cost(om.ExplicitComponent):
         outputs['CAPEX_ptg'] = ptg_MW * (electrolyzer_capex_cost + electrolyzer_power_electronics_cost) + storage_capex_cost * HSS_kg + \
                                (m_H2_offtake_t.mean()*365*24 * transportation_cost * transportation_distance) 
         outputs['OPEX_ptg'] = ptg_MW * (electrolyzer_opex_cost) + storage_opex_cost * HSS_kg
-        outputs['water_consumption_cost'] = (m_H2_t.mean()*365*24 * water_consumption * (water_cost + water_treatment_cost)/1000) # annual mean water consumption to produce hydrogen over an year
+        outputs['water_consumption_cost'] = (m_H2_offtake_t.mean()*365*24 * water_consumption * (water_cost + water_treatment_cost)/1000) # annual mean water consumption to produce hydrogen over an year
 
 
        
