@@ -2660,28 +2660,30 @@ def operation_constant_output(
     
         aux_mins = np.repeat( df_aux.groupby('day').min().values, 24,axis=0)
         df_aux['min_hpp_day'] = aux_mins[:,0]
-        df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day']
+        df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day'].round(decimals=5)
         df_aux['P_to_b_removed'] = (df_aux['Hpp_deg'] - df_aux['min_hpp_day'])
         
         df_aux['P_to_b_removed_to_charge_battery'] = 0
-        df_aux.loc[df_aux['b_t_sat'] <= 0, 'P_to_b_removed_to_charge_battery'] = - df_aux.loc[df_aux['b_t_sat'] <= 0,'P_to_b_removed']
+        #df_aux.loc[df_aux['b_t_sat'] <= 0, 'P_to_b_removed_to_charge_battery'] = - df_aux.loc[df_aux['b_t_sat'] <= 0,'P_to_b_removed']
+        ind_b_t_sat_lt_0 = np.where(df_aux['b_t_sat'] <= 0)[0]
+        df_aux.loc[ind_b_t_sat_lt_0, 'P_to_b_removed_to_charge_battery'] = - df_aux.loc[ind_b_t_sat_lt_0,'P_to_b_removed'].values
         
         df_aux['P_to_b_removed_to_curtailment'] = 0
-        df_aux.loc[df_aux['b_t_sat'] > 0, 'P_to_b_removed_to_curtailment'] = - df_aux.loc[df_aux['b_t_sat'] > 0,'P_to_b_removed']
+        #df_aux.loc[df_aux['b_t_sat'] > 0, 'P_to_b_removed_to_curtailment'] = - df_aux.loc[df_aux['b_t_sat'] > 0,'P_to_b_removed']
+        ind_b_t_sat_gt_0 = np.where(df_aux['b_t_sat'] > 0)[0]
+        df_aux.loc[ind_b_t_sat_gt_0, 'P_to_b_removed_to_curtailment'] = - df_aux.loc[ind_b_t_sat_gt_0,'P_to_b_removed'].values
     
         # Update curtailment and battery charge to meet constant output
         P_curt_deg = P_curt_deg + df_aux['P_to_b_removed_to_curtailment'].values
         b_t_sat = b_t_sat +  df_aux['P_to_b_removed_to_charge_battery'].values
         
         Hpp_deg, P_curt_deg, b_t_sat, b_E_SOC_t_sat =  operation_rule_base_no_penalty(
-            #wind_t_deg = wind_t_deg - df_aux['P_to_b_removed_to_curtailment'].values,
             wind_t_deg = wind_t_deg,
             solar_t_deg = solar_t_deg,
             batt_degradation = batt_degradation,
             wind_t = wind_t,
             solar_t = solar_t,
             hpp_curt_t = P_curt_deg,        
-            #b_t = b_t_sat +  df_aux['P_to_b_removed_to_charge_battery'].values,
             b_t = b_t_sat, 
             b_E_SOC_t = b_E_SOC_t_sat,
             G_MW = G_MW,
@@ -2706,7 +2708,7 @@ def operation_constant_output(
 
     aux_mins = np.repeat( df_aux.groupby('day').min().values, 24,axis=0)
     df_aux['min_hpp_day'] = aux_mins[:,0]
-    df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day']
+    df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day'].round(decimals=5)
     df_aux['P_to_b_removed'] = (df_aux['Hpp_deg'] - df_aux['min_hpp_day'])
     
     # Update curtailment and battery charge to meet constant output
@@ -2717,6 +2719,8 @@ def operation_constant_output(
     def fneg(x):
         return - x * (x < 0)
 
-    penalty_ts = load_min_penalty_factor * fneg(Hpp_deg - load_min)
+    # round errors on the Hpp_deg
+    tol = 1e-6
+    penalty_ts = load_min_penalty_factor * fneg(Hpp_deg + tol - load_min)
        
     return Hpp_deg, P_curt_deg, b_t_sat, b_E_SOC_t_sat, penalty_ts
