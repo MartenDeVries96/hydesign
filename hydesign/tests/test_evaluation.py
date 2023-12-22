@@ -5,8 +5,10 @@ import pickle
 import os
 
 from hydesign.tests.test_files import tfp
-from hydesign.hpp_assembly import hpp_model
-from hydesign.hpp_assembly_P2X import hpp_model_P2X
+from hydesign.assembly.hpp_assembly import hpp_model
+from hydesign.assembly.hpp_assembly_P2X import hpp_model_P2X
+from hydesign.assembly.hpp_assembly_constantoutput import hpp_model_constant_output
+from hydesign.assembly.hpp_assembly_P2X_bidrectional import hpp_model_P2X_bidirectional
 from hydesign.examples import examples_filepath
 
 
@@ -16,6 +18,9 @@ def run_evaluation(out_name = 'France_good_wind_design.csv',
                    p2x = False,
                    tmp_name = 'test_eval_design_1',
                    PPA=None,
+                   constant_load=False,
+                   load_min=3,
+                   p2x_bidirectional=False,
                    ):
     output_df = pd.read_csv(
         tfp+out_name,
@@ -28,12 +33,36 @@ def run_evaluation(out_name = 'France_good_wind_design.csv',
     altitude = ex_site['altitude'].values[0]
     input_ts_fn = examples_filepath+ex_site['input_ts_fn'].values[0]
     sim_pars_fn = examples_filepath+ex_site['sim_pars_fn'].values[0]
-    if PPA is not None:
+    H2_demand_fn = examples_filepath+ex_site['H2_demand_col'].values[0]
+    if p2x_bidirectional:
+        hpp = hpp_model_P2X_bidirectional(
+            latitude,
+            longitude,
+            altitude,
+            num_batteries = 10,
+            work_dir = './',
+            sim_pars_fn = sim_pars_fn,
+            input_ts_fn = input_ts_fn,
+            H2_demand_fn = H2_demand_fn,
+            electrolyzer_eff_curve_name = 'Alkaline electrolyzer H2 production',
+            )
+    elif constant_load:
+        hpp = hpp_model_constant_output(
+            latitude,
+            longitude,
+            altitude,
+            num_batteries = 10,
+            work_dir = './',
+            sim_pars_fn = sim_pars_fn,
+            input_ts_fn = input_ts_fn,
+            load_min=load_min,)
+                
+    elif PPA is not None:
         hpp = hpp_model(
             latitude,
             longitude,
             altitude,
-            num_batteries = 1,
+            num_batteries = 10,
             work_dir = './',
             sim_pars_fn = sim_pars_fn,
             input_ts_fn = input_ts_fn,
@@ -43,17 +72,16 @@ def run_evaluation(out_name = 'France_good_wind_design.csv',
             latitude,
             longitude,
             altitude,
-            num_batteries = 1,
+            num_batteries = 10,
             work_dir = './',
             sim_pars_fn = sim_pars_fn,
             input_ts_fn = input_ts_fn)
     else:
-        H2_demand_fn = examples_filepath+ex_site['H2_demand_col'].values[0]
         hpp = hpp_model_P2X(
             latitude,
             longitude,
             altitude,
-            num_batteries = 1,
+            num_batteries = 10,
             work_dir = './',
             sim_pars_fn = sim_pars_fn,
             input_ts_fn = input_ts_fn,
@@ -78,7 +106,9 @@ def run_evaluation(out_name = 'France_good_wind_design.csv',
         ptg_MW = output_df.loc['PTG [MW]','Design 1']
         HSS_kg = output_df.loc['HSS [kg]','Design 1']
         x.extend([ptg_MW, HSS_kg])
-
+    if p2x_bidirectional:
+        x=[50, 300, 10, 40, 10, 0, 45, 180, 1.5, 40, 4, 5, 250, 5000]
+# 
     outs = hpp.evaluate(*x)
     hpp.evaluation_in_csv(os.path.join(tfp + 'tmp', tmp_name), longitude, latitude, altitude, x, outs)
     return outs
@@ -89,19 +119,23 @@ def update_test(out_name='France_good_wind_design.csv',
                 p2x = False,
                 tmp_name = 'test_eval_design_1',
                 PPA=None,
+                constant_load=False,
+                load_min=3,
+                p2x_bidirectional=False
                 ):
     output_df = pd.read_csv(
         tfp+out_name,
         index_col=0, 
         parse_dates = True)
-    run_evaluation(out_name, name, design_name, p2x, tmp_name, PPA)
+    run_evaluation(out_name, name, design_name, p2x, tmp_name, PPA, constant_load, load_min, p2x_bidirectional)
     eval_df = pd.read_csv(os.path.join(tfp + 'tmp', tmp_name + '.csv'))
     output_df[design_name] = eval_df.T[0]
     output_df.to_csv(tfp+out_name)
     
 def load_evaluation(out_name='France_good_wind_design.csv',
                     design_name = 'Design 1',
-                    p2x = False):
+                    p2x = False,
+                    ):
     output_df = pd.read_csv(
         tfp+out_name,
         index_col=0, 
@@ -369,6 +403,74 @@ def test_evaluation_PPA2():
     for i in range(len(loaded_metrics)):
         np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
 
+# ------------------------------------------------------------------------------------------------
+# constant load 1
+
+def run_evaluation_constant_load():
+    return run_evaluation(out_name = 'constant_load_design.csv',
+                       name = 'France_good_wind',
+                       design_name = 'Design 1',
+                       p2x = False,
+                       tmp_name = 'test_eval_constant_load',
+                       constant_load=True,
+                       load_min = 3,
+                       )
+
+def update_test_constant_load():
+    update_test(out_name='constant_load_design.csv',
+                    name = 'France_good_wind',
+                    design_name = 'Design 1',
+                    p2x = False,
+                    tmp_name = 'test_eval_constant_load',
+                    constant_load=True,
+                    load_min = 3,
+                    )
+    
+
+def load_evaluation_constant_load():
+    return load_evaluation(out_name='constant_load_design.csv',
+                        design_name = 'Design 1',
+                        p2x = False,
+)
+
+def test_evaluation_constant_load():
+    evaluation_metrics = run_evaluation_constant_load()
+    loaded_metrics = load_evaluation_constant_load()
+    for i in range(len(loaded_metrics)):
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
+
+# ------------------------------------------------------------------------------------------------
+# P2X bidirectional
+
+def run_evaluation_P2X_bidirectional():
+    return run_evaluation(out_name = 'Evaluation_test_P2X_bidirectional.csv',
+                       name = 'Denmark_good_wind',
+                       design_name = 'Design 1',
+                       p2x = True,
+                       p2x_bidirectional = True,
+                       tmp_name = 'test_eval_design_P2X_bidirectional',
+                       )
+
+def update_test_P2X_bidirectional():
+    update_test(out_name='Evaluation_test_P2X_bidirectional.csv',
+                    name = 'Denmark_good_wind',
+                    design_name = 'Design 1',
+                    p2x = True,
+                    p2x_bidirectional = True,
+                    tmp_name = 'test_eval_P2X_bidirectional',
+                    )
+    
+
+def load_evaluation_P2X_bidirectional():
+    return load_evaluation(out_name='Evaluation_test_P2X_bidirectional.csv',
+                        design_name = 'Design 1',
+                        p2x = True,)
+
+def test_evaluation_P2X_bidirectional():
+    evaluation_metrics = run_evaluation_P2X_bidirectional()
+    loaded_metrics = load_evaluation_P2X_bidirectional()
+    for i in range(len(loaded_metrics)):
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
         
 # ------------------------------------------------------------------------------------------------
 # update_test_design_1()
@@ -379,4 +481,5 @@ def test_evaluation_PPA2():
 # update_test_design_3_P2X()
 # update_test_PPA()
 # update_test_PPA2()
-
+# update_test_constant_load()
+# update_test_P2X_bidirectional()

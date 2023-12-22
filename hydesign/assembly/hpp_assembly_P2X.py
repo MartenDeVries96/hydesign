@@ -1,4 +1,3 @@
-# %%
 # import glob
 import os
 # import time
@@ -21,10 +20,10 @@ from hydesign.weather import extract_weather_for_HPP, ABL
 # from hydesign.pv import pvp #, pvp_degradation_linear
 from hydesign.wind import genericWT_surrogate, genericWake_surrogate, wpp, get_rotor_d # , wpp_with_degradation, get_rotor_area
 from hydesign.pv import pvp #, pvp_with_degradation
-from hydesign.ems import ems_P2X #, ems_long_term_operation
+from hydesign.ems.ems_P2X import ems_P2X as ems #, ems_long_term_operation
 # from hydesign.battery_degradation import battery_degradation
 from hydesign.costs import wpp_cost, pvp_cost, battery_cost, shared_cost, ptg_cost
-from hydesign.finance import finance_P2X
+from hydesign.finance.finance_P2X import finance_P2X
 from hydesign.look_up_tables import lut_filepath
 
 
@@ -220,8 +219,8 @@ class hpp_model_P2X:
                 'land_use_per_solar_MW',
                 ])
         model.add_subsystem(
-            'ems_P2X', 
-            ems_P2X(
+            'ems', 
+            ems(
                 N_time = N_time,
                 eff_curve=eff_curve,
                 life_h = life_h, 
@@ -244,7 +243,10 @@ class hpp_model_P2X:
                 'ptg_deg',
                 'hhv',
                 'm_H2_demand_t',
-                'penalty_H2',
+                'penalty_factor_H2',
+                # 'min_power_standby',
+                # 'ramp_up_limit',
+                # 'ramp_down_limit',
                 ],
             promotes_outputs=[
                 'total_curtailment'
@@ -381,7 +383,7 @@ class hpp_model_P2X:
                              'battery_WACC',
                              'ptg_WACC',
                              'tax_rate',
-                             'penalty_H2',
+                              'penalty_factor_H2',
                             ],
             promotes_outputs=['NPV',
                               'IRR',
@@ -393,6 +395,7 @@ class hpp_model_P2X:
                               'mean_Power2Grid',
                               'annual_H2',
                               'annual_P_ptg',
+                              # 'annual_P_ptg_H2',
                               'penalty_lifetime',
                               'CAPEX',
                               'OPEX',
@@ -411,8 +414,8 @@ class hpp_model_P2X:
 
         model.connect('abl.wst', 'wpp.wst')
         
-        model.connect('wpp.wind_t', 'ems_P2X.wind_t')
-        model.connect('pvp.solar_t', 'ems_P2X.solar_t')
+        model.connect('wpp.wind_t', 'ems.wind_t')
+        model.connect('pvp.solar_t', 'ems.solar_t')
         
         # model.connect('ems.b_E_SOC_t', 'battery_degradation.b_E_SOC_t')
         
@@ -453,16 +456,18 @@ class hpp_model_P2X:
         # model.connect('ems.P_ptg_t', 'ems_long_term_operation.P_ptg_t')
         # model.connect('ems.epc_t', 'ems_long_term_operation.epc_t')
 
-        model.connect('ems_P2X.price_t_ext', 'finance_P2X.price_t_ext')
-        model.connect('ems_P2X.hpp_t', 'finance_P2X.hpp_t')
-        model.connect('ems_P2X.penalty_t', 'finance_P2X.penalty_t')
-        model.connect('ems_P2X.hpp_curt_t', 'finance_P2X.hpp_curt_t')
-        model.connect('ems_P2X.m_H2_t', 'finance_P2X.m_H2_t')
-        model.connect('ems_P2X.m_H2_t', 'ptg_cost.m_H2_t' )
-        model.connect('ems_P2X.P_ptg_t', 'finance_P2X.P_ptg_t')
-        model.connect('ems_P2X.m_H2_demand_t_ext', 'finance_P2X.m_H2_demand_t_ext')
-        model.connect('ems_P2X.m_H2_offtake_t', 'finance_P2X.m_H2_offtake_t')
-        model.connect('ems_P2X.m_H2_offtake_t', 'ptg_cost.m_H2_offtake_t' )
+        model.connect('ems.price_t_ext', 'finance_P2X.price_t_ext')
+        model.connect('ems.hpp_t', 'finance_P2X.hpp_t')
+        model.connect('ems.penalty_t', 'finance_P2X.penalty_t')
+        model.connect('ems.hpp_curt_t', 'finance_P2X.hpp_curt_t')
+        model.connect('ems.m_H2_t', 'finance_P2X.m_H2_t')
+        model.connect('ems.m_H2_t', 'ptg_cost.m_H2_t' )
+        model.connect('ems.P_ptg_t', 'finance_P2X.P_ptg_t')
+        model.connect('ems.m_H2_demand_t_ext', 'finance_P2X.m_H2_demand_t_ext')
+        model.connect('ems.m_H2_offtake_t', 'finance_P2X.m_H2_offtake_t')
+        # model.connect('ems.P_ptg_grid_t', 'finance_P2X.P_ptg_grid_t')
+        model.connect('ems.m_H2_demand_t_ext', 'ptg_cost.m_H2_demand_t_ext')
+        model.connect('ems.m_H2_offtake_t', 'ptg_cost.m_H2_offtake_t')
         
         prob = om.Problem(
             model,
@@ -491,9 +496,8 @@ class hpp_model_P2X:
         prob.set_val('hhv', sim_pars['hhv'])
         prob.set_val('ptg_deg', sim_pars['ptg_deg'])
         prob.set_val('price_H2', sim_pars['price_H2'])
-        prob.set_val('penalty_H2', sim_pars['penalty_H2'])
+        prob.set_val('penalty_factor_H2', sim_pars['penalty_factor_H2'])
         prob.set_val('storage_eff', sim_pars['storage_eff'])
-        
 
         self.sim_pars = sim_pars
         self.prob = prob
@@ -516,6 +520,7 @@ class hpp_model_P2X:
             'GUF',
             'annual_H2 [tons]',
             'annual_P_ptg [GWh]',
+            # 'annual_P_ptg_H2 [GWh]',
             'grid [MW]',
             'wind [MW]',
             'solar [MW]',
@@ -674,6 +679,7 @@ class hpp_model_P2X:
             prob['mean_AEP']/(self.sim_pars['G_MW']*365*24),
             prob['annual_H2']/1e3, # in tons
             prob['annual_P_ptg']/1e3, # in GWh
+            # prob['annual_P_ptg_H2']/1e3, # in GWh
             self.sim_pars['G_MW'],
             wind_MW,
             solar_MW,
@@ -737,6 +743,7 @@ class hpp_model_P2X:
                                             'GUF',
                                             'annual_H2',
                                             'annual_P_ptg',
+                                            # 'annual_P_ptg_H2',
                                             'grid [MW]',
                                             'wind [MW]',
                                             'solar [MW]',
@@ -775,4 +782,3 @@ def mkdir(dir_):
     return dir_
 
 
-# %%

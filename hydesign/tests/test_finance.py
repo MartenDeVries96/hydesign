@@ -10,7 +10,7 @@ import pytest
 import pickle
 
 from hydesign.tests.test_files import tfp
-from hydesign.finance import calculate_NPV_IRR, calculate_WACC
+from hydesign.finance.finance import calculate_NPV_IRR, calculate_WACC
 
 # ------------------------------------------------------------------------------------------------
 def run_WACC():

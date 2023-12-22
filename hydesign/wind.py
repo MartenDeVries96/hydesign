@@ -12,7 +12,7 @@ import xarray as xr
 import openmdao.api as om
 
 from hydesign.look_up_tables import lut_filepath
-from hydesign.ems import expand_to_lifetime
+from hydesign.ems.ems import expand_to_lifetime
 
 class genericWT_surrogate(om.ExplicitComponent):
     """

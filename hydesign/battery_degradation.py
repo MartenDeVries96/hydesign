@@ -18,7 +18,7 @@ from docplex.mp.model import Model
 
 import rainflow
 
-from hydesign.ems import expand_to_lifetime
+from hydesign.ems.ems import expand_to_lifetime
 
 class battery_degradation(om.ExplicitComponent):
     """

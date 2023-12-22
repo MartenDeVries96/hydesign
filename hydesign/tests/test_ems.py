@@ -10,7 +10,7 @@ import pytest
 import pickle
 
 from hydesign.tests.test_files import tfp
-from hydesign.ems import ems_cplex, operation_solar_batt_deg
+from hydesign.ems.ems import ems_cplex, operation_solar_batt_deg
 
 # ------------------------------------------------------------------------------------------------
 def run_ems():

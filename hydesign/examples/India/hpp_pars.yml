@@ -91,7 +91,7 @@ H2_storage_opex_cost: 3 #[EUR/kg] 1% of CAPEX
 H2_transportation_cost: 5 #[EUR/kg/km] transportation can be through pipelines or lorry
 # https://joint-research-centre.ec.europa.eu/system/files/2021-06/jrc124206_assessment_of_hydrogen_delivery_options.pdf
 H2_transportation_distance: 0 #[km]
-penalty_H2: 0.5 #[Eur/kg] This is the penalty price for not meeting the demand of hydrogen in an hour, for infinite H2 offtake this value becomes ZERO
+penalty_factor_H2: 0.5 #[Eur/kg] This is the penalty price for not meeting the demand of hydrogen in an hour, for infinite H2 offtake this value becomes ZERO
 electrolyzer_eff_curve_name: 'PEM electrolyzer simple'
 # The storage size can be kept as zero when there is no storage
 # For infinite hydrogen offtake keep the demand very high in 'H2_demand.csv' file
