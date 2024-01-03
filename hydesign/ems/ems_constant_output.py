@@ -926,13 +926,13 @@ def operation_constant_output(
     
         aux_mins = np.repeat( df_aux.groupby('day').min().values, 24,axis=0)
         df_aux['min_hpp_day'] = aux_mins[:,0]
-        df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day']
+        df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day'].round(decimals=5)
         df_aux['P_to_b_removed'] = (df_aux['Hpp_deg'] - df_aux['min_hpp_day'])
         
-        df_aux['P_to_b_removed_to_charge_battery'] = 0
+        df_aux['P_to_b_removed_to_charge_battery'] = 0.0
         df_aux.loc[df_aux['b_t_sat'] <= 0, 'P_to_b_removed_to_charge_battery'] = - df_aux.loc[df_aux['b_t_sat'] <= 0,'P_to_b_removed']
         
-        df_aux['P_to_b_removed_to_curtailment'] = 0
+        df_aux['P_to_b_removed_to_curtailment'] = 0.0
         df_aux.loc[df_aux['b_t_sat'] > 0, 'P_to_b_removed_to_curtailment'] = - df_aux.loc[df_aux['b_t_sat'] > 0,'P_to_b_removed']
     
         # Update curtailment and battery charge to meet constant output
@@ -972,7 +972,7 @@ def operation_constant_output(
 
     aux_mins = np.repeat( df_aux.groupby('day').min().values, 24,axis=0)
     df_aux['min_hpp_day'] = aux_mins[:,0]
-    df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day']
+    df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day'].round(decimals=5)
     df_aux['P_to_b_removed'] = (df_aux['Hpp_deg'] - df_aux['min_hpp_day'])
     
     # Update curtailment and battery charge to meet constant output
