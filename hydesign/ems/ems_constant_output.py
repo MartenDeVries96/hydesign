@@ -926,7 +926,7 @@ def operation_constant_output(
     
         aux_mins = np.repeat( df_aux.groupby('day').min().values, 24,axis=0)
         df_aux['min_hpp_day'] = aux_mins[:,0]
-        df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day'].round(decimals=5)
+        df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day'].round(decimals=3)
         df_aux['P_to_b_removed'] = (df_aux['Hpp_deg'] - df_aux['min_hpp_day'])
         
         df_aux['P_to_b_removed_to_charge_battery'] = 0.0
@@ -972,7 +972,7 @@ def operation_constant_output(
 
     aux_mins = np.repeat( df_aux.groupby('day').min().values, 24,axis=0)
     df_aux['min_hpp_day'] = aux_mins[:,0]
-    df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day'].round(decimals=5)
+    df_aux['Hpp_deg_actual'] = df_aux['min_hpp_day'].round(decimals=3)
     df_aux['P_to_b_removed'] = (df_aux['Hpp_deg'] - df_aux['min_hpp_day'])
     
     # Update curtailment and battery charge to meet constant output
@@ -981,8 +981,8 @@ def operation_constant_output(
     
     
     def fneg(x):
-        return - x * (x < 0)
-
+       return (x < 0)
+    
     penalty_ts = load_min_penalty_factor * fneg(Hpp_deg - load_min)
        
     return Hpp_deg, P_curt_deg, b_t_sat, b_E_SOC_t_sat, penalty_ts

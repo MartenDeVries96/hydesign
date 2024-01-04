@@ -14,10 +14,10 @@ DC_AC_ratio,1.5
 b_P [MW],0.0
 b_E_h [h],3.0
 cost_of_battery_P_fluct_in_peak_price_ratio,5.0
-NPV_over_CAPEX,-494.6724823116661
-NPV [MEuro],-145003.51510628182
+NPV_over_CAPEX,-0.0363441970618213
+NPV [MEuro],-10.653587001751044
 IRR,0.0
-LCOE [Euro/MWh],58.668855527746665
+LCOE [Euro/MWh],58.66886257325169
 CAPEX [MEuro],293.1303444021433
 OPEX [MEuro],5.357487360409396
 Wind CAPEX [MEuro],229.29120154500043
@@ -28,9 +28,9 @@ Batt CAPEX [MEuro],0.0
 Batt OPEX [MEuro],0.0
 Shared CAPEX [MEuro],63.83914285714286
 Shared OPEX [MEuro],0.0
-penalty lifetime [MEuro],171574.23316326423
-AEP [GWh],440.9392395975236
-GUF,0.1677850987814016
+penalty lifetime [MEuro],6.4512
+AEP [GWh],440.9391825091101
+GUF,0.1677850770582611
 grid [MW],300.0
 wind [MW],300.0
 solar [MW],0.0
@@ -43,5 +43,5 @@ Plant area [km2],42.85714285714285
 Rotor diam [m],134.86710626894708
 Hub height [m],77.43355313447354
 Number of batteries used in lifetime,0.0
-Break-even PPA price [Euro/MWh],15716.253814148333
+Break-even PPA price [Euro/MWh],40.1189411988867
 Capacity factor wind [-],0.3882563630022329

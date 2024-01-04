@@ -50,6 +50,7 @@ class hpp_model_constant_output:
         name = '',
         ppa_price=None,
         load_min=3, # MW
+        load_min_penalty = 100,
         **kwargs
         ):
         """Initialization of the hybrid power plant evaluator
@@ -316,7 +317,9 @@ class hpp_model_constant_output:
             ems_long_term_operation(
                 N_time = N_time,
                 life_h = life_h,
-                ems_type = 'constant_output'),
+                ems_type = 'constant_output',
+                load_min_penalty_factor = load_min_penalty,
+                ),
             promotes_inputs=[
                 'b_P',
                 'b_E',
@@ -501,7 +504,10 @@ class hpp_model_constant_output:
         self.num_batteries = num_batteries
         self.input_ts_fn = input_ts_fn
         self.altitude = altitude
+        self.ppa_price = ppa_price
         self.battery_deg = battery_deg
+        self.load_min = load_min
+        self.load_min_penalty = load_min_penalty
     
         self.list_out_vars = [
             'NPV_over_CAPEX',
