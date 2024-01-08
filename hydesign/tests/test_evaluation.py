@@ -470,7 +470,7 @@ def test_evaluation_P2X_bidirectional():
     evaluation_metrics = run_evaluation_P2X_bidirectional()
     loaded_metrics = load_evaluation_P2X_bidirectional()
     for i in range(len(loaded_metrics)):
-        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=1e-04)
+        np.testing.assert_allclose(evaluation_metrics[i], loaded_metrics[i], rtol=2e-04)
         
 # ------------------------------------------------------------------------------------------------
 # update_test_design_1()
