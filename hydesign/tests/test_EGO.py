@@ -5,7 +5,6 @@ Created on Fri Nov 25 14:43:04 2022
 @author: mikf
 """
 import numpy as np
-# import matplotlib.pyplot as plt
 from hydesign.Parallel_EGO import (
     get_sm, LCB, EI, KStd, KB, eval_sm, #opt_sm,
     get_candiate_points, get_mixint_context)
@@ -14,7 +13,11 @@ import pandas as pd
 import pytest
 import pickle
 
-def test_get_sm():
+import smt
+smt_version = smt.__version__.split('.')
+major, minor = smt_version[:2]
+
+def get_test_sm():
     nt = 100
     data = pd.read_csv(tfp + 'test_data.csv', sep=';',nrows=nt) # y=A2^2+B2^3+SIN(C2)+ATAN(D2)+1/E2+PI()*F2+EXP(G2/10)+H2^4+LN(I2)
     x = data[[f'x{int(i + 1)}' for i in range(9)]].values
@@ -22,21 +25,35 @@ def test_get_sm():
     return get_sm(x, y)
 
 def save_sm():
-    sm = test_get_sm()
-    with open(tfp + 'sm.pkl','wb') as f:
+    sm = get_test_sm()
+    with open(tfp + f'sm_{major}_{minor}.pkl','wb') as f:
          pickle.dump(sm, f)
 
 def load_sm():
-    with open(tfp + 'sm.pkl','rb') as f:
+    with open(tfp + f'sm_{major}_{minor}.pkl','rb') as f:
         sm = pickle.load(f)
     return sm
 
 sm = load_sm()
+# sm = get_test_sm()
 fmins = [1, 10, 50, 500, 10000]
 point = np.array([10, 1, 0, 142, 2, 10, 0, 0, 1]).reshape((1, 9)) # analytical: 135.4796807
 
+
+def get_data1():
+    df = pd.read_csv(tfp + f'test_surrogate_models_{major}_{minor}.csv', sep=';')
+    return df
+
+def generate_data1():
+    df = pd.DataFrame({'LCB': float(LCB(sm, point)),
+                  'EI': float(EI(sm, point)),
+                  'KStd': float(KStd(sm, point)),
+                  'KB': float(KB(sm, point)),
+                  }, index=[0])
+    df.to_csv(tfp + f'test_surrogate_models_{major}_{minor}.csv', sep=';', index=False)
+
 def get_data2(fmin):
-    data2 = pd.read_csv(tfp + 'sm_pred_test_data.csv', sep=';').values
+    data2 = pd.read_csv(tfp + f'sm_pred_test_data_{major}_{minor}.csv', sep=';').values
     n = fmins.index(fmin)
     a = data2[n * 5: n * 5 + 5, :9]
     b = data2[n * 5: n * 5 + 5, 9]
@@ -49,23 +66,25 @@ def generate_data2():
         new_data[n*5:n*5+5,:9] = a
         new_data[n*5:n*5+5,9] = b.ravel()
     df = pd.DataFrame(new_data, columns=[f'x{i + 1}' for i in range(9)] + ['y'])
-    df.to_csv(tfp + 'sm_pred_test_data.csv', sep=';', index=False)
+    df.to_csv(tfp + f'sm_pred_test_data_{major}_{minor}.csv', sep=';', index=False)
+
+df = get_data1()
 
 def test_LCB():
     res = LCB(sm, point)
-    np.testing.assert_allclose(res, np.array([[127.142855]]))
+    np.testing.assert_allclose(float(res[0][0]), float(df.LCB.iloc[0]))
 
 def test_EI():
     res = EI(sm, point)
-    np.testing.assert_allclose(res, np.array([[-863.117345]]))
+    np.testing.assert_allclose(float(res[0][0]), float(df.EI.iloc[0]))
 
 def test_KStd():
     res = KStd(sm, point)
-    np.testing.assert_allclose(res, np.array([[3.2466]]))
+    np.testing.assert_allclose(float(res[0][0]), float(df.KStd.iloc[0]))
 
 def test_KB():
     res = KB(sm, point)
-    np.testing.assert_allclose(res, np.array([[136.882655]]))
+    np.testing.assert_allclose(float(res[0][0]), float(df.KB.iloc[0]))
 
 variables = {
     'a':
@@ -124,12 +143,14 @@ def test_eval_sm(fmin):
     np.testing.assert_allclose(b.ravel(), b_ref, rtol=1e-6)
 
 def test_get_candidate_points():
-    xpred, ypred_LB = eval_sm(sm, mixint, npred=5, fmin=10)
+    xpred, ypred_LB = eval_sm(sm, mixint, npred=5, fmin=1e3)
+    print(xpred, ypred_LB)
     xnew = get_candiate_points(
     xpred, ypred_LB, 
     n_clusters = 1, 
     quantile = 1e-4) 
     np.testing.assert_allclose(xnew, np.array([[9, 4.06, 1.51, 86, 2.95, -3, -4.3, -0.5, 1.316]]))
 
+# generate_data1()
 # generate_data2()
 

@@ -102,8 +102,7 @@ def eval_sm(sm, mixint, scaler=None, seed=0, npred=1e3, fmin=1e10):
     '''
     Function that predicts the xepected improvement (EI) of the surrogate model based on random input points
     '''
-    sampling = mixint.build_sampling_method(
-        LHS, criterion="c", random_state=int(seed))
+    sampling = get_sampling(mixint, seed=int(seed), criterion="c")
     xpred = sampling(int(npred))
     xpred = np.array(mixint.design_space.decode_values(xpred))
 
@@ -188,7 +187,7 @@ def get_candiate_points(
     cluster for acutal model evaluation
     '''
 
-    yq = np.quantile(y,quantile)
+    yq = np.quantile(y, quantile)
     ind_up = np.where(y<yq)[0]
     xup = x[ind_up]
     yup = y[ind_up]
@@ -303,6 +302,19 @@ def get_mixint_context(variables, seed=None):
     mixint = MixedIntegerContext(DesignSpace(list_vars_doe, seed=seed))
     return mixint
 
+def get_sampling(mixint, seed, criterion='maximin'):
+    import smt
+    smt_version = smt.__version__.split('.')
+    major, minor = smt_version[:2]
+    if int(major) == 2:
+        if int(minor) < 1:
+            sampling = mixint.build_sampling_method(LHS, criterion=criterion, random_state=int(seed))
+        else:
+            mixint._design_space.sampler = LHS(xlimits=mixint.get_unfolded_xlimits(), criterion=criterion, random_state=int(seed))
+            sampling = mixint.build_sampling_method(random_state=int(seed))
+        return sampling
+            
+    
 def expand_x_for_model_eval(x, kwargs):
     
     list_vars = kwargs['list_vars']
@@ -458,8 +470,7 @@ class EfficientGlobalOptimizationDriver(Driver):
         
         # LHS intial doe
         mixint = get_mixint_context(kwargs['variables'], kwargs['n_seed'])
-        sampling = mixint.build_sampling_method(
-          LHS, criterion="maximin", random_state=kwargs['n_seed'])
+        sampling = get_sampling(mixint, seed=kwargs['n_seed'], criterion="maximin")
         xdoe = sampling(kwargs['n_doe'])
         xdoe = np.array(mixint.design_space.decode_values(xdoe))
 
