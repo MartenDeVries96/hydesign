@@ -508,6 +508,8 @@ class hpp_model_constant_output:
         self.battery_deg = battery_deg
         self.load_min = load_min
         self.load_min_penalty = load_min_penalty
+        self.life_h = life_h
+        
     
         self.list_out_vars = [
             'NPV_over_CAPEX',

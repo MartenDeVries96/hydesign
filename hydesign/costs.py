@@ -344,7 +344,7 @@ class battery_cost(om.ExplicitComponent):
         battery_energy_onm_cost = self.battery_energy_onm_cost
         
 
-        ii_battery_change = np.where(SoH>0.99 )[0]
+        ii_battery_change = np.where( (SoH>0.99) & ( np.append(1, np.diff(SoH)) > 0) )[0]
         year_new_battery = np.unique(np.floor(age[ii_battery_change]))
         
         battery_price_reduction_per_year = 0.1
