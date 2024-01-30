@@ -18,16 +18,29 @@ def run_interp_ws():
     hh = 100
     weather = pd.read_csv(examples_filepath+'Europe/GWA2/input_ts_Denmark_good_solar.csv',index_col=0)
     interp_ws_out = interpolate_WS_loglog(weather,hh)
-    return interp_ws_out.WS.values, interp_ws_out.dWS_dz.values
+    df_out = pd.DataFrame()
+    df_out['WS'] = interp_ws_out.WS.values
+    df_out['dWS_dz'] = interp_ws_out.dWS_dz.values
+    return df_out
 
 def load_interp_ws():
-    with open(tfp+'weather_output_interp_ws.pickle','rb') as f:
-        interp_ws_out = pickle.load(f)
-    return interp_ws_out
+    output_df = pd.read_csv(
+        tfp+'weather_output_interp_ws.csv',
+        index_col=0,
+        parse_dates=False)
+    return output_df
 
 def test_interp_ws():
     interp_ws_out = run_interp_ws()
     interp_ws_out_data = load_interp_ws()
-    for i in range(len(interp_ws_out)):
-        np.testing.assert_allclose(interp_ws_out[i], interp_ws_out_data[i])
-        # print(np.allclose(interp_ws_out[i], interp_ws_out_data[i]))
+    for var in ['WS', 'dWS_dz']:
+        np.testing.assert_allclose(
+            interp_ws_out[var].values, interp_ws_out_data[var].values)
+
+# ------------------------------------------------------------------------------------------------
+def update_interp_ws():
+    df = run_interp_ws()
+    df.to_csv(tfp+'weather_output_interp_ws.csv')  
+    
+# ------------------------------------------------------------------------------------------------
+# update_interp_ws()

@@ -87,7 +87,7 @@ def run_get_wind_ts():
     pcw_df = pd.read_csv(
         tfp+'wind_get_wake_affected_pc_output.csv',
         index_col=0, 
-        parse_dates = True)
+        parse_dates = False)
     ws = pcw_df['ws'].values
     pcw = pcw_df['pcw'].values
     
@@ -104,7 +104,7 @@ def load_get_wind_ts():
     output_df = pd.read_csv(
         tfp+'wind_get_wind_ts_output.csv',
         index_col=0, 
-        parse_dates = True)
+        parse_dates = False)
     return output_df.wind_ts.values
 
 def test_get_wind_ts():
@@ -113,3 +113,12 @@ def test_get_wind_ts():
     np.testing.assert_allclose(wind_ts, wind_ts_data)
     #print(np.allclose(wind_ts, wind_ts_data))
     
+
+# ------------------------------------------------------------------------------------------------
+def update_wind_ts_tests():
+    df = pd.DataFrame()
+    df['wind_ts'] = run_get_wind_ts()
+    df.to_csv(tfp+'wind_get_wind_ts_output.csv')  
+    
+# ------------------------------------------------------------------------------------------------
+# update_wind_ts_tests()

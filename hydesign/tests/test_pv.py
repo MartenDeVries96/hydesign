@@ -63,7 +63,7 @@ def load_solar_time_series(tracking):
     output_df = pd.read_csv(
         tfp+'pv_generation_output.csv', 
         index_col=0, 
-        parse_dates = True)
+        parse_dates = False)
     return output_df[tracking]
 
 @pytest.mark.parametrize('tracking', ['no', 'single_axis'])
@@ -83,7 +83,7 @@ def load_solar_degradation():
     output_df = pd.read_csv(
         tfp+'pv_degradation_output.csv', 
         index_col=0, 
-        parse_dates = True)
+        parse_dates = False)
     return output_df.pv_deg.values
 
 def test_solar_degradation():
@@ -91,4 +91,14 @@ def test_solar_degradation():
     pv_deg_ts_data = load_solar_degradation()
     np.testing.assert_allclose(pv_deg_ts, pv_deg_ts_data)
     #print(np.allclose(pv_deg_ts, pv_deg_ts_data))
+
+
+# ------------------------------------------------------------------------------------------------
+def update_solar_tests():
+    pv_ts = pd.DataFrame()
+    for tracking in ['no', 'single_axis']:
+        pv_ts[tracking] = run_solar_time_series(tracking)
+    pv_ts.to_csv(tfp+'pv_generation_output.csv')  
     
+# ------------------------------------------------------------------------------------------------
+# update_solar_tests()

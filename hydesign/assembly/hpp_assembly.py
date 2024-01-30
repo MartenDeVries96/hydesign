@@ -35,7 +35,7 @@ class hpp_model:
         altitude=None,
         sim_pars_fn=None,
         work_dir = './',
-        num_batteries = 3,
+        max_num_batteries_allowed = 3,
         factor_battery_cost = 1,
         ems_type='cplex',
         weeks_per_season_per_year = None,
@@ -58,7 +58,7 @@ class hpp_model:
         altitude : Altitude at chosen location, if not provided, elevation is calculated using elevation map datasets
         sims_pars_fn : Case study input values of the HPP 
         work_dir : Working directory path
-        num_batteries : Number of battery replacements
+        max_num_batteries_allowed : Maximum number of batteries allowed including start and replacements
         weeks_per_season_per_year: Number of weeks per season to select from the input data, to reduce computation time. Default is `None` which uses all the input time series
         seed: seed number for week selection
         ems_type : Energy management system optimization type: cplex solver or rule based
@@ -153,6 +153,14 @@ class hpp_model:
                 weather['Price'] = price.loc[weather.index].bfill()
             except:
                 raise('Price timeseries does not match the weather')
+
+            # Check for complete years in the input_ts: Hydesign works with years of 365 days
+            N_time = len(weather)
+            if np.mod(N_time,365)/24 == 0:
+                pass
+            else:
+                N_sel = N_time - np.mod(N_time,365)
+                weather = weather.iloc[:N_sel]
             
             input_ts_fn = f'{work_dir}input_ts{name}.csv'
             print(f'\ninput_ts_fn extracted and stored in {input_ts_fn}')
@@ -162,12 +170,27 @@ class hpp_model:
         else: # User provided weather timeseries
             weather = pd.read_csv(input_ts_fn, index_col=0, parse_dates=True)
             N_time = len(weather)
-        
+
+        # Check for complete years in the input_ts
+        if np.mod(N_time,365)/24 == 0:
+            pass
+        else:
+            N_sel = N_time - np.mod(N_time,365)
+            weather = weather.iloc[:N_sel]
+            
+            input_ts_fn = f'{work_dir}input_ts_modified.csv'
+            print(f'\ninput_ts_fn length is not a complete number of years (hyDesign handles years as 365 days).')
+            print(f'The file has been modified and stored in {input_ts_fn}')
+            weather.to_csv(input_ts_fn)
+            N_time = len(weather)
+
+        # Assign PPA to the full input_ts
         if ppa_price is None:
             price = weather['Price']
         else:
             price = ppa_price * np.ones_like(weather['Price'])
-            
+
+        # Randomly sample the weather to generate representative years
         if weeks_per_season_per_year != None:
             weather = select_years(
                 weather,
@@ -178,7 +201,8 @@ class hpp_model:
             input_ts_fn = f'{work_dir}input_ts_sel.csv'
             print(f'\n\nSelected input time series based on {weeks_per_season_per_year} weeks per season are stored in {input_ts_fn}')
             weather.to_csv(input_ts_fn)
-        
+
+        # extract number of ws in the look-up tables
         with xr.open_dataset(genWT_fn) as ds: 
             # number of points in the power curves
             N_ws = len(ds.ws.values)
@@ -263,7 +287,7 @@ class hpp_model:
             'battery_degradation', 
             battery_degradation(
                 weather_fn = input_ts_fn, # for extracting temperature
-                num_batteries = num_batteries,
+                num_batteries = max_num_batteries_allowed,
                 life_h = life_h,
                 weeks_per_season_per_year = weeks_per_season_per_year,
             ),
@@ -492,7 +516,7 @@ class hpp_model:
 
         self.sim_pars = sim_pars
         self.prob = prob
-        self.num_batteries = num_batteries
+        self.max_num_batteries_allowed = max_num_batteries_allowed
         self.input_ts_fn = input_ts_fn
         self.altitude = altitude
     

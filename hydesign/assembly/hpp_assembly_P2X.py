@@ -37,7 +37,7 @@ class hpp_model_P2X:
         altitude=None,
         sim_pars_fn=None,
         work_dir = './',
-        num_batteries = 3,
+        max_num_batteries_allowed = 3,
         factor_battery_cost = 1,
         ems_type='cplex',
         input_ts_fn = None, # If None then it computes the weather
@@ -60,7 +60,7 @@ class hpp_model_P2X:
         altitude : Altitude at chosen location, if not provided, elevation is calculated using elevation map datasets
         sims_pars_fn : Case study input values of the HPP 
         work_dir : Working directory path
-        num_batteries : Number of battery replacements
+        max_num_batteries_allowed : Number of batteries allowed
         ems_type : Energy management system optimization type: cplex solver or rule based
         inputs_ts_fn : User provided weather timeseries, if not provided, the weather data is calculated using ERA5 datasets
         price_fn : Price timeseries
@@ -135,7 +135,16 @@ class hpp_model_P2X:
             except:
                 raise('Price timeseries does not match the weather')
             
+            # Check for complete years in the input_ts: Hydesign works with years of 365 days
+            N_time = len(weather)
+            if np.mod(N_time,365)/24 == 0:
+                pass
+            else:
+                N_sel = N_time - np.mod(N_time,365)
+                weather = weather.iloc[:N_sel]
+            
             input_ts_fn = f'{work_dir}input_ts{name}.csv'
+            print(f'\ninput_ts_fn extracted and stored in {input_ts_fn}')
             weather.to_csv(input_ts_fn)
             N_time = len(weather)
 
@@ -148,7 +157,20 @@ class hpp_model_P2X:
         else:
             price = ppa_price * np.ones_like(weather['Price'])
 
-        H2_demand_data = pd.read_csv(H2_demand_fn, index_col=0, parse_dates=True)
+        # Check for complete years in the input_ts
+        if np.mod(N_time,365)/24 == 0:
+            pass
+        else:
+            N_sel = N_time - np.mod(N_time,365)
+            weather = weather.iloc[:N_sel]
+            
+            input_ts_fn = f'{work_dir}input_ts_modified.csv'
+            print(f'\ninput_ts_fn length is not a complete number of years (hyDesign handles years as 365 days).')
+            print(f'The file has been modified and stored in {input_ts_fn}')
+            weather.to_csv(input_ts_fn)
+            N_time = len(weather)
+
+        H2_demand_data = pd.read_csv(H2_demand_fn, index_col=0, parse_dates=True).loc[weather.index,:]
         electrolyzer_eff_fn = os.path.join(os.path.dirname(sim_pars_fn), 'Electrolyzer_efficiency_curves.csv')
         df = pd.read_csv(electrolyzer_eff_fn)
         electrolyzer_eff_curve_name = sim_pars['electrolyzer_eff_curve_name']
@@ -254,7 +276,7 @@ class hpp_model_P2X:
         # model.add_subsystem(
         #     'battery_degradation', 
         #     battery_degradation(
-        #         num_batteries = num_batteries,
+        #         num_batteries = max_num_batteries_allowed,
         #         life_h = life_h),
         #     promotes_inputs=[
         #         'min_LoH'
@@ -501,7 +523,7 @@ class hpp_model_P2X:
 
         self.sim_pars = sim_pars
         self.prob = prob
-        self.num_batteries = num_batteries
+        self.max_num_batteries_allowed = max_num_batteries_allowed
         self.input_ts_fn = input_ts_fn
         self.altitude = altitude
 
@@ -615,7 +637,7 @@ class hpp_model_P2X:
         prob['total_curtailment']/1e3 : Total curtailed power [GMW]
         d : wind turbine diameter [m]
         hh : hub height of the wind turbine [m]
-        self.num_batteries : Number of allowed replacements of the battery
+        num_batteries : Number of batteries
         """
         # print(clearance)
         # print(sp)
@@ -692,7 +714,7 @@ class hpp_model_P2X:
             prob.get_val('shared_cost.Apvp'),
             d,
             hh,
-            self.num_batteries * (b_P>0),
+            1 * (b_P>0),
             prob['break_even_H2_price'],
             prob['break_even_PPA_price'],
             cf_wind,
