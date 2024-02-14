@@ -4,7 +4,10 @@ import numpy as np
 from hydesign.hpp_assembly_constantoutput import hpp_model
 from hydesign.examples import examples_filepath
 import matplotlib.pyplot as plt
+<<<<<<< HEAD
 import time
+=======
+>>>>>>> d86e485ba0896308cc8c67d9ebab0792d8766471
 #from ems import ems_cplex_parts_constantoutput
 # Evaluation
 examples_sites = pd.read_csv(f'{examples_filepath}examples_sites.csv', index_col=0)
@@ -22,8 +25,12 @@ hpp = hpp_model(
     latitude,
     longitude,
     altitude,
+<<<<<<< HEAD
     num_batteries = 1,
     battery_deg = False,
+=======
+    num_batteries = 10,
+>>>>>>> d86e485ba0896308cc8c67d9ebab0792d8766471
     work_dir = './',
     sim_pars_fn = sim_pars_fn,
     input_ts_fn = input_ts_fn,
@@ -34,6 +41,7 @@ hpp = hpp_model(
         #solar_MW,  surface_tilt, surface_azimuth, DC_AC_ratio,
         # Energy storage & EMS price constrains
         # b_P, b_E_h, cost_of_battery_P_fluct_in_peak_price_ratio]
+<<<<<<< HEAD
 
 number_of_runs = 1        
 x=[35.0, 302.8, 5, 1, 7.0, 150, 25.0, 180.0, 1.0, 30, 0, 10.0]
@@ -115,6 +123,10 @@ output_timeseries.to_csv('output3.csv')
 
 run_times = pd.concat([pd.DataFrame(times_array1, columns=['scenario 1']), pd.DataFrame(times_array2, columns=['scenario 2']), pd.DataFrame(times_array3, columns=['scenario 3'])], axis=1)
 run_times.to_excel('run_times.xlsx', sheet_name='time')
+=======
+x=[35.0, 300.0, 10.0, 46, 7.0, 74, 25.0, 180.0, 1.0, 30, 7, 10.0]
+outs = hpp.evaluate(*x)
+>>>>>>> d86e485ba0896308cc8c67d9ebab0792d8766471
 
 hpp.print_design(x, outs)
 
