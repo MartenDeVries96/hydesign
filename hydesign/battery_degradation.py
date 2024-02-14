@@ -48,6 +48,7 @@ class battery_degradation(om.ExplicitComponent):
         self.num_batteries = num_batteries
         self.weather_fn = weather_fn
         self.battery_deg = battery_deg
+        self.battery_rf_matrix = None
 
         weather = pd.read_csv(
             weather_fn, 
@@ -97,7 +98,7 @@ class battery_degradation(om.ExplicitComponent):
                 outputs['n_batteries'] = 0
             else:
                 SoC = b_E_SOC_t/np.max(b_E_SOC_t)
-                rf_DoD, rf_SoC, rf_count, rf_i_start = RFcount(SoC)   
+                rf_DoD, rf_SoC, rf_count, rf_i_start, self.battery_rf_matrix = RFcount(SoC)   
 
                 # use the temperature time-series
                 avr_tem = np.mean(air_temp_K_t)
@@ -435,7 +436,7 @@ def RFcount(SoC):
     """
     
     rf_df = rf_df.sort_values(by='i_start')
-    return rf_df.rng_.values, rf_df.mean_.values, rf_df.count_.values, rf_df.i_start.astype(int).values
+    return rf_df.rng_.values, rf_df.mean_.values, rf_df.count_.values, rf_df.i_start.astype(int).values, rf_df
 
 
 def thermal_loss_of_storage(air_temp_C_t):

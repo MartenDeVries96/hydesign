@@ -540,13 +540,14 @@ class EfficientGlobalOptimizationDriver(Driver):
         print(f'  Current solution {opt_sign}*{opt_var} = {float(yopt):.3E}'.replace('1*',''))
         print(f'  Current No. model evals: {xdoe.shape[0]}\n')
     
+        sm_args = {'n_comp': min(len(design_vars), 4)}
+        sm_args.update({k: v for k, v in kwargs.items() if k in ['theta_bounds', 'n_comp']})
         while itr < kwargs['max_iter']:
             # Iteration
             start_iter = time.time()
         
             # Train surrogate model
             np.random.seed(kwargs['n_seed'])
-            sm_args = {k: v for k, v in kwargs.items() if k in ['theta_bounds', 'n_comp']}
             sm = get_sm(xdoe, ydoe, **sm_args)
             kwargs['sm'] = sm
             

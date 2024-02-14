@@ -17,7 +17,7 @@ def run_RFcount():
     np.random.seed(0)
     SoC = np.random.rand(24*365*25)
     RF_out_ = RFcount(SoC)
-    return RF_out_
+    return RF_out_[:-1]
 
 def load_RFcount():
     with open(tfp+'battery_degradation_RF_count.pickle','rb') as f:
